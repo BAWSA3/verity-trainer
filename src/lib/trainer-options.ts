@@ -2,7 +2,7 @@ import { TrainerOption } from '@/types/trainer';
 
 // Set to true when PNG sprites are placed in /public/sprites/
 // Set to false to use programmatic pixel grids (fallback)
-export const USE_PNG_SPRITES = false;
+export const USE_PNG_SPRITES = true;
 
 const _ = ''; // transparent shorthand
 
@@ -649,18 +649,74 @@ export const ACCESSORY_OPTIONS: TrainerOption[] = [
   },
 ];
 
+// ============================================================
+// PNG OPTIONS (used when USE_PNG_SPRITES = true)
+// These IDs match the filenames in /public/sprites/
+// ============================================================
+const R_PNG = Array(32).fill('') as string[];
+const EMPTY_PIXELS = Array(32).fill([...R_PNG]) as string[][];
+
+const PNG_BODY_OPTIONS: TrainerOption[] = [
+  { id: 'light', label: 'LIGHT', pixels: EMPTY_PIXELS },
+  { id: 'medium', label: 'MEDIUM', pixels: EMPTY_PIXELS },
+  { id: 'tan', label: 'TAN', pixels: EMPTY_PIXELS },
+  { id: 'brown', label: 'BROWN', pixels: EMPTY_PIXELS },
+  { id: 'dark', label: 'DARK', pixels: EMPTY_PIXELS },
+];
+
+const PNG_HAIR_OPTIONS: TrainerOption[] = [
+  { id: 'buzzcut', label: 'BUZZ CUT', pixels: EMPTY_PIXELS },
+  { id: 'spiky', label: 'SPIKY', pixels: EMPTY_PIXELS },
+  { id: 'dreads', label: 'DREADS', pixels: EMPTY_PIXELS },
+  { id: 'afro', label: 'AFRO', pixels: EMPTY_PIXELS },
+  { id: 'mullet', label: 'MULLET', pixels: EMPTY_PIXELS },
+];
+
+const PNG_TOP_OPTIONS: TrainerOption[] = [
+  { id: 'hoodie', label: 'HOODIE', pixels: EMPTY_PIXELS },
+  { id: 'varsity', label: 'VARSITY JKT', pixels: EMPTY_PIXELS },
+  { id: 'tee', label: 'T-SHIRT', pixels: EMPTY_PIXELS },
+  { id: 'trench', label: 'TRENCH', pixels: EMPTY_PIXELS },
+  { id: 'vest', label: 'VEST', pixels: EMPTY_PIXELS },
+];
+
+const PNG_BOTTOM_OPTIONS: TrainerOption[] = [
+  { id: 'pants', label: 'PANTS', pixels: EMPTY_PIXELS },
+  { id: 'shorts', label: 'SHORTS', pixels: EMPTY_PIXELS },
+  { id: 'formal', label: 'FORMAL', pixels: EMPTY_PIXELS },
+  { id: 'cuffed', label: 'CUFFED', pixels: EMPTY_PIXELS },
+  { id: 'leggings', label: 'LEGGINGS', pixels: EMPTY_PIXELS },
+];
+
+const PNG_ACCESSORY_OPTIONS: TrainerOption[] = [
+  { id: 'chain', label: 'CHAIN', pixels: EMPTY_PIXELS },
+  { id: 'hood', label: 'HOOD', pixels: EMPTY_PIXELS },
+  { id: 'bandana', label: 'BANDANA', pixels: EMPTY_PIXELS },
+  { id: 'headband', label: 'HEADBAND', pixels: EMPTY_PIXELS },
+  { id: 'none', label: 'NONE', pixels: EMPTY_PIXELS },
+];
+
+// ============================================================
+// CATEGORIES & DEFAULT CONFIG — switches based on sprite mode
+// ============================================================
+const bodyOpts = USE_PNG_SPRITES ? PNG_BODY_OPTIONS : BODY_OPTIONS;
+const hairOpts = USE_PNG_SPRITES ? PNG_HAIR_OPTIONS : HAIR_OPTIONS;
+const topOpts = USE_PNG_SPRITES ? PNG_TOP_OPTIONS : TOP_OPTIONS;
+const bottomOpts = USE_PNG_SPRITES ? PNG_BOTTOM_OPTIONS : BOTTOM_OPTIONS;
+const accOpts = USE_PNG_SPRITES ? PNG_ACCESSORY_OPTIONS : ACCESSORY_OPTIONS;
+
 export const CATEGORIES = [
-  { key: 'body' as const, label: 'BODY', options: BODY_OPTIONS },
-  { key: 'hair' as const, label: 'HAIR', options: HAIR_OPTIONS },
-  { key: 'top' as const, label: 'TOP', options: TOP_OPTIONS },
-  { key: 'bottom' as const, label: 'BOTTOM', options: BOTTOM_OPTIONS },
-  { key: 'accessory' as const, label: 'ACC', options: ACCESSORY_OPTIONS },
+  { key: 'body' as const, label: 'BODY', options: bodyOpts },
+  { key: 'hair' as const, label: 'HAIR', options: hairOpts },
+  { key: 'top' as const, label: 'TOP', options: topOpts },
+  { key: 'bottom' as const, label: 'BOTTOM', options: bottomOpts },
+  { key: 'accessory' as const, label: 'ACC', options: accOpts },
 ];
 
 export const DEFAULT_CONFIG = {
-  body: BODY_OPTIONS[1].id, // medium
-  hair: HAIR_OPTIONS[0].id,
-  top: TOP_OPTIONS[0].id,
-  bottom: BOTTOM_OPTIONS[0].id,
-  accessory: ACCESSORY_OPTIONS[0].id,
+  body: bodyOpts[1].id,
+  hair: hairOpts[0].id,
+  top: topOpts[0].id,
+  bottom: bottomOpts[0].id,
+  accessory: accOpts[accOpts.length - 1].id, // 'none'
 };

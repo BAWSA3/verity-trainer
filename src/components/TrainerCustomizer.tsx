@@ -156,6 +156,7 @@ export default function TrainerCustomizer() {
             <CategorySelector
               key={cat.key}
               label={cat.label}
+              categoryKey={cat.key}
               options={cat.options}
               selected={config[cat.key]}
               onSelect={(id) => handleSelect(cat.key, id)}
