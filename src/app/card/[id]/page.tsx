@@ -33,7 +33,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const config = trainer.trainer_config as TrainerConfig;
   const stats = generateStats(config);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg';
-  const ogUrl = `${appUrl}/api/og?n=${encodeURIComponent(name)}&s=${stats.style}&d=${stats.drip}&f=${stats.flex}`;
+  const ogParams = new URLSearchParams({
+    n: name,
+    s: String(stats.style),
+    d: String(stats.drip),
+    f: String(stats.flex),
+    b: config.body,
+    h: config.hair,
+    t: config.top,
+    bo: config.bottom,
+    a: config.accessory,
+  });
+  const ogUrl = `${appUrl}/api/og?${ogParams.toString()}`;
 
   return {
     title: `${name}'s Trainer Card | VERITY`,
