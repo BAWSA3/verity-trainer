@@ -38,6 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     s: String(stats.style),
     d: String(stats.drip),
     f: String(stats.flex),
+    g: config.gender ?? 'male',
     b: config.body,
     h: config.hair,
     t: config.top,

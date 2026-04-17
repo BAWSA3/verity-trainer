@@ -47,12 +47,13 @@ export default function SpriteCanvas({ config, size = 256 }: SpriteCanvasProps) 
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, size, size);
 
-    // PNG layer paths
+    // PNG layer paths (gender-aware for body/head/tops; bottoms/hair/acc are universal)
+    const g = config.gender ?? 'male';
     const layers = [
-      `/sprites/base/${config.body}.png`,
-      `/sprites/head/${config.body}.png`,
+      `/sprites/body/${g}/${config.body}.png`,
+      `/sprites/head/${g}/${config.body}.png`,
       `/sprites/bottoms/${config.bottom}.png`,
-      `/sprites/tops/${config.top}.png`,
+      `/sprites/tops/${g}/${config.top}.png`,
       `/sprites/hair/${config.hair}.png`,
       config.accessory !== 'none' ? `/sprites/accessories/${config.accessory}.png` : null,
     ].filter(Boolean) as string[];

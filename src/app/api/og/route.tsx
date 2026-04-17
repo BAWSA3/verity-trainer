@@ -3,32 +3,15 @@ import { NextRequest } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import {
-  BODY_OPTIONS,
-  HAIR_OPTIONS,
-  TOP_OPTIONS,
-  BOTTOM_OPTIONS,
-  ACCESSORY_OPTIONS,
-} from '@/lib/trainer-options';
 
 export const runtime = 'nodejs';
 
 const SPRITE_SIZE = 512;
 
-const CATEGORY_DIRS: Record<string, string> = {
-  body: 'base',
-  head: 'head',
-  hair: 'hair',
-  top: 'tops',
-  bottom: 'bottoms',
-  accessory: 'accessories',
-};
-
-async function loadSprite(category: string, id: string): Promise<Buffer | null> {
+// Paths are now gender-aware for body/head/tops. Others stay universal.
+async function loadSprite(relPath: string): Promise<Buffer | null> {
   try {
-    const dir = CATEGORY_DIRS[category];
-    if (!dir) return null;
-    const filePath = path.join(process.cwd(), 'public', 'sprites', dir, `${id}.png`);
+    const filePath = path.join(process.cwd(), 'public', 'sprites', relPath);
     return await readFile(filePath);
   } catch {
     return null;
@@ -36,6 +19,7 @@ async function loadSprite(category: string, id: string): Promise<Buffer | null> 
 }
 
 async function compositeTrainer(
+  gender: 'male' | 'female',
   body: string,
   hair: string,
   top: string,
@@ -43,19 +27,19 @@ async function compositeTrainer(
   accessory: string,
 ): Promise<string | null> {
   const layers = [
-    { cat: 'body', id: body },
-    { cat: 'head', id: body },
-    { cat: 'bottom', id: bottom },
-    { cat: 'top', id: top },
-    { cat: 'hair', id: hair },
-    ...(accessory !== 'none' ? [{ cat: 'accessory', id: accessory }] : []),
+    { rel: `body/${gender}/${body}.png` },
+    { rel: `head/${gender}/${body}.png` },
+    { rel: `bottoms/${bottom}.png` },
+    { rel: `tops/${gender}/${top}.png` },
+    { rel: `hair/${hair}.png` },
+    ...(accessory !== 'none' ? [{ rel: `accessories/${accessory}.png` }] : []),
   ];
 
   try {
     // Load all layer buffers in parallel
     const buffers = await Promise.all(
-      layers.map(async ({ cat, id }) => {
-        const buf = await loadSprite(cat, id);
+      layers.map(async ({ rel }) => {
+        const buf = await loadSprite(rel);
         if (!buf) return null;
         return sharp(buf).resize(SPRITE_SIZE, SPRITE_SIZE, { kernel: 'nearest' }).toBuffer();
       }),
@@ -112,14 +96,16 @@ export async function GET(req: NextRequest) {
   const drip = parseInt(searchParams.get('d') || '80');
   const flex = parseInt(searchParams.get('f') || '70');
 
-  // Trainer config (fall back to first option in each category)
-  const body = searchParams.get('b') || BODY_OPTIONS[1]?.id || 'medium';
-  const hair = searchParams.get('h') || HAIR_OPTIONS[0]?.id || 'buzz';
-  const top = searchParams.get('t') || TOP_OPTIONS[0]?.id || 'hoodie';
-  const bottom = searchParams.get('bo') || BOTTOM_OPTIONS[0]?.id || 'pants';
-  const accessory = searchParams.get('a') || ACCESSORY_OPTIONS[0]?.id || 'none';
+  // Trainer config (fall back to sensible defaults)
+  const genderParam = searchParams.get('g');
+  const gender: 'male' | 'female' = genderParam === 'female' ? 'female' : 'male';
+  const body = searchParams.get('b') || 'medium';
+  const hair = searchParams.get('h') || 'buzz';
+  const top = searchParams.get('t') || 'hoodie';
+  const bottom = searchParams.get('bo') || 'pants';
+  const accessory = searchParams.get('a') || 'none';
 
-  const spriteDataUri = await compositeTrainer(body, hair, top, bottom, accessory);
+  const spriteDataUri = await compositeTrainer(gender, body, hair, top, bottom, accessory);
 
   return new ImageResponse(
     (

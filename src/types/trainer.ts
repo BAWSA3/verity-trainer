@@ -1,13 +1,16 @@
-export type Category = 'body' | 'hair' | 'top' | 'bottom' | 'accessory';
+export type Gender = 'male' | 'female';
+
+export type Category = 'gender' | 'body' | 'hair' | 'top' | 'bottom' | 'accessory';
 
 export interface TrainerOption {
   id: string;
   label: string;
-  pixels: string[][]; // 32x32 grid of hex colors ("" = transparent)
+  pixels: string[][]; // 32x32 grid of hex colors ("" = transparent) — legacy fallback
 }
 
 export interface TrainerConfig {
-  body: string;
+  gender: Gender;
+  body: string;     // skin tone id (porcelain, light, ..., ebony)
   hair: string;
   top: string;
   bottom: string;

@@ -1,16 +1,18 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import { TrainerOption } from '@/types/trainer';
+import { TrainerOption, Gender } from '@/types/trainer';
 import { USE_PNG_SPRITES } from '@/lib/trainer-options';
 import { playHover } from '@/lib/sounds';
 
 interface CategorySelectorProps {
   label: string;
-  categoryKey: string; // e.g. 'hair', 'tops', etc.
+  categoryKey: string; // 'gender' | 'body' | 'hair' | 'top' | 'bottom' | 'accessory'
   options: TrainerOption[];
   selected: string;
   onSelect: (id: string) => void;
+  gender: Gender;           // current gender so thumbnails reflect user's picks
+  currentSkin: string;      // current skin tone so thumbnails use it for clothes/hair/etc
 }
 
 function MiniSpritePixel({ pixels, selected }: { pixels: string[][]; selected: boolean }) {
@@ -21,10 +23,8 @@ function MiniSpritePixel({ pixels, selected }: { pixels: string[][]; selected: b
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, 64, 64);
-
     const pixelSize = 2;
     for (let y = 0; y < 32; y++) {
       for (let x = 0; x < 32; x++) {
@@ -52,19 +52,45 @@ function MiniSpritePixel({ pixels, selected }: { pixels: string[][]; selected: b
   );
 }
 
-// Map category keys to sprite folder names
-const CATEGORY_FOLDER_MAP: Record<string, string> = {
-  body: 'base',
-  hair: 'hair',
-  top: 'tops',
-  bottom: 'bottoms',
-  accessory: 'accessories',
-};
+function thumbnailSrc(
+  categoryKey: string,
+  optionId: string,
+  gender: Gender,
+  currentSkin: string,
+): string {
+  switch (categoryKey) {
+    case 'gender':
+      // Show body silhouette in current skin tone — clearly communicates body shape
+      return `/sprites/body/${optionId}/${currentSkin}.png`;
+    case 'body':
+      // Show face only in that skin tone — cleaner than full body
+      return `/sprites/head/${gender}/${optionId}.png`;
+    case 'top':
+      return `/sprites/tops/${gender}/${optionId}.png`;
+    case 'hair':
+      return `/sprites/hair/${optionId}.png`;
+    case 'bottom':
+      return `/sprites/bottoms/${optionId}.png`;
+    case 'accessory':
+      return `/sprites/accessories/${optionId}.png`;
+    default:
+      return '';
+  }
+}
 
-function MiniSpritePNG({ optionId, categoryKey, selected }: { optionId: string; categoryKey: string; selected: boolean }) {
-  const folder = CATEGORY_FOLDER_MAP[categoryKey] || categoryKey;
-  const src = `/sprites/${folder}/${optionId}.png`;
-
+function MiniSpritePNG({
+  optionId,
+  categoryKey,
+  selected,
+  gender,
+  currentSkin,
+}: {
+  optionId: string;
+  categoryKey: string;
+  selected: boolean;
+  gender: Gender;
+  currentSkin: string;
+}) {
   if (optionId === 'none') {
     return (
       <div
@@ -79,6 +105,8 @@ function MiniSpritePNG({ optionId, categoryKey, selected }: { optionId: string; 
       </div>
     );
   }
+
+  const src = thumbnailSrc(categoryKey, optionId, gender, currentSkin);
 
   return (
     <img
@@ -102,11 +130,14 @@ export default function CategorySelector({
   options,
   selected,
   onSelect,
+  gender,
+  currentSkin,
 }: CategorySelectorProps) {
   return (
     <div className="mb-4">
       <div className="text-[#39FF14] text-[9px] sm:text-[10px] mb-2 tracking-wider">
-        {'> '}{label}
+        {'> '}
+        {label}
       </div>
       <div className="flex gap-2 sm:gap-3 flex-wrap">
         {options.map((option) => (
@@ -118,13 +149,21 @@ export default function CategorySelector({
             className="flex flex-col items-center gap-1 transition-transform"
           >
             {USE_PNG_SPRITES ? (
-              <MiniSpritePNG optionId={option.id} categoryKey={categoryKey} selected={selected === option.id} />
+              <MiniSpritePNG
+                optionId={option.id}
+                categoryKey={categoryKey}
+                selected={selected === option.id}
+                gender={gender}
+                currentSkin={currentSkin}
+              />
             ) : (
               <MiniSpritePixel pixels={option.pixels} selected={selected === option.id} />
             )}
-            <span className={`text-[6px] sm:text-[7px] tracking-wider ${
-              selected === option.id ? 'text-[#39FF14]' : 'text-[#555]'
-            }`}>
+            <span
+              className={`text-[6px] sm:text-[7px] tracking-wider ${
+                selected === option.id ? 'text-[#39FF14]' : 'text-[#555]'
+              }`}
+            >
               {option.label}
             </span>
           </button>

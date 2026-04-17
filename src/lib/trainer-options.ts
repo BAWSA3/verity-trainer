@@ -656,49 +656,83 @@ export const ACCESSORY_OPTIONS: TrainerOption[] = [
 const R_PNG = Array(32).fill('') as string[];
 const EMPTY_PIXELS = Array(32).fill([...R_PNG]) as string[][];
 
+const PNG_GENDER_OPTIONS: TrainerOption[] = [
+  { id: 'male',   label: 'MALE',   pixels: EMPTY_PIXELS },
+  { id: 'female', label: 'FEMALE', pixels: EMPTY_PIXELS },
+];
+
 const PNG_BODY_OPTIONS: TrainerOption[] = [
-  { id: 'light', label: 'LIGHT', pixels: EMPTY_PIXELS },
-  { id: 'medium', label: 'MEDIUM', pixels: EMPTY_PIXELS },
-  { id: 'tan', label: 'TAN', pixels: EMPTY_PIXELS },
-  { id: 'brown', label: 'BROWN', pixels: EMPTY_PIXELS },
-  { id: 'dark', label: 'DARK', pixels: EMPTY_PIXELS },
+  { id: 'porcelain', label: 'PORCELAIN', pixels: EMPTY_PIXELS },
+  { id: 'light',     label: 'LIGHT',     pixels: EMPTY_PIXELS },
+  { id: 'fair',      label: 'FAIR',      pixels: EMPTY_PIXELS },
+  { id: 'olive',     label: 'OLIVE',     pixels: EMPTY_PIXELS },
+  { id: 'medium',    label: 'MEDIUM',    pixels: EMPTY_PIXELS },
+  { id: 'tan',       label: 'TAN',       pixels: EMPTY_PIXELS },
+  { id: 'bronze',    label: 'BRONZE',    pixels: EMPTY_PIXELS },
+  { id: 'brown',     label: 'BROWN',     pixels: EMPTY_PIXELS },
+  { id: 'mahogany',  label: 'MAHOGANY',  pixels: EMPTY_PIXELS },
+  { id: 'ebony',     label: 'EBONY',     pixels: EMPTY_PIXELS },
 ];
 
 const PNG_HAIR_OPTIONS: TrainerOption[] = [
-  { id: 'buzzcut', label: 'BUZZ CUT', pixels: EMPTY_PIXELS },
-  { id: 'spiky', label: 'SPIKY', pixels: EMPTY_PIXELS },
-  { id: 'dreads', label: 'DREADS', pixels: EMPTY_PIXELS },
-  { id: 'afro', label: 'AFRO', pixels: EMPTY_PIXELS },
-  { id: 'mullet', label: 'MULLET', pixels: EMPTY_PIXELS },
+  { id: 'buzz',     label: 'BUZZ CUT',   pixels: EMPTY_PIXELS },
+  { id: 'spiky',    label: 'SPIKY',      pixels: EMPTY_PIXELS },
+  { id: 'dreads',   label: 'DREADS',     pixels: EMPTY_PIXELS },
+  { id: 'afro',     label: 'AFRO',       pixels: EMPTY_PIXELS },
+  { id: 'mullet',   label: 'MULLET',     pixels: EMPTY_PIXELS },
+  { id: 'bangs',    label: 'BANGS',      pixels: EMPTY_PIXELS },
+  { id: 'long',     label: 'LONG',       pixels: EMPTY_PIXELS },
+  { id: 'pigtails', label: 'PIGTAILS',   pixels: EMPTY_PIXELS },
+  { id: 'bedhead',  label: 'BEDHEAD',    pixels: EMPTY_PIXELS },
+  { id: 'loose',    label: 'LOOSE',      pixels: EMPTY_PIXELS },
+  { id: 'swoop',    label: 'SWOOP',      pixels: EMPTY_PIXELS },
+  { id: 'halfmess', label: 'HALF-MESSY', pixels: EMPTY_PIXELS },
+  { id: 'unkempt',  label: 'UNKEMPT',    pixels: EMPTY_PIXELS },
 ];
 
 const PNG_TOP_OPTIONS: TrainerOption[] = [
-  { id: 'hoodie', label: 'HOODIE', pixels: EMPTY_PIXELS },
-  { id: 'varsity', label: 'VARSITY JKT', pixels: EMPTY_PIXELS },
-  { id: 'tee', label: 'T-SHIRT', pixels: EMPTY_PIXELS },
-  { id: 'trench', label: 'TRENCH', pixels: EMPTY_PIXELS },
-  { id: 'vest', label: 'VEST', pixels: EMPTY_PIXELS },
+  { id: 'hoodie',     label: 'HOODIE',       pixels: EMPTY_PIXELS },
+  { id: 'longsleeve', label: 'LONGSLEEVE',   pixels: EMPTY_PIXELS },
+  { id: 'cardigan',   label: 'CARDIGAN',     pixels: EMPTY_PIXELS },
+  { id: 'buttondown', label: 'BUTTONDOWN',   pixels: EMPTY_PIXELS },
+  { id: 'polo-long',  label: 'POLO (LONG)',  pixels: EMPTY_PIXELS },
+  { id: 'vneck-long', label: 'V-NECK (L)',   pixels: EMPTY_PIXELS },
+  { id: 'scoop-long', label: 'SCOOP (L)',    pixels: EMPTY_PIXELS },
+  { id: 'tee',        label: 'T-SHIRT',      pixels: EMPTY_PIXELS },
+  { id: 'vneck',      label: 'V-NECK',       pixels: EMPTY_PIXELS },
+  { id: 'scoop',      label: 'SCOOP NECK',   pixels: EMPTY_PIXELS },
+  { id: 'sleeves',    label: 'SLEEVES',      pixels: EMPTY_PIXELS },
+  { id: 'polo',       label: 'POLO',         pixels: EMPTY_PIXELS },
+  { id: 'cardigan-s', label: 'CARDIGAN (S)', pixels: EMPTY_PIXELS },
 ];
 
 const PNG_BOTTOM_OPTIONS: TrainerOption[] = [
-  { id: 'pants', label: 'PANTS', pixels: EMPTY_PIXELS },
-  { id: 'shorts', label: 'SHORTS', pixels: EMPTY_PIXELS },
-  { id: 'formal', label: 'FORMAL', pixels: EMPTY_PIXELS },
-  { id: 'cuffed', label: 'CUFFED', pixels: EMPTY_PIXELS },
-  { id: 'leggings', label: 'LEGGINGS', pixels: EMPTY_PIXELS },
+  { id: 'pants',          label: 'PANTS',          pixels: EMPTY_PIXELS },
+  { id: 'shorts',         label: 'SHORTS',         pixels: EMPTY_PIXELS },
+  { id: 'formal',         label: 'FORMAL',         pixels: EMPTY_PIXELS },
+  { id: 'leggings',       label: 'LEGGINGS',       pixels: EMPTY_PIXELS },
+  { id: 'cuffed',         label: 'CUFFED',         pixels: EMPTY_PIXELS },
+  { id: 'pantaloons',     label: 'PANTALOONS',     pixels: EMPTY_PIXELS },
+  { id: 'skirt-plain',    label: 'SKIRT',          pixels: EMPTY_PIXELS },
+  { id: 'skirt-straight', label: 'PENCIL SKIRT',   pixels: EMPTY_PIXELS },
 ];
 
 const PNG_ACCESSORY_OPTIONS: TrainerOption[] = [
-  { id: 'chain', label: 'CHAIN', pixels: EMPTY_PIXELS },
-  { id: 'hood', label: 'HOOD', pixels: EMPTY_PIXELS },
-  { id: 'bandana', label: 'BANDANA', pixels: EMPTY_PIXELS },
-  { id: 'headband', label: 'HEADBAND', pixels: EMPTY_PIXELS },
-  { id: 'none', label: 'NONE', pixels: EMPTY_PIXELS },
+  { id: 'hood',        label: 'HOOD',        pixels: EMPTY_PIXELS },
+  { id: 'hood-sack',   label: 'HOOD-SACK',   pixels: EMPTY_PIXELS },
+  { id: 'bandana',     label: 'BANDANA',     pixels: EMPTY_PIXELS },
+  { id: 'bandana2',    label: 'BANDANA 2',   pixels: EMPTY_PIXELS },
+  { id: 'leather-cap', label: 'LEATHER CAP', pixels: EMPTY_PIXELS },
+  { id: 'tophat',      label: 'TOP HAT',     pixels: EMPTY_PIXELS },
+  { id: 'bowler',      label: 'BOWLER',      pixels: EMPTY_PIXELS },
+  { id: 'visor',       label: 'VISOR',       pixels: EMPTY_PIXELS },
+  { id: 'none',        label: 'NONE',        pixels: EMPTY_PIXELS },
 ];
 
 // ============================================================
 // CATEGORIES & DEFAULT CONFIG — switches based on sprite mode
 // ============================================================
+const genderOpts = PNG_GENDER_OPTIONS;
 const bodyOpts = USE_PNG_SPRITES ? PNG_BODY_OPTIONS : BODY_OPTIONS;
 const hairOpts = USE_PNG_SPRITES ? PNG_HAIR_OPTIONS : HAIR_OPTIONS;
 const topOpts = USE_PNG_SPRITES ? PNG_TOP_OPTIONS : TOP_OPTIONS;
@@ -706,17 +740,19 @@ const bottomOpts = USE_PNG_SPRITES ? PNG_BOTTOM_OPTIONS : BOTTOM_OPTIONS;
 const accOpts = USE_PNG_SPRITES ? PNG_ACCESSORY_OPTIONS : ACCESSORY_OPTIONS;
 
 export const CATEGORIES = [
-  { key: 'body' as const, label: 'BODY', options: bodyOpts },
-  { key: 'hair' as const, label: 'HAIR', options: hairOpts },
-  { key: 'top' as const, label: 'TOP', options: topOpts },
-  { key: 'bottom' as const, label: 'BOTTOM', options: bottomOpts },
-  { key: 'accessory' as const, label: 'ACC', options: accOpts },
+  { key: 'gender' as const,    label: 'GENDER', options: genderOpts },
+  { key: 'body' as const,      label: 'SKIN',   options: bodyOpts },
+  { key: 'hair' as const,      label: 'HAIR',   options: hairOpts },
+  { key: 'top' as const,       label: 'TOP',    options: topOpts },
+  { key: 'bottom' as const,    label: 'BOTTOM', options: bottomOpts },
+  { key: 'accessory' as const, label: 'ACC',    options: accOpts },
 ];
 
 export const DEFAULT_CONFIG = {
-  body: bodyOpts[1].id,
+  gender: 'male' as const,
+  body: 'medium',
   hair: hairOpts[0].id,
   top: topOpts[0].id,
   bottom: bottomOpts[0].id,
-  accessory: accOpts[accOpts.length - 1].id, // 'none'
+  accessory: 'none',
 };
