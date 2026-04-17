@@ -150,20 +150,31 @@ function download(url) {
   });
 }
 
+// Output resolution — we keep source 64x64 for palette-swap math (fewer pixels to compare),
+// then upscale to this size before saving so the final pipeline has more resolution to play with.
+const OUTPUT_SIZE = 192; // 3x — good middle ground: crisp but still pixel-art feel
+
 async function extractFrontFrame(buffer) {
   const meta = await sharp(buffer).metadata();
   const left = IDLE_COL * FRAME_W;
   const top = FRONT_FACING_ROW * FRAME_H;
-  if (left + FRAME_W > meta.width || top + FRAME_H > meta.height) {
-    // Fallback — grab row 0 col 0
-    return sharp(buffer)
-      .extract({ left: 0, top: 0, width: FRAME_W, height: FRAME_H })
-      .png()
-      .toBuffer();
-  }
+  const extractOpts =
+    left + FRAME_W > meta.width || top + FRAME_H > meta.height
+      ? { left: 0, top: 0, width: FRAME_W, height: FRAME_H }
+      : { left, top, width: FRAME_W, height: FRAME_H };
+
+  // Keep at native 64x64 during processing — palette swap needs exact color matching
+  return sharp(buffer).extract(extractOpts).png().toBuffer();
+}
+
+// Upscale a processed 64x64 sprite to OUTPUT_SIZE with crisp pixel edges.
+// Nearest neighbor preserves the pixel-art aesthetic; a subtle sharpen pass
+// pops the line work so it reads cleanly at larger display sizes.
+async function enhanceForOutput(buffer) {
   return sharp(buffer)
-    .extract({ left, top, width: FRAME_W, height: FRAME_H })
-    .png()
+    .resize(OUTPUT_SIZE, OUTPUT_SIZE, { kernel: 'nearest' })
+    .sharpen({ sigma: 0.4, m1: 0.5, m2: 0.5 })
+    .png({ compressionLevel: 9 })
     .toBuffer();
 }
 
@@ -238,7 +249,8 @@ async function main() {
         ensureDir(outDir);
         for (const [tone, palette] of Object.entries(SKIN_TONES)) {
           const swapped = await paletteSwap(frame, BASE_PALETTE, palette);
-          fs.writeFileSync(path.join(outDir, `${tone}.png`), swapped);
+          const enhanced = await enhanceForOutput(swapped);
+          fs.writeFileSync(path.join(outDir, `${tone}.png`), enhanced);
           successes.push(`${category}/${gender}/${tone}.png`);
         }
         console.log(`  ✓ ${Object.keys(SKIN_TONES).length} tones saved`);
@@ -256,7 +268,8 @@ async function main() {
     try {
       const buf = await download(`${BASE_URL}/${h.path}`);
       const frame = await extractFrontFrame(buf);
-      fs.writeFileSync(path.join(root, 'hair', `${h.id}.png`), frame);
+      const enhanced = await enhanceForOutput(frame);
+      fs.writeFileSync(path.join(root, 'hair', `${h.id}.png`), enhanced);
       successes.push(`hair/${h.id}.png`);
       console.log(`  ✓ ${h.id}`);
     } catch (err) {
@@ -274,7 +287,8 @@ async function main() {
       try {
         const buf = await download(url);
         const frame = await extractFrontFrame(buf);
-        fs.writeFileSync(path.join(root, 'tops', gender, `${t.id}.png`), frame);
+        const enhanced = await enhanceForOutput(frame);
+        fs.writeFileSync(path.join(root, 'tops', gender, `${t.id}.png`), enhanced);
         successes.push(`tops/${gender}/${t.id}.png`);
         console.log(`  ✓ ${t.id}`);
       } catch (err) {
@@ -291,7 +305,8 @@ async function main() {
     try {
       const buf = await download(`${BASE_URL}/${b.fromPath}`);
       const frame = await extractFrontFrame(buf);
-      fs.writeFileSync(path.join(root, 'bottoms', `${b.id}.png`), frame);
+      const enhanced = await enhanceForOutput(frame);
+      fs.writeFileSync(path.join(root, 'bottoms', `${b.id}.png`), enhanced);
       successes.push(`bottoms/${b.id}.png`);
       console.log(`  ✓ ${b.id}`);
     } catch (err) {
@@ -307,7 +322,8 @@ async function main() {
     try {
       const buf = await download(`${BASE_URL}/${a.path}`);
       const frame = await extractFrontFrame(buf);
-      fs.writeFileSync(path.join(root, 'accessories', `${a.id}.png`), frame);
+      const enhanced = await enhanceForOutput(frame);
+      fs.writeFileSync(path.join(root, 'accessories', `${a.id}.png`), enhanced);
       successes.push(`accessories/${a.id}.png`);
       console.log(`  ✓ ${a.id}`);
     } catch (err) {

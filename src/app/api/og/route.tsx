@@ -6,7 +6,9 @@ import sharp from 'sharp';
 
 export const runtime = 'nodejs';
 
-const SPRITE_SIZE = 512;
+// Internal compositing resolution — sprites are stored at 192x192 source,
+// composited at this size for final OG image. Larger = crisper printout.
+const SPRITE_SIZE = 1024;
 
 // Paths are now gender-aware for body/head/tops. Others stay universal.
 async function loadSprite(relPath: string): Promise<Buffer | null> {
