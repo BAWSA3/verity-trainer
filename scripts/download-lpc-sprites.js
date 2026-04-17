@@ -29,6 +29,10 @@ const SPRITES = {
   body: [
     { id: 'base', path: 'body/bodies/male/walk.png' },
   ],
+  // Head with face (separate LPC layer; palette-swapped for skin tones)
+  head: [
+    { id: 'base', path: 'head/heads/human/male/walk.png' },
+  ],
   // Hair styles
   hair: [
     { id: 'buzzcut', path: 'hair/buzzcut/adult/walk.png' },
@@ -154,7 +158,7 @@ async function main() {
   const outBase = path.join(__dirname, '..', 'public', 'sprites');
 
   // Ensure output directories exist
-  for (const category of ['base', 'hair', 'tops', 'bottoms', 'accessories']) {
+  for (const category of ['base', 'head', 'hair', 'tops', 'bottoms', 'accessories']) {
     fs.mkdirSync(path.join(outBase, category), { recursive: true });
   }
 
@@ -177,13 +181,14 @@ async function main() {
         const frame = await extractFrontFrame(buffer);
         console.log(`    Extracted front-facing frame`);
 
-        if (category === 'body') {
-          // Generate skin tone variants
+        if (category === 'body' || category === 'head') {
+          // Generate skin tone variants (both body and head use skin palette)
+          const outCat = category === 'body' ? 'base' : 'head';
           for (const [tone, palette] of Object.entries(SKIN_PALETTES)) {
             const swapped = await paletteSwap(frame, BASE_PALETTE, palette);
-            const outPath = path.join(outBase, 'base', `${tone}.png`);
+            const outPath = path.join(outBase, outCat, `${tone}.png`);
             fs.writeFileSync(outPath, swapped);
-            console.log(`    Saved skin tone: ${tone}`);
+            console.log(`    Saved ${outCat} skin tone: ${tone}`);
           }
         } else {
           const outPath = path.join(outBase, category, `${item.id}.png`);

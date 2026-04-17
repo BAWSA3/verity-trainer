@@ -17,6 +17,7 @@ const SPRITE_SIZE = 512;
 
 const CATEGORY_DIRS: Record<string, string> = {
   body: 'base',
+  head: 'head',
   hair: 'hair',
   top: 'tops',
   bottom: 'bottoms',
@@ -43,6 +44,7 @@ async function compositeTrainer(
 ): Promise<string | null> {
   const layers = [
     { cat: 'body', id: body },
+    { cat: 'head', id: body },
     { cat: 'bottom', id: bottom },
     { cat: 'top', id: top },
     { cat: 'hair', id: hair },

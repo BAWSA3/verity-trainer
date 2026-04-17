@@ -141,7 +141,7 @@ export default function TrainerCustomizer() {
         {/* Character Preview */}
         <div className="flex justify-center mb-6 sm:mb-8">
           <div className="relative">
-            <SpriteCanvas config={config} size={256} />
+            <SpriteCanvas config={config} size={384} />
             {/* Corner decorations */}
             <div className="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-[#39FF14]" />
             <div className="absolute -top-2 -right-2 w-4 h-4 border-t-2 border-r-2 border-[#39FF14]" />

@@ -50,6 +50,7 @@ export default function SpriteCanvas({ config, size = 256 }: SpriteCanvasProps) 
     // PNG layer paths
     const layers = [
       `/sprites/base/${config.body}.png`,
+      `/sprites/head/${config.body}.png`,
       `/sprites/bottoms/${config.bottom}.png`,
       `/sprites/tops/${config.top}.png`,
       `/sprites/hair/${config.hair}.png`,
