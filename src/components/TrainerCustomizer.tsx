@@ -32,13 +32,13 @@ export default function TrainerCustomizer() {
 
     let i = 0;
     const interval = setInterval(() => {
-      if (i < lines.length) {
-        setBootLines(prev => [...prev, lines[i]]);
-        i++;
-      } else {
+      i++;
+      if (i > lines.length) {
         clearInterval(interval);
         setTimeout(() => setHeroReady(true), 400);
+        return;
       }
+      setBootLines(lines.slice(0, i));
     }, 200);
 
     return () => clearInterval(interval);
@@ -75,20 +75,23 @@ export default function TrainerCustomizer() {
         {/* Boot terminal */}
         <div className="border-2 border-[#222] bg-[#0a0a0a] p-4 sm:p-6 max-w-md w-full mb-8">
           <div className="space-y-1">
-            {bootLines.map((line, i) => (
-              <div
-                key={i}
-                className={`text-[9px] sm:text-[10px] font-mono ${
-                  line.startsWith('> PRESS') ? 'text-[#FF006E]' : 'text-[#39FF14]'
-                }`}
-                style={{ opacity: line === '' ? 0 : 1 }}
-              >
-                {line}
-                {i === bootLines.length - 1 && (
-                  <span className="animate-blink">_</span>
-                )}
-              </div>
-            ))}
+            {bootLines.map((line, i) => {
+              const safeLine = line ?? '';
+              return (
+                <div
+                  key={i}
+                  className={`text-[9px] sm:text-[10px] font-mono ${
+                    safeLine.startsWith('> PRESS') ? 'text-[#FF006E]' : 'text-[#39FF14]'
+                  }`}
+                  style={{ opacity: safeLine === '' ? 0 : 1 }}
+                >
+                  {safeLine}
+                  {i === bootLines.length - 1 && (
+                    <span className="animate-blink">_</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
