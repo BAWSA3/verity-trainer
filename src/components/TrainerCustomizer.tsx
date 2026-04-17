@@ -137,9 +137,13 @@ export default function TrainerCustomizer() {
         </p>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 pb-12">
-        {/* Character Preview */}
-        <div className="flex justify-center mb-6 sm:mb-8">
+      <div className="max-w-6xl mx-auto px-4 pb-12 lg:grid lg:grid-cols-[auto_1fr] lg:gap-8 lg:items-start">
+        {/* Character Preview — sticky so it stays visible while scrolling traits */}
+        <div
+          className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm
+                     py-4 mb-2 lg:mb-0 lg:py-0 lg:top-6
+                     flex justify-center"
+        >
           <div className="relative">
             <SpriteCanvas config={config} size={384} />
             {/* Corner decorations */}
@@ -150,38 +154,41 @@ export default function TrainerCustomizer() {
           </div>
         </div>
 
-        {/* Category Selectors */}
-        <div className="border-2 border-[#222] p-3 sm:p-4 mb-6">
-          <div className="text-[#39FF14] text-[8px] sm:text-[9px] tracking-wider mb-3 sm:mb-4 opacity-60">
-            {'// SELECT YOUR GEAR'}
+        {/* Right column: Traits + CTA */}
+        <div className="min-w-0">
+          {/* Category Selectors */}
+          <div className="border-2 border-[#222] p-3 sm:p-4 mb-6">
+            <div className="text-[#39FF14] text-[8px] sm:text-[9px] tracking-wider mb-3 sm:mb-4 opacity-60">
+              {'// SELECT YOUR GEAR'}
+            </div>
+            {CATEGORIES.map(cat => (
+              <CategorySelector
+                key={cat.key}
+                label={cat.label}
+                categoryKey={cat.key}
+                options={cat.options}
+                selected={config[cat.key]}
+                onSelect={(id) => handleSelect(cat.key, id)}
+                gender={config.gender}
+                currentSkin={config.body}
+              />
+            ))}
           </div>
-          {CATEGORIES.map(cat => (
-            <CategorySelector
-              key={cat.key}
-              label={cat.label}
-              categoryKey={cat.key}
-              options={cat.options}
-              selected={config[cat.key]}
-              onSelect={(id) => handleSelect(cat.key, id)}
-              gender={config.gender}
-              currentSkin={config.body}
-            />
-          ))}
+
+          {/* Generate Button */}
+          <button
+            onClick={handleGenerate}
+            className="w-full border-2 border-[#FF006E] bg-[#FF006E]/10 text-[#FF006E]
+                       text-xs sm:text-sm py-4 hover:bg-[#FF006E]/20 transition-all
+                       tracking-wider hover:shadow-[0_0_20px_rgba(255,0,110,0.3)]"
+          >
+            [ GENERATE MY CARD ]
+          </button>
+
+          <p className="text-center text-[#333] text-[7px] sm:text-[8px] mt-3">
+            GET EARLY ACCESS TO THE VERITY MARKETPLACE
+          </p>
         </div>
-
-        {/* Generate Button */}
-        <button
-          onClick={handleGenerate}
-          className="w-full border-2 border-[#FF006E] bg-[#FF006E]/10 text-[#FF006E]
-                     text-xs sm:text-sm py-4 hover:bg-[#FF006E]/20 transition-all
-                     tracking-wider hover:shadow-[0_0_20px_rgba(255,0,110,0.3)]"
-        >
-          [ GENERATE MY CARD ]
-        </button>
-
-        <p className="text-center text-[#333] text-[7px] sm:text-[8px] mt-3">
-          GET EARLY ACCESS TO THE VERITY MARKETPLACE
-        </p>
       </div>
 
       {/* Signup Modal */}
