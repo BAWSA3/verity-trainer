@@ -73,13 +73,13 @@ const PHASES: Phase[] = [
       '"What is a VERITY Gacha?" — 3-part explainer (mechanic, rarity tiers, utility)',
       'Waitlist-exclusive perks: early-access window (24h head start) + bonus free pull for first 100',
       'Partner brand / collab reveals (if applicable — TBD with founders)',
-      'Paid ads begin APR 24 — X + IG, retargeting trainer card visitors',
+      'Creator amplification round 2: seed list reposts + UGC remix prompts',
       'Press outreach: Hypebeast, Highsnobiety, Complex — target placements APR 28-30',
       'T-7, T-3, T-24h email drip to waitlist',
     ],
     deliverables: [
       'Gacha mechanic explainer microsite or thread',
-      'Paid ads creative set (3 variants)',
+      'Creator brief + UGC prompt pack',
       'Press kit (PDF + assets)',
       'Waitlist early-access email flow (automated)',
     ],
@@ -90,7 +90,7 @@ const PHASES: Phase[] = [
       'Pre-drop survey: 30%+ "definitely buying"',
     ],
     ownerAsk:
-      'Founders: own Gacha explainer narrative (publish APR 23). Marketing: ads + press. Product: harden infra for traffic spike. Community: Discord events mid-week.',
+      'Founders: own Gacha explainer narrative (publish APR 23). Marketing: creator briefs + press outreach. Product: harden infra for traffic spike. Community: Discord events mid-week.',
     accentColor: '#FF006E',
   },
   {
@@ -346,7 +346,7 @@ export default function LaunchPlanClient() {
             color="#FF006E"
             asks={[
               'Own content calendar across all 4 phases',
-              'Ads creative set + budget plan',
+              'Creator seed list + outreach briefs',
               'Press outreach + placements',
               'Drop-day real-time content',
               'Post-launch recap + UGC campaign',
@@ -379,10 +379,6 @@ export default function LaunchPlanClient() {
       <Section title="07 // OPEN DECISIONS" accent="#FFB800">
         <div className="space-y-4 max-w-4xl">
           <OpenItem
-            label="DROP DATE"
-            value="May 16 assumed — founders to confirm"
-          />
-          <OpenItem
             label="GACHA SUPPLY"
             value="How many units across what tiers? Drives sellout vs scarcity narrative."
           />
@@ -395,8 +391,8 @@ export default function LaunchPlanClient() {
             value="Any co-drop brands? Needed for Phase 02 reveals."
           />
           <OpenItem
-            label="PAID BUDGET"
-            value="Phase 02 ad spend range? Shapes creative plan."
+            label="CREATOR SEED LIST"
+            value="Which 10 tastemakers get the first coordinated push?"
           />
         </div>
       </Section>

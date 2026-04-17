@@ -64,13 +64,13 @@ const PHASES: Phase[] = [
       '"What is a VERITY Gacha?" — 3-part explainer (mechanic, rarity, utility)',
       'Waitlist perks: 24h early-access + bonus pull for first 100',
       'Partner brand reveals (TBD with founders)',
-      'Paid ads begin APR 24 — X + IG retargeting',
+      'Creator amplification round 2: seed list reposts + UGC remix prompts',
       'Press: Hypebeast, Highsnobiety, Complex — placements APR 28-30',
       'T-7, T-3, T-24h email drip to waitlist',
     ],
     deliverables: [
       'Gacha explainer thread / microsite',
-      'Paid ads creative set (3 variants)',
+      'Creator brief + UGC prompt pack',
       'Press kit (PDF + assets)',
       'Automated waitlist email flow',
     ],
@@ -81,7 +81,7 @@ const PHASES: Phase[] = [
       'Pre-drop survey: 30%+ "definitely buying"',
     ],
     ownerAsk:
-      'Founders: publish Gacha explainer APR 23. Marketing: ads + press. Product: harden infra. Community: Discord events mid-week.',
+      'Founders: publish Gacha explainer APR 23. Marketing: creator briefs + press. Product: harden infra. Community: Discord events mid-week.',
     accent: '#FF006E',
   },
   {
@@ -564,7 +564,7 @@ function TeamSlide() {
           color="#FF006E"
           asks={[
             'Own content calendar across all 4 phases',
-            'Ads creative set + budget plan',
+            'Creator seed list + outreach briefs',
             'Press outreach + placements',
             'Drop-day real-time content',
             'Post-launch recap + UGC campaign',
@@ -600,7 +600,6 @@ function OpenSlide() {
     { label: 'GACHA SUPPLY', value: 'How many units across what tiers? Drives sellout vs scarcity narrative.' },
     { label: 'PRICING', value: 'Entry tier pricing anchors all downstream creative.' },
     { label: 'PARTNER COLLABS', value: 'Any co-drop brands? Needed for Phase 02 reveals.' },
-    { label: 'PAID BUDGET', value: 'Phase 02 ad spend range? Shapes creative plan.' },
     { label: 'CREATOR SEED LIST', value: 'Which 10 tastemakers get the first coordinated push?' },
   ];
   return (
