@@ -62,9 +62,12 @@ export default function TrainerCustomizer() {
   // Hero / Landing Screen
   if (showHero) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 relative">
+        {/* Ambient pokémon-inspired background */}
+        <PokeBackground />
+
         {/* Title */}
-        <div className="mb-8 text-center">
+        <div className="relative z-10 mb-8 text-center">
           <h1 className="text-[#39FF14] text-2xl sm:text-3xl tracking-[0.3em] mb-3">
             VERITY
           </h1>
@@ -74,7 +77,7 @@ export default function TrainerCustomizer() {
         </div>
 
         {/* Boot terminal */}
-        <div className="border-2 border-[#222] bg-[#0a0a0a] p-4 sm:p-6 max-w-md w-full mb-8">
+        <div className="relative z-10 border-2 border-[#222] bg-[#0a0a0a]/80 backdrop-blur-sm p-4 sm:p-6 max-w-md w-full mb-8">
           <div className="space-y-1">
             {bootLines.map((line, i) => {
               const safeLine = line ?? '';
@@ -103,7 +106,7 @@ export default function TrainerCustomizer() {
               playSelect();
               setShowHero(false);
             }}
-            className="border-2 border-[#FF006E] bg-[#FF006E]/10 text-[#FF006E]
+            className="relative z-10 border-2 border-[#FF006E] bg-[#FF006E]/10 text-[#FF006E]
                        text-xs sm:text-sm py-3 px-8 tracking-wider
                        hover:bg-[#FF006E]/20 transition-all
                        animate-pulse"
@@ -113,7 +116,7 @@ export default function TrainerCustomizer() {
         )}
 
         {/* Footer */}
-        <div className="mt-12 text-center">
+        <div className="relative z-10 mt-12 text-center">
           <p className="text-[#333] text-[7px] sm:text-[8px] tracking-wider">
             DESIGN YOUR TRAINER // CLAIM YOUR CARD // JOIN THE DROP
           </p>

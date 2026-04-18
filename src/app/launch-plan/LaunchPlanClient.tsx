@@ -34,63 +34,70 @@ const PHASES: Phase[] = [
   {
     code: '01',
     name: 'AWAKENING',
-    tagline: 'Pre-launch — plant the flag',
+    tagline: 'Pre-launch — plant the flag + seed the referral loop',
     window: 'APR 16 – APR 22 (7 days)',
     objective:
-      'Turn every visit into a signal. The Trainer Creator is our Trojan horse — a lead-magnet capture product that hooks taste-driven, crypto-native retail into VERITY before we reveal the asset list. Week one is pure seeding of the retail funnel.',
+      'Turn every visit into a signal. The Trainer Creator is our Trojan horse — a lead-magnet capture product that hooks taste-driven, crypto-native retail into VERITY before we reveal the asset list. Every card also mints a unique invite link, turning Phase 01 into the seed layer of the referral loop.',
     activities: [
       'Trainer Creator live — every card = waitlist email + X handle captured',
-      'Creator seeding: 10 hand-picked crypto-native / RWA-curious tastemakers design their trainer and post to X over 3 coordinated days',
+      'Invite-link layer live — every trainer card generates a unique ?ref=CODE link, shared via built-in share buttons',
+      'Creator seeding: 10 hand-picked crypto-native / RWA-curious tastemakers design their trainer and post their invite link on X over 3 coordinated days',
       'Daily visual drops on X — isolated trainer sprites + "access + assurance" teasers, no asset reveals yet',
       'DM outreach to 50 mid-tier crypto / fintech / RWA-adjacent accounts with their personalized trainer card',
       'Discord soft-open for waitlisted users (behind trainer card gate)',
     ],
     deliverables: [
       'Trainer Creator (shipped ✓)',
-      '10 creator launch posts w/ unique trainers',
-      '7-day content calendar (X + IG)',
-      'Waitlist DB + segmentation (email, handle, trainer config, referrer, accreditation flag)',
+      'Invite-link referral system shipped — attribution captured at Trainer Creator signup + marketplace signup; referrer credit vests only when referred wallet completes KYC + first allocation post-launch',
+      'Unlock ladder v1 drafted — TVL / volume thresholds mapped to community unlocks',
+      '10 creator launch posts w/ unique trainers + invite links',
+      '7-day organic content calendar (X + IG) — no paid media',
+      'Waitlist DB + segmentation (email, handle, trainer config, referrer code, accreditation flag)',
     ],
     metrics: [
       '300+ trainer cards generated',
       '150+ waitlist emails confirmed',
+      'Invite link share-click ratio ≥ 0.5',
       '5+ viral shares (10k+ impressions each)',
       'Viral coefficient K ≥ 0.4',
     ],
     ownerAsk:
-      'Founders: approve creator seed list by Apr 17. Marketing: ship content cal by Apr 18. Product: tracking dashboard live Apr 19.',
+      'Founders: approve creator seed list by Apr 17. Marketing: ship organic content cal by Apr 18. Product: invite-link attribution system + tracking dashboard live Apr 19.',
     accentColor: '#39FF14',
   },
   {
     code: '02',
     name: 'IGNITION',
-    tagline: 'Reveal & convert — last push to launch day',
+    tagline: 'Reveal the unlock ladder — let creators carry it',
     window: 'APR 23 – APR 30 (8 days)',
     objective:
-      'Announce the launch. Educate what RWA actually is and why VERITY is different — curated access + institutional-grade compliance. Pre-qualify every waitlist member so May 1 is a packed launch, not a soft open.',
+      'Reveal the community unlock ladder and let the creator network carry the story. No press blitz, no hashtag campaign — every conversation is built around invite links and collective milestones. Pre-qualify every waitlist member so May 1 is a packed launch.',
     activities: [
-      'APR 23: Launch announcement — date + first-curation asset wave reveal thread on X',
-      '"What is RWA on VERITY?" — 3-part explainer (curated asset classes, compliance architecture, how to participate)',
+      'APR 23: Launch announcement + unlock ladder reveal thread (founders on X)',
+      '"What is RWA on VERITY?" — 3-part organic thread series (curated asset classes, compliance architecture, how to participate)',
       'Waitlist-exclusive perks: 24h early-access window to first-curation allocations + priority KYC processing',
       'Asset partner / issuer reveals (if applicable — TBD with founders)',
-      'Creator amplification round 2: seed list reposts + "what asset I\'d allocate to first" UGC prompts',
-      'Press outreach: The Block, CoinDesk, Decrypt, Bankless, Milk Road — target placements APR 28-30',
+      'Creator amplification round 2: seed list reposts + "who I\'m bringing with me" invite-link personal stories (replaces hashtag remix UGC)',
+      '3–5 podcast / X Space appearances sourced via creator-network warm intros — no cold pitching, no press outreach',
+      'Optional disclosed paid KOL slot — 1–2 max, surgical reach only, explicitly flagged as paid on-post',
       'T-7, T-3, T-24h email drip to waitlist',
     ],
     deliverables: [
-      'RWA + compliance explainer microsite or thread series',
-      'Creator brief + UGC prompt pack',
-      'Press kit (PDF + assets)',
+      'Unlock ladder microsite section — primary Phase 02 story anchor',
+      'RWA + compliance explainer thread series',
+      'Creator brief — framed around invite-link + unlock-ladder narrative (no hashtag prompts)',
+      'Podcast / X Space booking calendar, sourced via creator network',
       'Waitlist early-access email flow (automated)',
     ],
     metrics: [
       '2x waitlist growth (target 300+ emails total)',
       'Explainer thread: 75k+ impressions',
-      'Press placements: 1+ confirmed before launch',
+      '3+ creator-invited podcast / Space appearances',
+      'Invite link click → waitlist signup conversion rate',
       'Pre-launch survey: 30%+ "definitely investing"',
     ],
     ownerAsk:
-      'Founders: own RWA + compliance narrative (publish APR 23). Marketing: creator briefs + press outreach. Product: harden KYC + marketplace infra for traffic spike. Community: Discord events mid-week.',
+      'Founders: own unlock-ladder narrative + podcast voice (first drop APR 23). Marketing: creator briefs + podcast booking via creator network (not press). Product: harden KYC + marketplace infra; ship referral vesting logic. Community: Discord events mid-week.',
     accentColor: '#FF006E',
   },
   {
@@ -99,61 +106,67 @@ const PHASES: Phase[] = [
     tagline: 'The day the marketplace goes live',
     window: 'MAY 1 (1 day)',
     objective:
-      "Execute flawlessly. Create a launch moment on X so big that the RWA world is asking about VERITY by EOD — and first-curation allocations fill from the waitlist up.",
+      "Execute flawlessly. Create a launch moment on X so big that the RWA world is asking about VERITY by EOD — and first-curation allocations fill from the waitlist up. Every allocation also moves the public unlock tracker.",
     activities: [
-      'T-1h (11am PT): X Space countdown with founders + asset partners',
+      'T-1h (11am PT): X Space countdown with founders + creator partners',
       'T-0 (12pm PT): Marketplace live. Waitlist gets 24h head start on first-curation allocations.',
+      'Public live unlock tracker goes live — counter shows real-time progress toward the first milestone (e.g., "UNLOCK #1: Platform-wide fee cut at $1M TVL — currently $XXX,XXX")',
       'Rolling "fully allocated" announcements — build scarcity FOMO as initial tranches fill',
-      'Real-time social updates: first investments, notable allocations, TVL milestones',
+      'Real-time social updates: first investments, notable allocations, TVL + unlock milestone crossings',
       'Support + KYC surge protocol — dedicated team covering 18h window',
-      'Evening recap thread (6pm PT): "Day 1 by the numbers" (TVL, wallets, assets live)',
+      'Evening recap thread (6pm PT): "Day 1 by the numbers" — TVL, wallets, assets live, unlock ladder state',
     ],
     deliverables: [
       'Live marketplace experience on verity domain',
-      'Launch-day comms playbook (templates for full allocations, delays, KYC issues)',
+      'Public live unlock tracker (embedded + shareable)',
+      'Launch-day comms playbook (templates for full allocations, delays, KYC issues, unlock triggers)',
       'Live X Space schedule + hosts',
-      'Real-time stats dashboard (public-facing TVL + allocations ticker)',
+      'Real-time stats dashboard (public TVL + allocations + unlock ticker)',
     ],
     metrics: [
       'Target launch-day TVL: TBD with founders',
       'First-curation fill velocity (asset-by-asset)',
       'Launch-day average deposit size',
+      'Referred-wallet share of launch-day allocations',
       'Trending on X (≥ 1 regional trend)',
       '< 1% failed KYC / transactions',
     ],
     ownerAsk:
-      'Everyone on deck May 1. Founders: X Space + comms voice. Product/Eng: infra + KYC watch. Marketing: real-time content. Community: moderation + hype.',
+      'Everyone on deck May 1. Founders: X Space + comms voice, celebrate unlock triggers live. Product/Eng: infra + KYC watch + unlock tracker uptime. Marketing: real-time content. Community: moderation + hype.',
     accentColor: '#FFB800',
   },
   {
     code: '04',
     name: 'AFTERGLOW',
-    tagline: 'Post-launch — convert buzz into durable community',
+    tagline: 'Post-launch — community co-ownership of the unlock ladder',
     window: 'MAY 2 – MAY 31 (30 days)',
     objective:
-      'Turn first-time investors into repeat allocators and allocators into evangelists. 30 days to convert launch momentum into durable RWA community. Seed Curation Wave 2 while the energy is still hot.',
+      'Turn first-time investors into repeat allocators and the verified referrer cohort into co-owners of the unlock ladder. 30 days to convert launch momentum into the milestones that open Curation Wave 2, fee cuts, governance voting, and cohort rewards.',
     activities: [
-      'MAY 2 recap post: transparent numbers (TVL, wallets, assets allocated), thank-yous, what\'s next',
-      'WEEK 1 (May 2-8): Daily #FirstCuration UGC campaign — best first-investor stories + portfolio flexes featured',
-      'WEEK 2 (May 9-15): Curation Wave 2 decision — if Wave 1 filled, announce Wave 2 asset teaser',
-      'WEEK 3 (May 16-22): Founder AMA on Discord + "First Investors" holder spotlight interviews',
-      'WEEK 4 (May 23-31): June roadmap reveal — new asset classes, institutional-tier teaser',
-      'Ongoing: weekly community rituals (RWA primer nights, holder-only calls, compliance Q&As)',
+      'MAY 2 recap post: transparent numbers (TVL, wallets, assets allocated), thank-yous, unlock ladder status snapshot',
+      'WEEK 1: Daily "unlock progress" updates — when each milestone triggers, a founder-led celebration post names the contributing cohort (no hashtag, natural narrative)',
+      'WEEK 1: Full verified referrer cohort (everyone whose invite led to ≥1 allocated wallet) receives a standard printed Trainer card shipped IRL — collectible memento, not a leaderboard prize',
+      'WEEK 2: First community unlock fires (e.g., platform-wide fee reduction goes live) → "we did it" moment',
+      'WEEK 3: Founder AMA on Discord + governance voting unlock (if threshold hit) — community votes on next curation wave',
+      'WEEK 4: Curation Wave 2 teaser (unlocked) + IRL launch dinner invite for the verified referrer cohort',
+      'Prize-pool trigger (tentative, if confirmed): when the designated milestone trips (e.g., $5M TVL / Wave 2 unlock), announce the cohort-shared $10k pot + premium "expensive" Trainer card run — both split evenly across the verified referrer cohort. No top-N tiers, no leaderboard.',
+      'Ongoing: weekly "state of the unlock ladder" post + rituals (RWA primer nights, holder-only calls, compliance Q&As)',
     ],
     deliverables: [
-      'Launch recap report (internal + public versions)',
-      '30-day UGC / portfolio showcase landing page',
-      'Investor perks doc (what early allocators get long-term)',
+      'Launch recap report (public numbers + unlock ladder state)',
+      'Live unlock ladder landing page (replaces the legacy UGC feed)',
+      'Investor perks doc — what the ladder unlocks as more milestones hit',
       'June roadmap preview (teaser graphic + short thread)',
     ],
     metrics: [
       'D7 retention of active investors (Discord, reopened emails)',
       'Repeat-allocation rate (Wave 2 conversion from Wave 1)',
-      'Organic UGC share volume (posts / day using #FirstCuration)',
+      'Community milestones hit in first 30 days',
+      '% of post-launch TVL from referred wallets',
       'Sentiment on X (positive vs negative mention ratio)',
     ],
     ownerAsk:
-      'Marketing: own UGC + recap. Community: rituals + AMA. Founders: roadmap narrative + compliance voice. Product: measure everything.',
+      'Marketing: own unlock celebrations + recap (no hashtag curation). Community: rituals + AMA + cohort-card fulfillment logistics. Founders: roadmap + celebration voice. Product: measure everything, ship unlock ladder landing page.',
     accentColor: '#39FF14',
   },
 ];
@@ -237,9 +250,9 @@ export default function LaunchPlanClient() {
           </h1>
 
           <p className="text-[#888] text-base sm:text-xl max-w-2xl leading-relaxed mb-10">
-            The VERITY Marketplace goes live on May 1 — the first curated wave of tokenized real-world assets, built on access + assurance.
+            The VERITY Marketplace goes live on May 1 — the first curated wave of tokenized real-world assets, built on access + assurance, unlocked together.
             <br />
-            This is the roadmap from today to launch day — and the 30 days after.
+            This is the organic, creator-led roadmap from today to launch day — and the 30 days after.
           </p>
 
           {/* Countdown / status bar */}
@@ -278,11 +291,18 @@ export default function LaunchPlanClient() {
           </p>
           <p>
             The Trainer Creator is the <span className="text-[#FF006E]">Trojan horse</span>. It looks
-            like a toy. It&apos;s actually a lead-magnet capture product — a signup funnel that filters for the exact
-            retail audience we want: crypto-native, taste-driven, ready to own real things on-chain.
+            like a toy. It&apos;s a lead-magnet capture product that filters for the exact retail audience
+            we want — crypto-native, taste-driven, ready to own real things on-chain — and every card
+            mints a unique invite link, making it the origin point of the referral loop.
+          </p>
+          <p>
+            We&apos;re not running a hashtag campaign or a press blitz. Every user brings their tribe via
+            invite link — and every trade, allocation, and new wallet moves the community toward the next
+            unlock. <span className="text-[#39FF14]">When a milestone hits, the cohort that got us there splits the spoils.</span> No
+            personal point systems to farm. Only collective wins.
           </p>
           <p className="border-l-2 border-[#39FF14] pl-4 text-white text-lg sm:text-xl">
-            We&apos;re not launching another RWA marketplace. We&apos;re launching a curated layer for RWA investing — where taste meets trust.
+            We&apos;re launching a curated RWA marketplace that unlocks itself — together.
           </p>
         </div>
       </Section>
@@ -301,6 +321,7 @@ export default function LaunchPlanClient() {
             items={[
               'Trainer cards created',
               'Waitlist signups',
+              'Invite link share-click ratio',
               'Viral K-factor',
               'Creator partner reach',
             ]}
@@ -313,6 +334,7 @@ export default function LaunchPlanClient() {
               'Wallets onboarded',
               'First-curation fill rate',
               'Avg deposit size',
+              'Referred-wallet allocation %',
               'KYC / tx success rate',
               'X mentions / hour',
             ]}
@@ -323,7 +345,8 @@ export default function LaunchPlanClient() {
             items={[
               'D7 retention',
               'Repeat-allocation rate',
-              'UGC posts / day',
+              'Community milestones hit',
+              '% TVL from referred wallets',
               'Sentiment ratio',
             ]}
           />
@@ -337,21 +360,22 @@ export default function LaunchPlanClient() {
             role="FOUNDERS"
             color="#39FF14"
             asks={[
-              'Own the VERITY narrative — access + assurance, compliance as feature — you are the voice on X',
+              'Own the VERITY narrative — access + assurance + unlock ladder — you are the voice on X',
               'Approve creator seed list (Phase 01)',
               'Host launch-day X Space',
-              'Day +10 AMA',
+              'Celebrate unlock milestone triggers live as they fire',
+              'Day +10 AMA + governance unlock moderation',
             ]}
           />
           <TeamCard
             role="MARKETING"
             color="#FF006E"
             asks={[
-              'Own content calendar across all 4 phases',
-              'Creator seed list + outreach briefs (crypto-native / RWA-curious)',
-              'Press outreach + placements (crypto-native pubs)',
+              'Organic 4-phase content calendar (no paid media, no press)',
+              'Creator seed list + briefs framed around invite-link + unlock ladder',
+              'Podcast / X Space booking via creator-network warm intros',
               'Launch-day real-time content',
-              'Post-launch recap + UGC campaign',
+              'Post-launch unlock celebrations + recap',
             ]}
           />
           <TeamCard
@@ -359,9 +383,9 @@ export default function LaunchPlanClient() {
             color="#FFB800"
             asks={[
               'Trainer Creator → funnel dashboard (Phase 01)',
+              'Invite link + referral attribution system (trainer + marketplace signup capture, vesting logic)',
               'Harden KYC + marketplace infra for Phase 02 + 03 traffic',
-              'Launch-day marketplace UX + QA',
-              'Real-time TVL / allocations dashboard',
+              'Public live unlock tracker + real-time TVL dashboard',
             ]}
           />
           <TeamCard
@@ -369,9 +393,9 @@ export default function LaunchPlanClient() {
             color="#39FF14"
             asks={[
               'Discord soft-open + programming',
-              'Weekly rituals through launch',
+              'Weekly unlock-progress rituals through launch',
               'Moderation on launch day',
-              '#FirstCuration UGC curation',
+              'Verified referrer cohort curation + card fulfillment logistics',
             ]}
           />
         </div>
@@ -382,7 +406,7 @@ export default function LaunchPlanClient() {
         <div className="space-y-4 max-w-4xl">
           <OpenItem
             label="FIRST CURATION"
-            value="Which assets anchor the launch wave (real estate, treasuries, private credit, commodities)? Drives narrative, press, and partner story."
+            value="Which assets anchor the launch wave (real estate, treasuries, private credit, commodities)? Drives narrative and partner story."
           />
           <OpenItem
             label="ENTRY MINIMUMS"
@@ -395,6 +419,22 @@ export default function LaunchPlanClient() {
           <OpenItem
             label="CREATOR SEED LIST"
             value="Which 10 crypto-native / RWA-curious tastemakers get the first coordinated push?"
+          />
+          <OpenItem
+            label="UNLOCK LADDER THRESHOLDS"
+            value="Specific TVL / volume numbers for each milestone — fee cut tier, real estate unlock, private credit unlock, governance activation, prize-pool trigger."
+          />
+          <OpenItem
+            label="PAID KOL BUDGET"
+            value="Max spend envelope + # of disclosed slots for Phase 02 (0–2 suggested). Pure organic is the default — KOLs are a surgical lever, not the center of gravity."
+          />
+          <OpenItem
+            label="PHYSICAL TRAINER PRINTS"
+            value="Production partner, cost per unit, which milestones trigger the standard cohort-wide print run vs. the premium 'expensive' run."
+          />
+          <OpenItem
+            label="PRIZE POOL (~$10K + PREMIUM CARDS)"
+            value="Tentative. Cohort-shared pot unlocked at a specific community milestone, split evenly across verified referrers whose invites produced allocating wallets. Confirm: pool size, trigger milestone (suggested: Wave 2 unlock / $5M TVL), denomination (cash / USDC / platform credit / allocation credit), premium-card specs."
           />
           <OpenItem
             label="INSTITUTIONAL TRACK"
