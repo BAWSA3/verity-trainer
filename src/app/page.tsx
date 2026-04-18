@@ -19,27 +19,6 @@ export default function Home() {
       className="min-h-screen bg-[#fffdf3] text-[#333] overflow-x-hidden"
       style={{ fontFamily: 'var(--font-sora), sans-serif' }}
     >
-      {/* =============== NAV BAR =============== */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-[92vw]">
-        <div
-          className="flex items-center gap-8 sm:gap-16 px-6 sm:px-14 py-4 rounded-[48px] border border-white/20 backdrop-blur-md"
-          style={{
-            background:
-              'linear-gradient(-76.38deg, rgba(134,165,25,0.3) 8%, rgba(110,171,191,0.3) 57%, rgba(228,222,188,0.3) 110%)',
-          }}
-        >
-          <Link href="/" aria-label="VERITY home" className="shrink-0">
-            <img src={`${ASSETS}/imgframe4.svg`} alt="" width={32} height={22} />
-          </Link>
-          <div className="flex items-center gap-4 sm:gap-8 text-white text-sm sm:text-[18px]" style={{ fontFamily: 'var(--font-sora)' }}>
-            <Link href="/" className="font-bold">Home</Link>
-            <Link href="/create" className="font-light hover:font-bold transition-all">Explore</Link>
-            <Link href="/create" className="font-light hover:font-bold transition-all">Card</Link>
-            <Link href="/create" className="font-light hover:font-bold transition-all">Game</Link>
-          </div>
-        </div>
-      </nav>
-
       {/* =============== HERO =============== */}
       <section className="relative h-[100vh] min-h-[720px] max-h-[973px] overflow-hidden">
         {/* Landscape background */}
