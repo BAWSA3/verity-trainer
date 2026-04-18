@@ -16,6 +16,7 @@ export function hashConfig(config: TrainerConfig): number {
     config.gender,
     config.body,
     config.hair,
+    config.hairColor,
     config.top,
     config.bottom,
     config.accessory,
@@ -69,6 +70,7 @@ export function decodeConfig(encoded: string): TrainerConfig {
     bottom: BOTTOM_OPTIONS[b]?.id ?? BOTTOM_OPTIONS[0].id,
     accessory: ACCESSORY_OPTIONS[a]?.id ?? ACCESSORY_OPTIONS[0].id,
     // New categories default to sensible values; shareable URLs don't encode these
+    hairColor: 'black',
     facialHair: 'none',
     face: 'none',
     neck: 'none',

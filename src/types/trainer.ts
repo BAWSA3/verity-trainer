@@ -5,6 +5,7 @@ export type Category =
   | 'body'
   | 'facialHair'
   | 'hair'
+  | 'hairColor'
   | 'face'
   | 'top'
   | 'bottom'
@@ -22,7 +23,8 @@ export interface TrainerConfig {
   gender: Gender;
   body: string;       // skin tone id (porcelain, light, ..., ebony)
   facialHair: string; // 'none' | shadow | beard | trimmed | goatee | chevron | handlebar
-  hair: string;
+  hair: string;       // style id
+  hairColor: string;  // black | brown | blonde | red | auburn | platinum | blue | pink | green | purple
   face: string;       // 'none' | sunnies | nerd | round-frame | secretary | mask
   top: string;
   bottom: string;

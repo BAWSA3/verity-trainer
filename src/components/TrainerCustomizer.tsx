@@ -173,6 +173,8 @@ export default function TrainerCustomizer() {
                   onSelect={(id) => handleSelect(cat.key, id)}
                   gender={config.gender}
                   currentSkin={config.body}
+                  currentHairStyle={config.hair}
+                  currentHairColor={config.hairColor}
                 />
               ))}
           </div>

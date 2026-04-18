@@ -64,6 +64,24 @@ const BODY_HEAD_SOURCES = {
   },
 };
 
+// Hair color palettes — LPC hair sprites ship in red/orange tones.
+// We palette-swap each hair style to 10 targets so users can pick style + color.
+// Source palette extracted from hair/buzz.png (darkest → lightest):
+const HAIR_BASE_PALETTE = ['#260D14', '#6A1108', '#A42600', '#BF4000', '#E55600', '#FF8A00'];
+
+const HAIR_COLORS = {
+  black:    ['#000000', '#0E0E0E', '#1F1F1F', '#333333', '#555555', '#7A7A7A'],
+  brown:    ['#1A0D05', '#2E1810', '#4A2C18', '#6B4020', '#8B5E2F', '#A87A45'],
+  blonde:   ['#4A3820', '#6B5030', '#8B6F40', '#B59555', '#DCB870', '#F0D78E'],
+  red:      ['#260D14', '#6A1108', '#A42600', '#BF4000', '#E55600', '#FF8A00'], // original
+  auburn:   ['#1F0A0A', '#3A1010', '#5F1F1F', '#8B3030', '#B84D4D', '#D86B6B'],
+  platinum: ['#3A3848', '#555465', '#707085', '#909AA8', '#BDC8D5', '#EDEFF5'],
+  blue:     ['#0A1030', '#152048', '#254068', '#3A6595', '#5590C5', '#78B5E0'],
+  pink:     ['#3A0D24', '#580F40', '#7A1860', '#9C2880', '#C04598', '#E575B8'],
+  green:    ['#0A1F0A', '#1A3A1A', '#2A5A2A', '#3F7F3F', '#5FA55F', '#85CC85'],
+  purple:   ['#1A0A24', '#2E1040', '#502070', '#805099', '#AA80C0', '#D5B8E0'],
+};
+
 // Hair — universal (LPC adult folder works for both genders)
 const HAIR = [
   { id: 'buzz',     path: 'hair/buzzcut/adult/walk.png' },
@@ -297,17 +315,23 @@ async function main() {
     }
   }
 
-  // --- Hair (universal) ---
+  // --- Hair (universal, palette-swapped per color) ---
+  // Output: hair/{color}/{style}.png — 13 styles × 10 colors = 130 sprites
   console.log('\nHAIR');
-  ensureDir(path.join(root, 'hair'));
+  for (const color of Object.keys(HAIR_COLORS)) {
+    ensureDir(path.join(root, 'hair', color));
+  }
   for (const h of HAIR) {
     try {
       const buf = await download(`${BASE_URL}/${h.path}`);
       const frame = await extractFrontFrame(buf);
-      const enhanced = await enhanceForOutput(frame);
-      fs.writeFileSync(path.join(root, 'hair', `${h.id}.png`), enhanced);
-      successes.push(`hair/${h.id}.png`);
-      console.log(`  ✓ ${h.id}`);
+      for (const [color, palette] of Object.entries(HAIR_COLORS)) {
+        const swapped = await paletteSwap(frame, HAIR_BASE_PALETTE, palette);
+        const enhanced = await enhanceForOutput(swapped);
+        fs.writeFileSync(path.join(root, 'hair', color, `${h.id}.png`), enhanced);
+        successes.push(`hair/${color}/${h.id}.png`);
+      }
+      console.log(`  ✓ ${h.id} (${Object.keys(HAIR_COLORS).length} colors)`);
     } catch (err) {
       console.error(`  ✗ ${h.id}: ${err.message}`);
       failures.push(`hair/${h.id}: ${err.message}`);

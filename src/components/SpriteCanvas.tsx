@@ -61,7 +61,7 @@ export default function SpriteCanvas({ config, size = 256 }: SpriteCanvasProps) 
       config.shoes && config.shoes !== 'none' ? `/sprites/shoes/${config.shoes}.png` : null,
       `/sprites/tops/${g}/${config.top}.png`,
       config.neck && config.neck !== 'none' ? `/sprites/neck/${g}/${config.neck}.png` : null,
-      `/sprites/hair/${config.hair}.png`,
+      `/sprites/hair/${config.hairColor ?? 'black'}/${config.hair}.png`,
       config.face && config.face !== 'none' ? `/sprites/face/${config.face}.png` : null,
       config.accessory !== 'none' ? `/sprites/accessories/${config.accessory}.png` : null,
     ].filter(Boolean) as string[];

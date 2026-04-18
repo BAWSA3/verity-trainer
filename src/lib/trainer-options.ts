@@ -755,6 +755,19 @@ const PNG_NECK_OPTIONS: TrainerOption[] = [
   { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
 ];
 
+const PNG_HAIR_COLOR_OPTIONS: TrainerOption[] = [
+  { id: 'black',    label: 'BLACK',    pixels: EMPTY_PIXELS },
+  { id: 'brown',    label: 'BROWN',    pixels: EMPTY_PIXELS },
+  { id: 'blonde',   label: 'BLONDE',   pixels: EMPTY_PIXELS },
+  { id: 'red',      label: 'RED',      pixels: EMPTY_PIXELS },
+  { id: 'auburn',   label: 'AUBURN',   pixels: EMPTY_PIXELS },
+  { id: 'platinum', label: 'PLATINUM', pixels: EMPTY_PIXELS },
+  { id: 'blue',     label: 'BLUE',     pixels: EMPTY_PIXELS },
+  { id: 'pink',     label: 'PINK',     pixels: EMPTY_PIXELS },
+  { id: 'green',    label: 'GREEN',    pixels: EMPTY_PIXELS },
+  { id: 'purple',   label: 'PURPLE',   pixels: EMPTY_PIXELS },
+];
+
 const PNG_FACIAL_HAIR_OPTIONS: TrainerOption[] = [
   { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
   { id: 'shadow',    label: '5-O\'CLOCK',pixels: EMPTY_PIXELS },
@@ -778,20 +791,22 @@ const shoesOpts = PNG_SHOES_OPTIONS;
 const faceOpts = PNG_FACE_OPTIONS;
 const neckOpts = PNG_NECK_OPTIONS;
 const facialHairOpts = PNG_FACIAL_HAIR_OPTIONS;
+const hairColorOpts = PNG_HAIR_COLOR_OPTIONS;
 
 // Order matches natural head-to-toe + layering sensibility.
 // `facialHair` is filtered out for female users in the customizer UI.
 export const CATEGORIES = [
-  { key: 'gender' as const,     label: 'GENDER',   options: genderOpts },
-  { key: 'body' as const,       label: 'SKIN',     options: bodyOpts },
-  { key: 'hair' as const,       label: 'HAIR',     options: hairOpts },
-  { key: 'facialHair' as const, label: 'FACE HAIR',options: facialHairOpts },
-  { key: 'face' as const,       label: 'FACE',     options: faceOpts },
-  { key: 'accessory' as const,  label: 'HAT',      options: accOpts },
-  { key: 'neck' as const,       label: 'NECK',     options: neckOpts },
-  { key: 'top' as const,        label: 'TOP',      options: topOpts },
-  { key: 'bottom' as const,     label: 'BOTTOM',   options: bottomOpts },
-  { key: 'shoes' as const,      label: 'SHOES',    options: shoesOpts },
+  { key: 'gender' as const,     label: 'GENDER',     options: genderOpts },
+  { key: 'body' as const,       label: 'SKIN',       options: bodyOpts },
+  { key: 'hair' as const,       label: 'HAIR',       options: hairOpts },
+  { key: 'hairColor' as const,  label: 'HAIR COLOR', options: hairColorOpts },
+  { key: 'facialHair' as const, label: 'FACE HAIR',  options: facialHairOpts },
+  { key: 'face' as const,       label: 'FACE',       options: faceOpts },
+  { key: 'accessory' as const,  label: 'HAT',        options: accOpts },
+  { key: 'neck' as const,       label: 'NECK',       options: neckOpts },
+  { key: 'top' as const,        label: 'TOP',        options: topOpts },
+  { key: 'bottom' as const,     label: 'BOTTOM',     options: bottomOpts },
+  { key: 'shoes' as const,      label: 'SHOES',      options: shoesOpts },
 ];
 
 export const DEFAULT_CONFIG = {
@@ -799,6 +814,7 @@ export const DEFAULT_CONFIG = {
   body: 'medium',
   facialHair: 'none',
   hair: hairOpts[0].id,
+  hairColor: 'black',
   face: 'none',
   top: topOpts[0].id,
   bottom: bottomOpts[0].id,

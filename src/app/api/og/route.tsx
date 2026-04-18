@@ -24,6 +24,7 @@ async function compositeTrainer(
   gender: 'male' | 'female',
   body: string,
   hair: string,
+  hairColor: string,
   top: string,
   bottom: string,
   accessory: string,
@@ -42,7 +43,7 @@ async function compositeTrainer(
     ...(shoes && shoes !== 'none' ? [{ rel: `shoes/${shoes}.png` }] : []),
     { rel: `tops/${gender}/${top}.png` },
     ...(neck && neck !== 'none' ? [{ rel: `neck/${gender}/${neck}.png` }] : []),
-    { rel: `hair/${hair}.png` },
+    { rel: `hair/${hairColor}/${hair}.png` },
     ...(face && face !== 'none' ? [{ rel: `face/${face}.png` }] : []),
     ...(accessory !== 'none' ? [{ rel: `accessories/${accessory}.png` }] : []),
   ];
@@ -113,6 +114,7 @@ export async function GET(req: NextRequest) {
   const gender: 'male' | 'female' = genderParam === 'female' ? 'female' : 'male';
   const body = searchParams.get('b') || 'medium';
   const hair = searchParams.get('h') || 'buzz';
+  const hairColor = searchParams.get('hc') || 'black';
   const top = searchParams.get('t') || 'hoodie';
   const bottom = searchParams.get('bo') || 'pants';
   const accessory = searchParams.get('a') || 'none';
@@ -125,6 +127,7 @@ export async function GET(req: NextRequest) {
     gender,
     body,
     hair,
+    hairColor,
     top,
     bottom,
     accessory,

@@ -7,12 +7,14 @@ import { playHover } from '@/lib/sounds';
 
 interface CategorySelectorProps {
   label: string;
-  categoryKey: string; // 'gender' | 'body' | 'hair' | 'top' | 'bottom' | 'accessory'
+  categoryKey: string;
   options: TrainerOption[];
   selected: string;
   onSelect: (id: string) => void;
-  gender: Gender;           // current gender so thumbnails reflect user's picks
-  currentSkin: string;      // current skin tone so thumbnails use it for clothes/hair/etc
+  gender: Gender;              // current gender so thumbnails reflect user's picks
+  currentSkin: string;         // current skin tone so thumbnails use it for clothes/hair/etc
+  currentHairStyle: string;    // current hair style for HAIR COLOR thumbnails
+  currentHairColor: string;    // current hair color for HAIR style thumbnails
 }
 
 function MiniSpritePixel({ pixels, selected }: { pixels: string[][]; selected: boolean }) {
@@ -57,6 +59,8 @@ function thumbnailSrc(
   optionId: string,
   gender: Gender,
   currentSkin: string,
+  currentHairStyle: string,
+  currentHairColor: string,
 ): string {
   switch (categoryKey) {
     case 'gender':
@@ -68,7 +72,11 @@ function thumbnailSrc(
     case 'top':
       return `/sprites/tops/${gender}/${optionId}.png`;
     case 'hair':
-      return `/sprites/hair/${optionId}.png`;
+      // Style thumbnails show the current hair color
+      return `/sprites/hair/${currentHairColor}/${optionId}.png`;
+    case 'hairColor':
+      // Color thumbnails show the current hair style
+      return `/sprites/hair/${optionId}/${currentHairStyle}.png`;
     case 'bottom':
       return `/sprites/bottoms/${optionId}.png`;
     case 'accessory':
@@ -92,12 +100,16 @@ function MiniSpritePNG({
   selected,
   gender,
   currentSkin,
+  currentHairStyle,
+  currentHairColor,
 }: {
   optionId: string;
   categoryKey: string;
   selected: boolean;
   gender: Gender;
   currentSkin: string;
+  currentHairStyle: string;
+  currentHairColor: string;
 }) {
   if (optionId === 'none') {
     return (
@@ -114,7 +126,7 @@ function MiniSpritePNG({
     );
   }
 
-  const src = thumbnailSrc(categoryKey, optionId, gender, currentSkin);
+  const src = thumbnailSrc(categoryKey, optionId, gender, currentSkin, currentHairStyle, currentHairColor);
 
   return (
     <img
@@ -140,6 +152,8 @@ export default function CategorySelector({
   onSelect,
   gender,
   currentSkin,
+  currentHairStyle,
+  currentHairColor,
 }: CategorySelectorProps) {
   return (
     <div className="mb-4">
@@ -163,6 +177,8 @@ export default function CategorySelector({
                 selected={selected === option.id}
                 gender={gender}
                 currentSkin={currentSkin}
+                currentHairStyle={currentHairStyle}
+                currentHairColor={currentHairColor}
               />
             ) : (
               <MiniSpritePixel pixels={option.pixels} selected={selected === option.id} />

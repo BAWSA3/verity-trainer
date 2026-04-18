@@ -41,6 +41,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     g: config.gender ?? 'male',
     b: config.body,
     h: config.hair,
+    hc: config.hairColor ?? 'black',
     t: config.top,
     bo: config.bottom,
     a: config.accessory,
