@@ -8,6 +8,7 @@ import { playSelect, playGenerate } from '@/lib/sounds';
 import SpriteCanvas from './SpriteCanvas';
 import CategorySelector from './CategorySelector';
 import SignupGate from './SignupGate';
+import PokeBackground from './PokeBackground';
 
 export default function TrainerCustomizer() {
   const router = useRouter();
@@ -126,9 +127,12 @@ export default function TrainerCustomizer() {
 
   // Main Customizer
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-white relative">
+      {/* Ambient pokémon-inspired background */}
+      <PokeBackground />
+
       {/* Header */}
-      <div className="text-center pt-6 sm:pt-8 pb-3 sm:pb-4 px-4">
+      <div className="relative z-10 text-center pt-6 sm:pt-8 pb-3 sm:pb-4 px-4">
         <h1 className="text-[#39FF14] text-base sm:text-lg tracking-widest mb-1">
           VERITY
         </h1>
@@ -137,7 +141,7 @@ export default function TrainerCustomizer() {
         </p>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 pb-12 lg:grid lg:grid-cols-[auto_1fr] lg:gap-8 lg:items-start">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 pb-12 lg:grid lg:grid-cols-[auto_1fr] lg:gap-8 lg:items-start">
         {/* Character Preview — sticky so it stays visible while scrolling traits */}
         <div
           className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm
