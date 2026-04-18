@@ -161,18 +161,20 @@ export default function TrainerCustomizer() {
             <div className="text-[#39FF14] text-[8px] sm:text-[9px] tracking-wider mb-3 sm:mb-4 opacity-60">
               {'// SELECT YOUR GEAR'}
             </div>
-            {CATEGORIES.map(cat => (
-              <CategorySelector
-                key={cat.key}
-                label={cat.label}
-                categoryKey={cat.key}
-                options={cat.options}
-                selected={config[cat.key]}
-                onSelect={(id) => handleSelect(cat.key, id)}
-                gender={config.gender}
-                currentSkin={config.body}
-              />
-            ))}
+            {CATEGORIES
+              .filter(cat => !(cat.key === 'facialHair' && config.gender === 'female'))
+              .map(cat => (
+                <CategorySelector
+                  key={cat.key}
+                  label={cat.label}
+                  categoryKey={cat.key}
+                  options={cat.options}
+                  selected={config[cat.key]}
+                  onSelect={(id) => handleSelect(cat.key, id)}
+                  gender={config.gender}
+                  currentSkin={config.body}
+                />
+              ))}
           </div>
 
           {/* Generate Button */}

@@ -37,19 +37,19 @@ const PHASES: Phase[] = [
     tagline: 'Pre-launch — plant the flag',
     window: 'APR 16 – APR 22 (7 days)',
     objective:
-      'Turn every visit into a signal. The Trainer Creator is our Trojan horse — it hooks taste-aware creators + their audiences into VERITY before anyone knows what the drop is. Week one is pure seeding.',
+      'Turn every visit into a signal. The Trainer Creator is our Trojan horse — a lead-magnet capture product that hooks taste-driven, crypto-native retail into VERITY before we reveal the asset list. Week one is pure seeding of the retail funnel.',
     activities: [
       'Trainer Creator live — every card = waitlist email + X handle captured',
-      'Creator seeding: 10 hand-picked tastemakers design their trainer and post to X over 3 coordinated days',
-      'Daily visual drops on X — isolated trainer sprites, no context, build curiosity',
-      'DM outreach to 50 mid-tier streetwear-adjacent accounts with their personalized trainer card',
+      'Creator seeding: 10 hand-picked crypto-native / RWA-curious tastemakers design their trainer and post to X over 3 coordinated days',
+      'Daily visual drops on X — isolated trainer sprites + "access + assurance" teasers, no asset reveals yet',
+      'DM outreach to 50 mid-tier crypto / fintech / RWA-adjacent accounts with their personalized trainer card',
       'Discord soft-open for waitlisted users (behind trainer card gate)',
     ],
     deliverables: [
       'Trainer Creator (shipped ✓)',
       '10 creator launch posts w/ unique trainers',
       '7-day content calendar (X + IG)',
-      'Waitlist DB + segmentation (email, handle, trainer config, referrer)',
+      'Waitlist DB + segmentation (email, handle, trainer config, referrer, accreditation flag)',
     ],
     metrics: [
       '300+ trainer cards generated',
@@ -64,21 +64,21 @@ const PHASES: Phase[] = [
   {
     code: '02',
     name: 'IGNITION',
-    tagline: 'Reveal & convert — last push to drop day',
+    tagline: 'Reveal & convert — last push to launch day',
     window: 'APR 23 – APR 30 (8 days)',
     objective:
-      'Announce the drop. Educate what a Gacha is and why VERITY is different. Pre-qualify every waitlist member so May 1 is a sellout, not a gamble.',
+      'Announce the launch. Educate what RWA actually is and why VERITY is different — curated access + institutional-grade compliance. Pre-qualify every waitlist member so May 1 is a packed launch, not a soft open.',
     activities: [
-      'APR 23: Drop announcement — date + Gacha mechanic reveal thread on X',
-      '"What is a VERITY Gacha?" — 3-part explainer (mechanic, rarity tiers, utility)',
-      'Waitlist-exclusive perks: early-access window (24h head start) + bonus free pull for first 100',
-      'Partner brand / collab reveals (if applicable — TBD with founders)',
-      'Creator amplification round 2: seed list reposts + UGC remix prompts',
-      'Press outreach: Hypebeast, Highsnobiety, Complex — target placements APR 28-30',
+      'APR 23: Launch announcement — date + first-curation asset wave reveal thread on X',
+      '"What is RWA on VERITY?" — 3-part explainer (curated asset classes, compliance architecture, how to participate)',
+      'Waitlist-exclusive perks: 24h early-access window to first-curation allocations + priority KYC processing',
+      'Asset partner / issuer reveals (if applicable — TBD with founders)',
+      'Creator amplification round 2: seed list reposts + "what asset I\'d allocate to first" UGC prompts',
+      'Press outreach: The Block, CoinDesk, Decrypt, Bankless, Milk Road — target placements APR 28-30',
       'T-7, T-3, T-24h email drip to waitlist',
     ],
     deliverables: [
-      'Gacha mechanic explainer microsite or thread',
+      'RWA + compliance explainer microsite or thread series',
       'Creator brief + UGC prompt pack',
       'Press kit (PDF + assets)',
       'Waitlist early-access email flow (automated)',
@@ -86,74 +86,74 @@ const PHASES: Phase[] = [
     metrics: [
       '2x waitlist growth (target 300+ emails total)',
       'Explainer thread: 75k+ impressions',
-      'Press placements: 1+ confirmed before drop',
-      'Pre-drop survey: 30%+ "definitely buying"',
+      'Press placements: 1+ confirmed before launch',
+      'Pre-launch survey: 30%+ "definitely investing"',
     ],
     ownerAsk:
-      'Founders: own Gacha explainer narrative (publish APR 23). Marketing: creator briefs + press outreach. Product: harden infra for traffic spike. Community: Discord events mid-week.',
+      'Founders: own RWA + compliance narrative (publish APR 23). Marketing: creator briefs + press outreach. Product: harden KYC + marketplace infra for traffic spike. Community: Discord events mid-week.',
     accentColor: '#FF006E',
   },
   {
     code: '03',
-    name: 'DROP',
-    tagline: 'The day everything goes live',
+    name: 'LAUNCH',
+    tagline: 'The day the marketplace goes live',
     window: 'MAY 1 (1 day)',
     objective:
-      "Execute flawlessly. Create a moment on X so big that people who didn't know VERITY existed yesterday are asking about it tonight.",
+      "Execute flawlessly. Create a launch moment on X so big that the RWA world is asking about VERITY by EOD — and first-curation allocations fill from the waitlist up.",
     activities: [
-      'T-1h (11am PT): X Space countdown with founders + creator partners',
-      'T-0 (12pm PT): Drop live. Waitlist gets 24h head start.',
-      'Rolling "sold out" announcements — build scarcity FOMO as tiers deplete',
-      'Real-time social updates: top pulls, rare hits, collector callouts',
-      'Support ticket surge protocol — dedicated team covering 18h window',
-      'Evening recap thread (6pm PT): "Day 1 by the numbers"',
+      'T-1h (11am PT): X Space countdown with founders + asset partners',
+      'T-0 (12pm PT): Marketplace live. Waitlist gets 24h head start on first-curation allocations.',
+      'Rolling "fully allocated" announcements — build scarcity FOMO as initial tranches fill',
+      'Real-time social updates: first investments, notable allocations, TVL milestones',
+      'Support + KYC surge protocol — dedicated team covering 18h window',
+      'Evening recap thread (6pm PT): "Day 1 by the numbers" (TVL, wallets, assets live)',
     ],
     deliverables: [
-      'Live drop experience on verity.gg',
-      'Drop-day comms playbook (templates for sellouts, delays, issues)',
+      'Live marketplace experience on verity domain',
+      'Launch-day comms playbook (templates for full allocations, delays, KYC issues)',
       'Live X Space schedule + hosts',
-      'Real-time stats dashboard (public-facing)',
+      'Real-time stats dashboard (public-facing TVL + allocations ticker)',
     ],
     metrics: [
-      'Target units sold: TBD with founders',
-      'Sellout velocity (tier-by-tier)',
-      'Drop-day AOV',
+      'Target launch-day TVL: TBD with founders',
+      'First-curation fill velocity (asset-by-asset)',
+      'Launch-day average deposit size',
       'Trending on X (≥ 1 regional trend)',
-      '< 1% failed transactions',
+      '< 1% failed KYC / transactions',
     ],
     ownerAsk:
-      'Everyone on deck May 1. Founders: X Space + comms voice. Product/Eng: infra watch. Marketing: real-time content. Community: moderation + hype.',
+      'Everyone on deck May 1. Founders: X Space + comms voice. Product/Eng: infra + KYC watch. Marketing: real-time content. Community: moderation + hype.',
     accentColor: '#FFB800',
   },
   {
     code: '04',
     name: 'AFTERGLOW',
-    tagline: 'Post-launch — convert buzz into culture',
+    tagline: 'Post-launch — convert buzz into durable community',
     window: 'MAY 2 – MAY 31 (30 days)',
     objective:
-      'Turn one-time buyers into collectors and collectors into evangelists. 30 days to convert momentum into durable community. Seed the next drop while the energy is still hot.',
+      'Turn first-time investors into repeat allocators and allocators into evangelists. 30 days to convert launch momentum into durable RWA community. Seed Curation Wave 2 while the energy is still hot.',
     activities: [
-      'MAY 2 recap post: transparent numbers, thank-yous, what\'s next',
-      'WEEK 1 (May 2-8): Daily #VerityPull repost campaign — best collector flexes featured',
-      'WEEK 2 (May 9-15): Restock decision — if sold out, announce Drop 2 teaser',
-      'WEEK 3 (May 16-22): Founder AMA on Discord + "Gacha Spotlight" holder interviews',
-      'WEEK 4 (May 23-31): June roadmap reveal — new series, trainer utility expansion',
-      'Ongoing: weekly community rituals (Gacha trivia, holder raffles)',
+      'MAY 2 recap post: transparent numbers (TVL, wallets, assets allocated), thank-yous, what\'s next',
+      'WEEK 1 (May 2-8): Daily #FirstCuration UGC campaign — best first-investor stories + portfolio flexes featured',
+      'WEEK 2 (May 9-15): Curation Wave 2 decision — if Wave 1 filled, announce Wave 2 asset teaser',
+      'WEEK 3 (May 16-22): Founder AMA on Discord + "First Investors" holder spotlight interviews',
+      'WEEK 4 (May 23-31): June roadmap reveal — new asset classes, institutional-tier teaser',
+      'Ongoing: weekly community rituals (RWA primer nights, holder-only calls, compliance Q&As)',
     ],
     deliverables: [
       'Launch recap report (internal + public versions)',
-      '30-day UGC feed / landing page',
-      'Holder perks doc (what collectors get long-term)',
+      '30-day UGC / portfolio showcase landing page',
+      'Investor perks doc (what early allocators get long-term)',
       'June roadmap preview (teaser graphic + short thread)',
     ],
     metrics: [
-      'D7 retention of active buyers (Discord, reopened emails)',
-      'Repeat purchase rate (if restock happens)',
-      'Organic UGC share volume (posts / day using #VerityPull)',
+      'D7 retention of active investors (Discord, reopened emails)',
+      'Repeat-allocation rate (Wave 2 conversion from Wave 1)',
+      'Organic UGC share volume (posts / day using #FirstCuration)',
       'Sentiment on X (positive vs negative mention ratio)',
     ],
     ownerAsk:
-      'Marketing: own UGC + recap. Community: rituals + AMA. Founders: roadmap narrative. Product: measure everything.',
+      'Marketing: own UGC + recap. Community: rituals + AMA. Founders: roadmap narrative + compliance voice. Product: measure everything.',
     accentColor: '#39FF14',
   },
 ];
@@ -233,25 +233,25 @@ export default function LaunchPlanClient() {
           <h1 className="text-[#39FF14] text-5xl sm:text-7xl md:text-8xl font-bold tracking-tight mb-6 leading-none">
             MAY 2026
             <br />
-            <span className="text-white">DROP</span>
+            <span className="text-white">LAUNCH</span>
           </h1>
 
           <p className="text-[#888] text-base sm:text-xl max-w-2xl leading-relaxed mb-10">
-            The full VERITY Marketplace goes live with Gachas on May 1.
+            The VERITY Marketplace goes live on May 1 — the first curated wave of tokenized real-world assets, built on access + assurance.
             <br />
-            This is the roadmap from today to drop day — and the 30 days after.
+            This is the roadmap from today to launch day — and the 30 days after.
           </p>
 
           {/* Countdown / status bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 border-t border-b border-[#222] py-6 max-w-3xl">
             <Stat label="TODAY" value={TODAY_LABEL} color="#666" />
             <Stat
-              label="DROP DATE"
+              label="LAUNCH DATE"
               value="MAY 1 2026"
               color="#39FF14"
             />
             <Stat
-              label="DAYS TO DROP"
+              label="DAYS TO LAUNCH"
               value={daysToDrop !== null ? `T-${daysToDrop}` : '—'}
               color="#FF006E"
             />
@@ -268,20 +268,21 @@ export default function LaunchPlanClient() {
       <Section title="01 // THESIS" accent="#39FF14">
         <div className="space-y-6 text-[#ccc] text-base sm:text-lg leading-relaxed max-w-3xl">
           <p>
-            Streetwear in 2026 is drowning in AI-generated sameness. Every drop looks like every
-            other drop. The winning brands are the ones whose <span className="text-[#39FF14]">taste feels human</span>.
+            RWA is the hottest narrative in crypto — and the most crowded. Most platforms are
+            single-asset-class or institutional-only, and post-FTX, retail investors are scarred.
+            The winning marketplaces will be the ones whose <span className="text-[#39FF14]">access feels exclusive and whose compliance feels effortless</span>.
           </p>
           <p>
-            VERITY is a marketplace for people who care about curation over volume. Gachas are our
-            wedge — a mechanic that rewards taste with rarity, community, and status.
+            VERITY is a multi-asset RWA marketplace built on <span className="text-[#39FF14]">access + assurance</span> —
+            curated deal flow you can&apos;t get elsewhere, paired with institutional-grade compliance from day one.
           </p>
           <p>
             The Trainer Creator is the <span className="text-[#FF006E]">Trojan horse</span>. It looks
-            like a toy. It&apos;s actually a signup funnel that filters for the exact audience we want —
-            people who sit down, customize, and flex their design.
+            like a toy. It&apos;s actually a lead-magnet capture product — a signup funnel that filters for the exact
+            retail audience we want: crypto-native, taste-driven, ready to own real things on-chain.
           </p>
           <p className="border-l-2 border-[#39FF14] pl-4 text-white text-lg sm:text-xl">
-            We&apos;re not launching products. We&apos;re launching a taste community that happens to sell Gachas.
+            We&apos;re not launching another RWA marketplace. We&apos;re launching a curated layer for RWA investing — where taste meets trust.
           </p>
         </div>
       </Section>
@@ -305,13 +306,14 @@ export default function LaunchPlanClient() {
             ]}
           />
           <MetricCard
-            phase="DROP DAY"
+            phase="LAUNCH DAY"
             color="#FFB800"
             items={[
-              'Units sold (tier-by-tier)',
-              'Sellout velocity',
-              'Drop-day AOV',
-              'Tx success rate',
+              'TVL deployed',
+              'Wallets onboarded',
+              'First-curation fill rate',
+              'Avg deposit size',
+              'KYC / tx success rate',
               'X mentions / hour',
             ]}
           />
@@ -320,7 +322,7 @@ export default function LaunchPlanClient() {
             color="#FF006E"
             items={[
               'D7 retention',
-              'Repeat purchase rate',
+              'Repeat-allocation rate',
               'UGC posts / day',
               'Sentiment ratio',
             ]}
@@ -335,9 +337,9 @@ export default function LaunchPlanClient() {
             role="FOUNDERS"
             color="#39FF14"
             asks={[
-              'Own the Gacha mechanic narrative — you are the voice on X',
+              'Own the VERITY narrative — access + assurance, compliance as feature — you are the voice on X',
               'Approve creator seed list (Phase 01)',
-              'Host drop-day X Space',
+              'Host launch-day X Space',
               'Day +10 AMA',
             ]}
           />
@@ -346,9 +348,9 @@ export default function LaunchPlanClient() {
             color="#FF006E"
             asks={[
               'Own content calendar across all 4 phases',
-              'Creator seed list + outreach briefs',
-              'Press outreach + placements',
-              'Drop-day real-time content',
+              'Creator seed list + outreach briefs (crypto-native / RWA-curious)',
+              'Press outreach + placements (crypto-native pubs)',
+              'Launch-day real-time content',
               'Post-launch recap + UGC campaign',
             ]}
           />
@@ -357,9 +359,9 @@ export default function LaunchPlanClient() {
             color="#FFB800"
             asks={[
               'Trainer Creator → funnel dashboard (Phase 01)',
-              'Harden infra for Phase 02 + 03 traffic',
-              'Drop experience UX + QA',
-              'Real-time stats dashboard',
+              'Harden KYC + marketplace infra for Phase 02 + 03 traffic',
+              'Launch-day marketplace UX + QA',
+              'Real-time TVL / allocations dashboard',
             ]}
           />
           <TeamCard
@@ -368,8 +370,8 @@ export default function LaunchPlanClient() {
             asks={[
               'Discord soft-open + programming',
               'Weekly rituals through launch',
-              'Moderation on drop day',
-              '#VerityPull UGC curation',
+              'Moderation on launch day',
+              '#FirstCuration UGC curation',
             ]}
           />
         </div>
@@ -379,20 +381,24 @@ export default function LaunchPlanClient() {
       <Section title="07 // OPEN DECISIONS" accent="#FFB800">
         <div className="space-y-4 max-w-4xl">
           <OpenItem
-            label="GACHA SUPPLY"
-            value="How many units across what tiers? Drives sellout vs scarcity narrative."
+            label="FIRST CURATION"
+            value="Which assets anchor the launch wave (real estate, treasuries, private credit, commodities)? Drives narrative, press, and partner story."
           />
           <OpenItem
-            label="PRICING"
-            value="Entry tier pricing anchors all downstream creative."
+            label="ENTRY MINIMUMS"
+            value="Smallest allocation size for retail — anchors the accessibility story across all creative."
           />
           <OpenItem
-            label="PARTNER COLLABS"
-            value="Any co-drop brands? Needed for Phase 02 reveals."
+            label="ASSET PARTNERS"
+            value="Any co-launch issuers or institutional partners to reveal in Phase 02?"
           />
           <OpenItem
             label="CREATOR SEED LIST"
-            value="Which 10 tastemakers get the first coordinated push?"
+            value="Which 10 crypto-native / RWA-curious tastemakers get the first coordinated push?"
+          />
+          <OpenItem
+            label="INSTITUTIONAL TRACK"
+            value="Do we publicly acknowledge the parallel institutional GTM, or keep that pipeline quiet through launch?"
           />
         </div>
       </Section>

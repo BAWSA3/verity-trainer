@@ -44,6 +44,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     t: config.top,
     bo: config.bottom,
     a: config.accessory,
+    fh: config.facialHair ?? 'none',
+    fa: config.face ?? 'none',
+    ne: config.neck ?? 'none',
+    sh: config.shoes ?? 'sneakers',
   });
   const ogUrl = `${appUrl}/api/og?${ogParams.toString()}`;
 

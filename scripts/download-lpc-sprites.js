@@ -125,6 +125,42 @@ const ACCESSORIES = [
   { id: 'visor',       path: 'hat/visor/round/adult/walk.png' },
 ];
 
+// Shoes — unisex (LPC serves only male sprites but they layer fine on either body)
+const SHOES = [
+  { id: 'sneakers',  fromPath: 'feet/shoes/basic/male/walk.png' },
+  { id: 'boots',     fromPath: 'feet/boots/basic/male/walk.png' },
+  { id: 'hi-tops',   fromPath: 'feet/boots/revised/male/walk.png' },
+  { id: 'low-tops',  fromPath: 'feet/shoes/revised/male/walk.png' },
+  { id: 'fold-boot', fromPath: 'feet/boots/fold/male/walk.png' },
+];
+
+// Face accessories — universal (glasses, masks sit on top of face)
+const FACE = [
+  { id: 'sunnies',     path: 'facial/glasses/sunglasses/adult/walk.png' },
+  { id: 'nerd',        path: 'facial/glasses/nerd/adult/walk.png' },
+  { id: 'round-frame', path: 'facial/glasses/round/adult/walk.png' },
+  { id: 'secretary',   path: 'facial/glasses/secretary/adult/walk.png' },
+  { id: 'mask',        path: 'facial/masks/plain/adult/walk.png' },
+];
+
+// Neck — gendered (necklaces sit on collar, different for each body)
+const NECK = [
+  { id: 'chain',      base: 'neck/necklace/chain' },
+  { id: 'simple',     base: 'neck/necklace/simple' },
+  { id: 'beaded-lg',  base: 'neck/necklace/beaded_large' },
+  { id: 'beaded-sm',  base: 'neck/necklace/beaded_small' },
+];
+
+// Facial hair — effectively male-only (LPC doesn't gender these; hidden for female in UI)
+const FACIAL_HAIR = [
+  { id: 'shadow',    path: 'beards/beard/5oclock_shadow/walk.png' },
+  { id: 'beard',     path: 'beards/beard/basic/walk.png' },
+  { id: 'trimmed',   path: 'beards/beard/trimmed/walk.png' },
+  { id: 'goatee',    path: 'beards/beard/medium/walk.png' },
+  { id: 'chevron',   path: 'beards/mustache/chevron/walk.png' },
+  { id: 'handlebar', path: 'beards/mustache/handlebar/walk.png' },
+];
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -329,6 +365,77 @@ async function main() {
     } catch (err) {
       console.error(`  ✗ ${a.id}: ${err.message}`);
       failures.push(`accessories/${a.id}: ${err.message}`);
+    }
+  }
+
+  // --- Shoes (unisex) ---
+  console.log('\nSHOES');
+  ensureDir(path.join(root, 'shoes'));
+  for (const s of SHOES) {
+    try {
+      const buf = await download(`${BASE_URL}/${s.fromPath}`);
+      const frame = await extractFrontFrame(buf);
+      const enhanced = await enhanceForOutput(frame);
+      fs.writeFileSync(path.join(root, 'shoes', `${s.id}.png`), enhanced);
+      successes.push(`shoes/${s.id}.png`);
+      console.log(`  ✓ ${s.id}`);
+    } catch (err) {
+      console.error(`  ✗ ${s.id}: ${err.message}`);
+      failures.push(`shoes/${s.id}: ${err.message}`);
+    }
+  }
+
+  // --- Face accessories (universal) ---
+  console.log('\nFACE');
+  ensureDir(path.join(root, 'face'));
+  for (const f of FACE) {
+    try {
+      const buf = await download(`${BASE_URL}/${f.path}`);
+      const frame = await extractFrontFrame(buf);
+      const enhanced = await enhanceForOutput(frame);
+      fs.writeFileSync(path.join(root, 'face', `${f.id}.png`), enhanced);
+      successes.push(`face/${f.id}.png`);
+      console.log(`  ✓ ${f.id}`);
+    } catch (err) {
+      console.error(`  ✗ ${f.id}: ${err.message}`);
+      failures.push(`face/${f.id}: ${err.message}`);
+    }
+  }
+
+  // --- Neck (gendered) ---
+  for (const gender of ['male', 'female']) {
+    console.log(`\nNECK / ${gender}`);
+    ensureDir(path.join(root, 'neck', gender));
+    for (const n of NECK) {
+      const url = `${BASE_URL}/${n.base}/${gender}/walk.png`;
+      try {
+        const buf = await download(url);
+        const frame = await extractFrontFrame(buf);
+        const enhanced = await enhanceForOutput(frame);
+        fs.writeFileSync(path.join(root, 'neck', gender, `${n.id}.png`), enhanced);
+        successes.push(`neck/${gender}/${n.id}.png`);
+        console.log(`  ✓ ${n.id}`);
+      } catch (err) {
+        console.error(`  ✗ ${n.id}: ${err.message}`);
+        failures.push(`neck/${gender}/${n.id}: ${err.message}`);
+      }
+    }
+  }
+
+  // --- Facial hair (male-context — female user won't see this category in UI) ---
+  console.log('\nFACIAL HAIR');
+  ensureDir(path.join(root, 'facial-hair'));
+  for (const f of FACIAL_HAIR) {
+    try {
+      const buf = await download(`${BASE_URL}/${f.path}`);
+      const frame = await extractFrontFrame(buf);
+      const enhanced = await enhanceForOutput(frame);
+      fs.writeFileSync(path.join(root, 'facial-hair', `${f.id}.png`), enhanced);
+      successes.push(`facial-hair/${f.id}.png`);
+      console.log(`  ✓ ${f.id}`);
+    } catch (err) {
+      console.error(`  ✗ ${f.id}: ${err.message}`);
+      failures.push(`facial-hair/${f.id}: ${err.message}`);
     }
   }
 

@@ -729,6 +729,42 @@ const PNG_ACCESSORY_OPTIONS: TrainerOption[] = [
   { id: 'none',        label: 'NONE',        pixels: EMPTY_PIXELS },
 ];
 
+const PNG_SHOES_OPTIONS: TrainerOption[] = [
+  { id: 'sneakers',  label: 'SNEAKERS',  pixels: EMPTY_PIXELS },
+  { id: 'boots',     label: 'BOOTS',     pixels: EMPTY_PIXELS },
+  { id: 'hi-tops',   label: 'HI-TOPS',   pixels: EMPTY_PIXELS },
+  { id: 'low-tops',  label: 'LOW-TOPS',  pixels: EMPTY_PIXELS },
+  { id: 'fold-boot', label: 'FOLD BOOT', pixels: EMPTY_PIXELS },
+  { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
+];
+
+const PNG_FACE_OPTIONS: TrainerOption[] = [
+  { id: 'sunnies',     label: 'SUNNIES',    pixels: EMPTY_PIXELS },
+  { id: 'nerd',        label: 'NERD',       pixels: EMPTY_PIXELS },
+  { id: 'round-frame', label: 'ROUND',      pixels: EMPTY_PIXELS },
+  { id: 'secretary',   label: 'SECRETARY',  pixels: EMPTY_PIXELS },
+  { id: 'mask',        label: 'MASK',       pixels: EMPTY_PIXELS },
+  { id: 'none',        label: 'NONE',       pixels: EMPTY_PIXELS },
+];
+
+const PNG_NECK_OPTIONS: TrainerOption[] = [
+  { id: 'chain',     label: 'CHAIN',     pixels: EMPTY_PIXELS },
+  { id: 'simple',    label: 'SIMPLE',    pixels: EMPTY_PIXELS },
+  { id: 'beaded-lg', label: 'BEADED LG', pixels: EMPTY_PIXELS },
+  { id: 'beaded-sm', label: 'BEADED SM', pixels: EMPTY_PIXELS },
+  { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
+];
+
+const PNG_FACIAL_HAIR_OPTIONS: TrainerOption[] = [
+  { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
+  { id: 'shadow',    label: '5-O\'CLOCK',pixels: EMPTY_PIXELS },
+  { id: 'beard',     label: 'BEARD',     pixels: EMPTY_PIXELS },
+  { id: 'trimmed',   label: 'TRIMMED',   pixels: EMPTY_PIXELS },
+  { id: 'goatee',    label: 'GOATEE',    pixels: EMPTY_PIXELS },
+  { id: 'chevron',   label: 'CHEVRON',   pixels: EMPTY_PIXELS },
+  { id: 'handlebar', label: 'HANDLEBAR', pixels: EMPTY_PIXELS },
+];
+
 // ============================================================
 // CATEGORIES & DEFAULT CONFIG — switches based on sprite mode
 // ============================================================
@@ -738,21 +774,35 @@ const hairOpts = USE_PNG_SPRITES ? PNG_HAIR_OPTIONS : HAIR_OPTIONS;
 const topOpts = USE_PNG_SPRITES ? PNG_TOP_OPTIONS : TOP_OPTIONS;
 const bottomOpts = USE_PNG_SPRITES ? PNG_BOTTOM_OPTIONS : BOTTOM_OPTIONS;
 const accOpts = USE_PNG_SPRITES ? PNG_ACCESSORY_OPTIONS : ACCESSORY_OPTIONS;
+const shoesOpts = PNG_SHOES_OPTIONS;
+const faceOpts = PNG_FACE_OPTIONS;
+const neckOpts = PNG_NECK_OPTIONS;
+const facialHairOpts = PNG_FACIAL_HAIR_OPTIONS;
 
+// Order matches natural head-to-toe + layering sensibility.
+// `facialHair` is filtered out for female users in the customizer UI.
 export const CATEGORIES = [
-  { key: 'gender' as const,    label: 'GENDER', options: genderOpts },
-  { key: 'body' as const,      label: 'SKIN',   options: bodyOpts },
-  { key: 'hair' as const,      label: 'HAIR',   options: hairOpts },
-  { key: 'top' as const,       label: 'TOP',    options: topOpts },
-  { key: 'bottom' as const,    label: 'BOTTOM', options: bottomOpts },
-  { key: 'accessory' as const, label: 'ACC',    options: accOpts },
+  { key: 'gender' as const,     label: 'GENDER',   options: genderOpts },
+  { key: 'body' as const,       label: 'SKIN',     options: bodyOpts },
+  { key: 'hair' as const,       label: 'HAIR',     options: hairOpts },
+  { key: 'facialHair' as const, label: 'FACE HAIR',options: facialHairOpts },
+  { key: 'face' as const,       label: 'FACE',     options: faceOpts },
+  { key: 'accessory' as const,  label: 'HAT',      options: accOpts },
+  { key: 'neck' as const,       label: 'NECK',     options: neckOpts },
+  { key: 'top' as const,        label: 'TOP',      options: topOpts },
+  { key: 'bottom' as const,     label: 'BOTTOM',   options: bottomOpts },
+  { key: 'shoes' as const,      label: 'SHOES',    options: shoesOpts },
 ];
 
 export const DEFAULT_CONFIG = {
   gender: 'male' as const,
   body: 'medium',
+  facialHair: 'none',
   hair: hairOpts[0].id,
+  face: 'none',
   top: topOpts[0].id,
   bottom: bottomOpts[0].id,
+  shoes: 'sneakers',
+  neck: 'none',
   accessory: 'none',
 };

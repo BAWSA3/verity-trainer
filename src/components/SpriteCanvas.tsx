@@ -47,14 +47,22 @@ export default function SpriteCanvas({ config, size = 256 }: SpriteCanvasProps) 
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, size, size);
 
-    // PNG layer paths (gender-aware for body/head/tops; bottoms/hair/acc are universal)
+    // PNG layer paths — z-order is head-to-toe + sensible layering.
+    // Gender-aware for body/head/tops/neck; others are universal.
     const g = config.gender ?? 'male';
     const layers = [
       `/sprites/body/${g}/${config.body}.png`,
       `/sprites/head/${g}/${config.body}.png`,
+      // Facial hair only renders for male characters (no female sprite in LPC)
+      g === 'male' && config.facialHair && config.facialHair !== 'none'
+        ? `/sprites/facial-hair/${config.facialHair}.png`
+        : null,
       `/sprites/bottoms/${config.bottom}.png`,
+      config.shoes && config.shoes !== 'none' ? `/sprites/shoes/${config.shoes}.png` : null,
       `/sprites/tops/${g}/${config.top}.png`,
+      config.neck && config.neck !== 'none' ? `/sprites/neck/${g}/${config.neck}.png` : null,
       `/sprites/hair/${config.hair}.png`,
+      config.face && config.face !== 'none' ? `/sprites/face/${config.face}.png` : null,
       config.accessory !== 'none' ? `/sprites/accessories/${config.accessory}.png` : null,
     ].filter(Boolean) as string[];
 

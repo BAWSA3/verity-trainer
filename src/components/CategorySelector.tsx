@@ -73,6 +73,14 @@ function thumbnailSrc(
       return `/sprites/bottoms/${optionId}.png`;
     case 'accessory':
       return `/sprites/accessories/${optionId}.png`;
+    case 'shoes':
+      return `/sprites/shoes/${optionId}.png`;
+    case 'face':
+      return `/sprites/face/${optionId}.png`;
+    case 'neck':
+      return `/sprites/neck/${gender}/${optionId}.png`;
+    case 'facialHair':
+      return `/sprites/facial-hair/${optionId}.png`;
     default:
       return '';
   }

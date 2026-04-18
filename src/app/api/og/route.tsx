@@ -27,13 +27,23 @@ async function compositeTrainer(
   top: string,
   bottom: string,
   accessory: string,
+  facialHair: string,
+  face: string,
+  neck: string,
+  shoes: string,
 ): Promise<string | null> {
   const layers = [
     { rel: `body/${gender}/${body}.png` },
     { rel: `head/${gender}/${body}.png` },
+    ...(gender === 'male' && facialHair && facialHair !== 'none'
+      ? [{ rel: `facial-hair/${facialHair}.png` }]
+      : []),
     { rel: `bottoms/${bottom}.png` },
+    ...(shoes && shoes !== 'none' ? [{ rel: `shoes/${shoes}.png` }] : []),
     { rel: `tops/${gender}/${top}.png` },
+    ...(neck && neck !== 'none' ? [{ rel: `neck/${gender}/${neck}.png` }] : []),
     { rel: `hair/${hair}.png` },
+    ...(face && face !== 'none' ? [{ rel: `face/${face}.png` }] : []),
     ...(accessory !== 'none' ? [{ rel: `accessories/${accessory}.png` }] : []),
   ];
 
@@ -106,8 +116,23 @@ export async function GET(req: NextRequest) {
   const top = searchParams.get('t') || 'hoodie';
   const bottom = searchParams.get('bo') || 'pants';
   const accessory = searchParams.get('a') || 'none';
+  const facialHair = searchParams.get('fh') || 'none';
+  const face = searchParams.get('fa') || 'none';
+  const neck = searchParams.get('ne') || 'none';
+  const shoes = searchParams.get('sh') || 'sneakers';
 
-  const spriteDataUri = await compositeTrainer(gender, body, hair, top, bottom, accessory);
+  const spriteDataUri = await compositeTrainer(
+    gender,
+    body,
+    hair,
+    top,
+    bottom,
+    accessory,
+    facialHair,
+    face,
+    neck,
+    shoes,
+  );
 
   return new ImageResponse(
     (
