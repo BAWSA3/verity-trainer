@@ -33,8 +33,8 @@ interface Phase {
 const PHASES: Phase[] = [
   {
     code: '01',
-    name: 'AWAKENING',
-    tagline: 'Pre-launch — plant the flag + seed the referral loop',
+    name: 'STARTER SEASON',
+    tagline: 'Pre-launch — pick your trainer, plant the flag, seed the referral loop',
     window: 'APR 16 – APR 22 (7 days)',
     objective:
       'Turn every visit into a signal. The Trainer Creator is our Trojan horse — a lead-magnet capture product that hooks taste-driven, crypto-native retail into VERITY before we reveal the asset list. Every card also mints a unique invite link, turning Phase 01 into the seed layer of the referral loop.',
@@ -67,8 +67,8 @@ const PHASES: Phase[] = [
   },
   {
     code: '02',
-    name: 'IGNITION',
-    tagline: 'Reveal the unlock ladder — let creators carry it',
+    name: 'ROUTE 1',
+    tagline: 'First journey — reveal the unlock ladder, let trainers carry it',
     window: 'APR 23 – APR 30 (8 days)',
     objective:
       'Reveal the community unlock ladder and let the creator network carry the story. No press blitz, no hashtag campaign — every conversation is built around invite links and collective milestones. Pre-qualify every waitlist member so May 1 is a packed launch.',
@@ -102,8 +102,8 @@ const PHASES: Phase[] = [
   },
   {
     code: '03',
-    name: 'LAUNCH',
-    tagline: 'The day the marketplace goes live',
+    name: 'FIRST BADGE',
+    tagline: 'Drop day — the marketplace goes live',
     window: 'MAY 1 (1 day)',
     objective:
       "Execute flawlessly. Create a launch moment on X so big that the RWA world is asking about VERITY by EOD — and first-curation allocations fill from the waitlist up. Every allocation also moves the public unlock tracker.",
@@ -137,8 +137,8 @@ const PHASES: Phase[] = [
   },
   {
     code: '04',
-    name: 'AFTERGLOW',
-    tagline: 'Post-launch — community co-ownership of the unlock ladder',
+    name: 'REGISTRY WEEKS',
+    tagline: 'Post-launch — complete the set, trade, evolve, co-own the unlock ladder',
     window: 'MAY 2 – MAY 31 (30 days)',
     objective:
       'Turn first-time investors into repeat allocators and the verified referrer cohort into co-owners of the unlock ladder. 30 days to convert launch momentum into the milestones that open Curation Wave 2, fee cuts, governance voting, and cohort rewards.',
@@ -280,6 +280,12 @@ export default function LaunchPlanClient() {
       {/* THESIS */}
       <Section title="01 // THESIS" accent="#39FF14">
         <div className="space-y-6 text-[#ccc] text-base sm:text-lg leading-relaxed max-w-3xl">
+          <p className="text-white text-lg sm:text-2xl">
+            A generation grew up on a <span className="text-[#39FF14]">trainer journey</span>.
+            Pick a starter. Fill the registry. Trade with friends.
+            <br />
+            VERITY makes that journey real — with assets that actually hold value.
+          </p>
           <p>
             RWA is the hottest narrative in crypto — and the most crowded. Most platforms are
             single-asset-class or institutional-only, and post-FTX, retail investors are scarred.
@@ -302,8 +308,36 @@ export default function LaunchPlanClient() {
             personal point systems to farm. Only collective wins.
           </p>
           <p className="border-l-2 border-[#39FF14] pl-4 text-white text-lg sm:text-xl">
-            We&apos;re launching a curated RWA marketplace that unlocks itself — together.
+            A curated RWA marketplace that unlocks itself — one trainer, one route, one badge at a time.
           </p>
+
+          {/* Capsule definition — inset block, no section number */}
+          <div className="mt-12 p-6 border border-[#FF006E]/30 bg-[#FF006E]/[0.03] rounded-sm">
+            <div className="text-[#FF006E] text-[10px] sm:text-xs tracking-[0.3em] mb-4">
+              ◆ MEET YOUR FIRST CAPSULE
+            </div>
+            <p className="mb-4">
+              Every VERITY drop delivers a <span className="text-[#FF006E]">Capsule</span> — the retail
+              package that bundles your place in the journey:
+            </p>
+            <ul className="space-y-2 pl-4 border-l-2 border-[#FF006E]/40 text-[#bbb] text-sm sm:text-base">
+              <li>
+                <span className="text-[#39FF14]">▸ Trainer card</span> — the physical artifact of your VERITY identity, minted from the Creator. Gear / outfit / style is yours.
+              </li>
+              <li>
+                <span className="text-[#39FF14]">▸ First allocation</span> — a curated slice of a real-world asset (real estate, treasuries, private credit — see Phase 01 for the first wave).
+              </li>
+              <li>
+                <span className="text-[#39FF14]">▸ Creature companion</span> — original VERITY character tied to your trainer profile, tradable, evolving across drops. <span className="text-[#666]">(creature line direction pending — see Open Decisions)</span>
+              </li>
+              <li>
+                <span className="text-[#39FF14]">▸ On-chain receipt</span> — the token that proves provenance, enables instant trade, and ties it all to your wallet.
+              </li>
+            </ul>
+            <p className="mt-4 text-[#888] text-xs sm:text-sm">
+              Pulling a Capsule is how you step onto Route 1. Every capsule counts toward the next community unlock on the ladder.
+            </p>
+          </div>
         </div>
       </Section>
 
@@ -360,11 +394,12 @@ export default function LaunchPlanClient() {
             role="FOUNDERS"
             color="#39FF14"
             asks={[
+              'Play the Professor — mentor voice, not sales. The community is on a journey; you guide it.',
               'Own the VERITY narrative — access + assurance + unlock ladder — you are the voice on X',
-              'Approve creator seed list (Phase 01)',
-              'Host launch-day X Space',
+              'Approve trainer seed list (Phase 01)',
+              'Host launch-day (First Badge) X Space',
               'Celebrate unlock milestone triggers live as they fire',
-              'Day +10 AMA + governance unlock moderation',
+              'Day +10 Professor AMA + governance unlock moderation',
             ]}
           />
           <TeamCard
@@ -431,6 +466,14 @@ export default function LaunchPlanClient() {
           <OpenItem
             label="PHYSICAL TRAINER PRINTS"
             value="Production partner, cost per unit, which milestones trigger the standard cohort-wide print run vs. the premium 'expensive' run."
+          />
+          <OpenItem
+            label="CREATURE COMPANION DIRECTION"
+            value="Original VERITY creatures bundled into capsules — art style, starter trio, rarity tiering, whether evolution mechanic ships at launch or Wave 2. Zero Nintendo IP overlap required."
+          />
+          <OpenItem
+            label="TRAINER REGISTRY UX"
+            value="Do collectors get a public /registry/[handle] profile showing their trainer, creatures, allocations? Potential post-launch viral mechanic — flag now so design has time to ship by Wave 2."
           />
           <OpenItem
             label="PRIZE POOL (~$10K + PREMIUM CARDS)"

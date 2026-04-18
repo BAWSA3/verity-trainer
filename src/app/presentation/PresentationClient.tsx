@@ -29,122 +29,134 @@ interface Phase {
 const PHASES: Phase[] = [
   {
     code: '01',
-    name: 'AWAKENING',
-    tagline: 'Pre-launch — plant the flag',
+    name: 'STARTER SEASON',
+    tagline: 'Pre-launch — pick your trainer, plant the flag, seed the referral loop',
     window: 'APR 16 – APR 22  ·  7 DAYS',
     objective:
-      'Turn every visit into a signal. The Trainer Creator is our Trojan horse — it hooks taste-aware creators and their audiences into VERITY before anyone knows what the drop is. Week one is pure seeding.',
+      'Every visit becomes a signal. The Trainer Creator is the Trojan horse — a lead-magnet capture product that hooks taste-driven, crypto-native retail into VERITY before the asset list is revealed. Every card mints a unique invite link, making Phase 01 the seed layer of the referral loop.',
     activities: [
-      'Trainer Creator is live — every card captures email + X handle',
-      'Creator seeding: 10 tastemakers design + post on coordinated days',
-      'Daily visual drops on X — isolated sprites, no context, build curiosity',
-      'DM 50 mid-tier streetwear accounts with their personalized trainer',
-      'Discord soft-open for waitlisted users (behind trainer card gate)',
+      'Trainer Creator live — every card = email + X handle + invite link',
+      'Invite-link layer live — ?ref=CODE attached to every share',
+      'Trainer seeding: 10 crypto-native / RWA-curious tastemakers design + post across 3 coordinated days',
+      'Daily visual drops on X — trainer sprites + "access + assurance" teasers, no asset reveals',
+      'DM 50 crypto / fintech / RWA-adjacent accounts with their personalized trainer',
+      'Discord soft-open for the registered (trainer card gate)',
     ],
     deliverables: [
       'Trainer Creator (shipped ✓)',
-      '10 creator launch posts w/ unique trainers',
-      '7-day content calendar (X + IG)',
-      'Waitlist DB + segmentation',
+      'Invite-link attribution (vests only after referred wallet KYCs + allocates post-launch)',
+      'Unlock ladder v1 — TVL / volume thresholds mapped to community unlocks',
+      '10 trainer launch posts with unique invite links',
+      '7-day organic content calendar (X + IG, no paid media)',
+      'Registry DB + segmentation (email, handle, trainer config, referrer, accreditation flag)',
     ],
-    metrics: ['300+ trainer cards', '150+ waitlist emails', '5+ viral shares (10k+ each)', 'Viral K ≥ 0.4'],
+    metrics: ['300+ trainer cards', '150+ registry signups', 'Invite share-click ≥ 0.5', 'Viral K ≥ 0.4'],
     ownerAsk:
-      'Founders: approve creator seed list by APR 17. Marketing: ship content cal by APR 18. Product: tracking dashboard live APR 19.',
+      'Founders: approve trainer seed list by APR 17. Marketing: organic content cal by APR 18. Product: invite-link attribution + dashboard live APR 19.',
     accent: '#39FF14',
   },
   {
     code: '02',
-    name: 'IGNITION',
-    tagline: 'Reveal & convert — last push to drop day',
+    name: 'ROUTE 1',
+    tagline: 'First journey — reveal the unlock ladder, let trainers carry it',
     window: 'APR 23 – APR 30  ·  8 DAYS',
     objective:
-      "Announce the drop. Educate what a Gacha is and why VERITY is different. Pre-qualify every waitlist member so May 1 is a sellout, not a gamble.",
+      "Reveal the community unlock ladder. Let the trainer network carry the story — every conversation is built around invite links and collective milestones. Pre-qualify every registry member so FIRST BADGE is packed.",
     activities: [
-      'APR 23: Drop announcement — date + Gacha mechanic reveal on X',
-      '"What is a VERITY Gacha?" — 3-part explainer (mechanic, rarity, utility)',
-      'Waitlist perks: 24h early-access + bonus pull for first 100',
-      'Partner brand reveals (TBD with founders)',
-      'Creator amplification round 2: seed list reposts + UGC remix prompts',
-      'Press: Hypebeast, Highsnobiety, Complex — placements APR 28-30',
-      'T-7, T-3, T-24h email drip to waitlist',
+      'APR 23: Launch announcement + unlock ladder reveal thread (founders on X)',
+      '"What is RWA on VERITY?" — 3-part organic thread (asset classes, compliance, how to participate)',
+      'Registry perks: 24h early-access to first-curation allocations + priority KYC',
+      'Asset partner / issuer reveals (TBD with founders)',
+      '"Who I\'m bringing with me" — trainer amplification round 2 with invite-link personal stories',
+      '3–5 podcast / X Space appearances via warm intros — no cold pitching',
+      'Optional disclosed paid KOL slot (1–2 max, surgical)',
+      'T-7, T-3, T-24h email drip to registry',
     ],
     deliverables: [
-      'Gacha explainer thread / microsite',
-      'Creator brief + UGC prompt pack',
-      'Press kit (PDF + assets)',
-      'Automated waitlist email flow',
+      'Unlock ladder microsite section — Phase 02 story anchor',
+      'RWA + compliance explainer thread series',
+      'Trainer brief (invite-link + unlock-ladder framing, no hashtag prompts)',
+      'Podcast / X Space booking calendar',
+      'Automated early-access email flow',
     ],
     metrics: [
-      '2x waitlist growth (300+ total)',
+      '2x registry growth (300+ total)',
       'Explainer: 75k+ impressions',
-      'Press: 1+ placement before drop',
-      'Pre-drop survey: 30%+ "definitely buying"',
+      '3+ creator-invited podcast / Space slots',
+      'Invite → registry conversion rate',
+      'Pre-launch survey: 30%+ "definitely investing"',
     ],
     ownerAsk:
-      'Founders: publish Gacha explainer APR 23. Marketing: creator briefs + press. Product: harden infra. Community: Discord events mid-week.',
+      'Founders: own unlock-ladder narrative + podcast voice (first drop APR 23). Marketing: trainer briefs + podcast booking. Product: harden KYC + referral vesting. Community: Discord events mid-week.',
     accent: '#FF006E',
   },
   {
     code: '03',
-    name: 'DROP',
-    tagline: 'The day everything goes live',
+    name: 'FIRST BADGE',
+    tagline: 'Drop day — the marketplace goes live',
     window: 'MAY 1  ·  1 DAY',
     objective:
-      "Execute flawlessly. Create a moment on X so big that people who didn't know VERITY existed yesterday are asking about it tonight.",
+      "Execute flawlessly. The RWA world is asking about VERITY by EOD, and first-curation allocations fill from the registry up. Every allocation moves the public unlock tracker.",
     activities: [
-      'T-1h (11am PT): X Space countdown — founders + creators',
-      'T-0 (12pm PT): Drop live. Waitlist gets 24h head start.',
-      'Rolling "sold out" posts — build scarcity FOMO as tiers deplete',
-      'Real-time social: top pulls, rare hits, collector callouts',
-      'Support surge protocol — dedicated team, 18h coverage',
-      'Evening recap thread (6pm PT): "Day 1 by the numbers"',
+      'T-1h (11am PT): X Space countdown — founders + trainer partners',
+      'T-0 (12pm PT): Marketplace live. Registry gets 24h head start.',
+      'Public unlock tracker live — real-time counter toward the first milestone',
+      'Rolling "fully allocated" posts — scarcity FOMO as tranches fill',
+      'Real-time social: first investments, notable allocations, unlock crossings',
+      'Support + KYC surge protocol — dedicated team, 18h coverage',
+      'Evening recap thread (6pm PT): "Day 1 by the numbers" (TVL, wallets, ladder state)',
     ],
     deliverables: [
-      'Live drop experience on verity.gg',
-      'Comms playbook (sellout, delay, error templates)',
+      'Live marketplace on verity domain',
+      'Public unlock tracker (embedded + shareable)',
+      'Launch-day comms playbook (full-alloc, delay, KYC, unlock trigger templates)',
       'X Space schedule + hosts',
       'Public real-time stats dashboard',
     ],
     metrics: [
-      'Target units sold: TBD',
-      'Sellout velocity per tier',
-      'Drop-day AOV',
+      'Target launch-day TVL: TBD',
+      'First-curation fill velocity per asset',
+      'Launch-day avg deposit size',
+      'Referred-wallet share of allocations',
       'Trending on X (≥ 1 regional trend)',
-      '< 1% failed transactions',
+      '< 1% failed KYC / tx',
     ],
     ownerAsk:
-      'Everyone on deck May 1. Founders: X Space + comms. Product/Eng: infra watch. Marketing: real-time content. Community: moderation + hype.',
+      'Everyone on deck May 1. Founders: X Space + comms, celebrate unlock triggers live. Product/Eng: infra + KYC + tracker uptime. Marketing: real-time content. Community: moderation + hype.',
     accent: '#FFB800',
   },
   {
     code: '04',
-    name: 'AFTERGLOW',
-    tagline: 'Post-launch — convert buzz into culture',
+    name: 'REGISTRY WEEKS',
+    tagline: 'Post-launch — complete the set, trade, evolve, co-own the unlock ladder',
     window: 'MAY 2 – MAY 31  ·  30 DAYS',
     objective:
-      'Turn one-time buyers into collectors and collectors into evangelists. 30 days to convert momentum into durable community. Seed the next drop while the energy is still hot.',
+      'Turn first-time investors into repeat allocators; turn the verified referrer cohort into co-owners of the unlock ladder. 30 days to convert launch momentum into the milestones that open Curation Wave 2, fee cuts, governance voting, and cohort rewards.',
     activities: [
-      'MAY 2: recap post — transparent numbers, thank-yous, what\'s next',
-      'Week 1 (May 2-8): Daily #VerityPull repost campaign',
-      'Week 2 (May 9-15): Restock decision — if sold out, tease Drop 2',
-      'Week 3 (May 16-22): Founder AMA + Gacha Spotlight holder interviews',
-      'Week 4 (May 23-31): June roadmap reveal — new series, utility expansion',
-      'Ongoing: weekly rituals (Gacha trivia, holder raffles)',
+      'MAY 2: recap post — transparent numbers (TVL, wallets, assets), thank-yous, ladder snapshot',
+      'Week 1: daily "unlock progress" — when each milestone trips, a Professor-led post names the contributing cohort',
+      'Week 1: verified referrer cohort (invite → ≥1 allocated wallet) receives a printed Trainer card IRL',
+      'Week 2: first community unlock fires (e.g., fee reduction) → "we did it" moment',
+      'Week 3: Professor AMA on Discord + governance voting unlock (if threshold hit)',
+      'Week 4: Curation Wave 2 teaser + IRL launch dinner invite for the referrer cohort',
+      'Prize-pool trigger (tentative): $10k pot + premium Trainer card run, split evenly across verified referrers at milestone (e.g., Wave 2 unlock / $5M TVL). No leaderboards.',
+      'Ongoing: weekly "state of the ladder" + rituals (RWA primer nights, holder calls, compliance Q&As)',
     ],
     deliverables: [
-      'Launch recap (internal + public)',
-      '30-day UGC landing page',
-      'Holder perks doc',
+      'Launch recap report (public numbers + ladder state)',
+      'Live unlock ladder landing page',
+      'Investor perks doc — what each milestone unlocks',
       'June roadmap teaser',
     ],
     metrics: [
-      'D7 retention',
-      'Repeat purchase rate (if restock)',
-      'Organic UGC volume',
-      'Sentiment ratio (X mentions)',
+      'D7 retention of active investors',
+      'Repeat-allocation rate (Wave 2 conversion from Wave 1)',
+      'Milestones hit in first 30 days',
+      '% post-launch TVL from referred wallets',
+      'Sentiment ratio on X',
     ],
     ownerAsk:
-      'Marketing: UGC + recap. Community: rituals + AMA. Founders: roadmap narrative. Product: measure everything.',
+      'Marketing: unlock celebrations + recap (no hashtag curation). Community: rituals + AMA + cohort-card fulfillment. Founders: Professor voice + roadmap. Product: ship unlock ladder landing page + measure everything.',
     accent: '#39FF14',
   },
 ];
@@ -360,18 +372,18 @@ function CoverSlide({ daysToDrop }: { daysToDrop: number | null }) {
         MAY 2026
       </h1>
       <h2 className="text-white text-4xl sm:text-6xl md:text-8xl font-bold tracking-tight leading-none mb-10">
-        DROP
+        FIRST BADGE
       </h2>
       <p className="text-[#888] text-sm sm:text-lg max-w-2xl mx-auto mb-10">
-        The full VERITY Marketplace goes live with Gachas on May 1.
+        The VERITY Marketplace goes live on May 1 — the first curated wave of tokenized real-world assets.
         <br />
-        This is the campaign from today to drop day — and the 30 days after.
+        This is the campaign from today to launch day — and the 30 days after.
       </p>
       <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-2xl mx-auto border-y border-[#222] py-5">
         <Stat label="TODAY" value={TODAY_LABEL} color="#666" />
-        <Stat label="DROP DATE" value="MAY 1 2026" color="#39FF14" />
+        <Stat label="LAUNCH DATE" value="MAY 1 2026" color="#39FF14" />
         <Stat
-          label="DAYS TO DROP"
+          label="DAYS TO LAUNCH"
           value={daysToDrop !== null ? `T-${daysToDrop}` : '—'}
           color="#FF006E"
         />
@@ -387,23 +399,24 @@ function ThesisSlide() {
         WHY NOW
       </SlideTitle>
       <div className="space-y-5 text-[#ccc] text-base sm:text-xl leading-relaxed mt-8">
-        <p>
-          Streetwear in 2026 is drowning in AI-generated sameness. Every drop looks like every
-          other drop. The winning brands are the ones whose{' '}
-          <span className="text-[#39FF14]">taste feels human</span>.
+        <p className="text-white text-xl sm:text-2xl">
+          A generation grew up on a <span className="text-[#39FF14]">trainer journey</span>. Pick a starter. Fill the registry. Trade with friends.
+          <br />
+          VERITY makes that journey real — with assets that actually hold value.
         </p>
         <p>
-          VERITY is a marketplace for people who care about curation over volume. Gachas are our
-          wedge — a mechanic that rewards taste with rarity, community, and status.
+          RWA is the hottest narrative in crypto — and the most crowded. The winners will be platforms whose{' '}
+          <span className="text-[#39FF14]">access feels exclusive and whose compliance feels effortless</span>.
         </p>
         <p>
-          The Trainer Creator is the <span className="text-[#FF006E]">Trojan horse</span>. Looks
-          like a toy. Actually a signup funnel that filters for the exact audience we want.
+          VERITY is a multi-asset RWA marketplace built on access + assurance — curated deal flow you can&apos;t get elsewhere, paired with institutional-grade compliance from day one.
+        </p>
+        <p>
+          The Trainer Creator is the <span className="text-[#FF006E]">Trojan horse</span>. Looks like a toy. It&apos;s a lead-magnet product that filters for the exact retail audience we want, and every card mints an invite link — the origin of the referral loop.
         </p>
       </div>
       <div className="mt-10 border-l-2 border-[#39FF14] pl-6 text-white text-lg sm:text-2xl">
-        We&apos;re not launching products. We&apos;re launching a taste community that happens to
-        sell Gachas.
+        A curated RWA marketplace that unlocks itself — one trainer, one route, one badge at a time.
       </div>
     </div>
   );
@@ -525,17 +538,37 @@ function MetricsSlide() {
         <MetricCard
           phase="PRE-LAUNCH"
           color="#39FF14"
-          items={['Trainer cards created', 'Waitlist signups', 'Viral K-factor', 'Creator reach']}
+          items={[
+            'Trainer cards created',
+            'Registry signups',
+            'Invite link share-click ratio',
+            'Viral K-factor',
+            'Trainer-partner reach',
+          ]}
         />
         <MetricCard
-          phase="DROP DAY"
+          phase="FIRST BADGE (DAY 1)"
           color="#FFB800"
-          items={['Units sold per tier', 'Sellout velocity', 'Drop-day AOV', 'Tx success rate', 'X mentions / hour']}
+          items={[
+            'TVL deployed',
+            'Wallets onboarded',
+            'First-curation fill rate',
+            'Avg deposit size',
+            'Referred-wallet allocation %',
+            'KYC / tx success rate',
+            'X mentions / hour',
+          ]}
         />
         <MetricCard
           phase="POST-LAUNCH"
           color="#FF006E"
-          items={['D7 retention', 'Repeat purchase rate', 'UGC posts / day', 'Sentiment ratio']}
+          items={[
+            'D7 retention',
+            'Repeat-allocation rate',
+            'Community milestones hit',
+            '% TVL from referred wallets',
+            'Sentiment ratio',
+          ]}
         />
       </div>
     </div>
@@ -553,21 +586,23 @@ function TeamSlide() {
           role="FOUNDERS"
           color="#39FF14"
           asks={[
-            'Own the Gacha mechanic narrative — you are the voice on X',
-            'Approve creator seed list (Phase 01)',
-            'Host drop-day X Space',
-            'Day +10 AMA on Discord',
+            'Play the Professor — mentor voice, not sales. The community is on a journey; you guide it.',
+            'Own the VERITY narrative — access + assurance + unlock ladder — you are the voice on X',
+            'Approve trainer seed list (Phase 01)',
+            'Host First Badge X Space',
+            'Celebrate unlock milestones live as they fire',
+            'Day +10 Professor AMA + governance unlock moderation',
           ]}
         />
         <TeamCard
           role="MARKETING"
           color="#FF006E"
           asks={[
-            'Own content calendar across all 4 phases',
-            'Creator seed list + outreach briefs',
-            'Press outreach + placements',
-            'Drop-day real-time content',
-            'Post-launch recap + UGC campaign',
+            'Organic 4-phase content calendar (no paid media, no press blitz)',
+            'Trainer seed list + briefs framed around invite-link + unlock ladder',
+            'Podcast / X Space booking via warm intros',
+            'First Badge real-time content',
+            'Post-launch unlock celebrations + recap',
           ]}
         />
         <TeamCard
@@ -575,9 +610,9 @@ function TeamSlide() {
           color="#FFB800"
           asks={[
             'Trainer Creator → funnel dashboard (Phase 01)',
-            'Harden infra for Phase 02 + 03 traffic',
-            'Drop experience UX + QA',
-            'Real-time stats dashboard',
+            'Invite-link + referral attribution system (vesting logic)',
+            'Harden KYC + marketplace infra for Phase 02 + 03 traffic',
+            'Public unlock tracker + real-time TVL dashboard',
           ]}
         />
         <TeamCard
@@ -585,9 +620,9 @@ function TeamSlide() {
           color="#39FF14"
           asks={[
             'Discord soft-open + programming',
-            'Weekly rituals through launch',
-            'Moderation on drop day',
-            '#VerityPull UGC curation',
+            'Weekly unlock-progress rituals through launch',
+            'Moderation on First Badge day',
+            'Verified referrer cohort curation + Trainer card fulfillment',
           ]}
         />
       </div>
@@ -597,10 +632,14 @@ function TeamSlide() {
 
 function OpenSlide() {
   const items = [
-    { label: 'GACHA SUPPLY', value: 'How many units across what tiers? Drives sellout vs scarcity narrative.' },
-    { label: 'PRICING', value: 'Entry tier pricing anchors all downstream creative.' },
-    { label: 'PARTNER COLLABS', value: 'Any co-drop brands? Needed for Phase 02 reveals.' },
-    { label: 'CREATOR SEED LIST', value: 'Which 10 tastemakers get the first coordinated push?' },
+    { label: 'FIRST CURATION', value: 'Which assets anchor the launch wave (real estate, treasuries, private credit, commodities)?' },
+    { label: 'ENTRY MINIMUMS', value: 'Smallest allocation size for retail — anchors the accessibility story.' },
+    { label: 'ASSET PARTNERS', value: 'Any co-launch issuers or institutional partners to reveal in Route 1?' },
+    { label: 'TRAINER SEED LIST', value: 'Which 10 crypto-native / RWA-curious tastemakers get the first coordinated push?' },
+    { label: 'UNLOCK LADDER', value: 'Specific TVL / volume thresholds for fee cuts, asset unlocks, governance activation, prize-pool trigger.' },
+    { label: 'CAPSULE DESIGN', value: 'Creature companion art direction + starter trio + rarity tiers (zero Nintendo IP overlap).' },
+    { label: 'TRAINER REGISTRY UX', value: 'Public /registry/[handle] profile showing trainer + creatures + allocations? Potential viral mechanic.' },
+    { label: 'PRIZE POOL (~$10K)', value: 'Cohort-shared pot unlocked at a milestone, split evenly across verified referrers. Confirm trigger.' },
   ];
   return (
     <div>
