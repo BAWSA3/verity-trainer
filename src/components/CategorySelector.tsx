@@ -1,9 +1,14 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { TrainerOption, Gender } from '@/types/trainer';
 import { USE_PNG_SPRITES } from '@/lib/trainer-options';
 import { playHover } from '@/lib/sounds';
+
+// Categories with more than this many items collapse behind a "+N MORE" toggle
+// to keep the panel scannable. Tuned to fit ~2 rows at the default thumbnail
+// size on mobile + desktop.
+const PREVIEW_LIMIT = 6;
 
 interface CategorySelectorProps {
   label: string;
@@ -155,16 +160,37 @@ export default function CategorySelector({
   currentHairStyle,
   currentHairColor,
 }: CategorySelectorProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  // If the currently-selected option lives past the preview cutoff, force-expand
+  // so the user always sees their pick without first clicking "MORE". Tracked as
+  // an effect of the option list rather than one-shot so a fresh random pick
+  // beyond the cutoff still reveals.
+  const selectedIndex = useMemo(
+    () => options.findIndex((o) => o.id === selected),
+    [options, selected]
+  );
+  const overflows = options.length > PREVIEW_LIMIT;
+  const forceExpanded = overflows && selectedIndex >= PREVIEW_LIMIT;
+  const isExpanded = expanded || forceExpanded;
+
+  const visibleOptions =
+    overflows && !isExpanded ? options.slice(0, PREVIEW_LIMIT) : options;
+  const hiddenCount = options.length - PREVIEW_LIMIT;
+
   return (
     <div className="mb-5">
       <div
-        className="text-[#367d95] text-[9px] sm:text-[11px] mb-2 tracking-[0.2em] uppercase"
+        className="text-[#367d95] text-[9px] sm:text-[11px] mb-2 tracking-[0.2em] uppercase flex items-baseline justify-between"
         style={{ fontFamily: 'var(--font-loos), sans-serif', fontWeight: 700 }}
       >
-        {label}
+        <span>{label}</span>
+        <span className="text-[#8a7d4d]/60 text-[8px] sm:text-[10px] tracking-[0.15em] normal-case">
+          {options.length} {options.length === 1 ? 'OPTION' : 'OPTIONS'}
+        </span>
       </div>
       <div className="flex gap-2 sm:gap-3 flex-wrap">
-        {options.map((option) => (
+        {visibleOptions.map((option) => (
           <button
             key={option.id}
             onClick={() => onSelect(option.id)}
@@ -194,6 +220,40 @@ export default function CategorySelector({
             </span>
           </button>
         ))}
+        {overflows && (
+          <button
+            onClick={() => setExpanded((e) => !e)}
+            onMouseEnter={() => playHover()}
+            disabled={forceExpanded}
+            className={`flex flex-col items-center gap-1 transition-transform ${
+              forceExpanded ? 'opacity-50 cursor-default' : ''
+            }`}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? 'Show fewer options' : `Show ${hiddenCount} more options`}
+          >
+            <div
+              className="w-16 h-16 flex items-center justify-center border-2 cursor-pointer transition-all rounded-[8px] border-[#367d95]/30 hover:border-[#367d95] hover:scale-105 text-[#367d95] text-[10px] tracking-wider"
+              style={{ background: 'rgba(255, 253, 243, 0.6)' }}
+            >
+              {isExpanded ? (
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="text-[14px] leading-none">−</span>
+                  <span className="text-[7px] tracking-[0.15em] mt-1">LESS</span>
+                </span>
+              ) : (
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="text-[12px] font-bold leading-none">+{hiddenCount}</span>
+                  <span className="text-[7px] tracking-[0.15em] mt-1">MORE</span>
+                </span>
+              )}
+            </div>
+            <span
+              className="text-[7px] sm:text-[8px] tracking-[0.15em] uppercase text-[#367d95] font-bold"
+            >
+              {isExpanded ? 'SHOW LESS' : 'SHOW MORE'}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

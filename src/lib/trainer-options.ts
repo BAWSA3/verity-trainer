@@ -691,19 +691,35 @@ const PNG_HAIR_OPTIONS: TrainerOption[] = [
 ];
 
 const PNG_TOP_OPTIONS: TrainerOption[] = [
-  { id: 'hoodie',     label: 'HOODIE',       pixels: EMPTY_PIXELS },
-  { id: 'longsleeve', label: 'LONGSLEEVE',   pixels: EMPTY_PIXELS },
+  { id: 'hoodie',        label: 'HOODIE',       pixels: EMPTY_PIXELS },
+  { id: 'hoodie-red',    label: 'HOODIE RED',   pixels: EMPTY_PIXELS },
+  { id: 'hoodie-blue',   label: 'HOODIE BLUE',  pixels: EMPTY_PIXELS },
+  { id: 'hoodie-navy',   label: 'HOODIE NAVY',  pixels: EMPTY_PIXELS },
+  { id: 'longsleeve',       label: 'LONGSLEEVE',      pixels: EMPTY_PIXELS },
+  { id: 'longsleeve-red',   label: 'LONGSLEEVE RED',  pixels: EMPTY_PIXELS },
+  { id: 'longsleeve-blue',  label: 'LONGSLEEVE BLUE', pixels: EMPTY_PIXELS },
+  { id: 'longsleeve-navy',  label: 'LONGSLEEVE NAVY', pixels: EMPTY_PIXELS },
   { id: 'cardigan',   label: 'CARDIGAN',     pixels: EMPTY_PIXELS },
   { id: 'buttondown', label: 'BUTTONDOWN',   pixels: EMPTY_PIXELS },
   { id: 'polo-long',  label: 'POLO (LONG)',  pixels: EMPTY_PIXELS },
   { id: 'vneck-long', label: 'V-NECK (L)',   pixels: EMPTY_PIXELS },
   { id: 'scoop-long', label: 'SCOOP (L)',    pixels: EMPTY_PIXELS },
   { id: 'tee',        label: 'T-SHIRT',      pixels: EMPTY_PIXELS },
+  { id: 'tee-red',    label: 'TEE RED',      pixels: EMPTY_PIXELS },
+  { id: 'tee-blue',   label: 'TEE BLUE',     pixels: EMPTY_PIXELS },
+  { id: 'tee-navy',   label: 'TEE NAVY',     pixels: EMPTY_PIXELS },
   { id: 'vneck',      label: 'V-NECK',       pixels: EMPTY_PIXELS },
   { id: 'scoop',      label: 'SCOOP NECK',   pixels: EMPTY_PIXELS },
   { id: 'sleeves',    label: 'SLEEVES',      pixels: EMPTY_PIXELS },
   { id: 'polo',       label: 'POLO',         pixels: EMPTY_PIXELS },
+  { id: 'polo-red',   label: 'POLO RED',     pixels: EMPTY_PIXELS },
+  { id: 'polo-blue',  label: 'POLO BLUE',    pixels: EMPTY_PIXELS },
+  { id: 'polo-navy',  label: 'POLO NAVY',    pixels: EMPTY_PIXELS },
   { id: 'cardigan-s', label: 'CARDIGAN (S)', pixels: EMPTY_PIXELS },
+  // --- New designs from the 25-item expansion ---
+  { id: 'jacket',       label: 'JACKET',       pixels: EMPTY_PIXELS },
+  { id: 'biker-jacket', label: 'TRENCH',       pixels: EMPTY_PIXELS },
+  { id: 'suit',         label: 'SUIT',         pixels: EMPTY_PIXELS },
 ];
 
 const PNG_BOTTOM_OPTIONS: TrainerOption[] = [
@@ -715,6 +731,11 @@ const PNG_BOTTOM_OPTIONS: TrainerOption[] = [
   { id: 'pantaloons',     label: 'PANTALOONS',     pixels: EMPTY_PIXELS },
   { id: 'skirt-plain',    label: 'SKIRT',          pixels: EMPTY_PIXELS },
   { id: 'skirt-straight', label: 'PENCIL SKIRT',   pixels: EMPTY_PIXELS },
+  // --- New bottoms from the 25-item expansion ---
+  { id: 'skirt-legion',    label: 'LEGION SKIRT',    pixels: EMPTY_PIXELS },
+  { id: 'skirt-slit',      label: 'SLIT SKIRT',      pixels: EMPTY_PIXELS },
+  { id: 'skirt-belle',     label: 'BELLE SKIRT',     pixels: EMPTY_PIXELS },
+  { id: 'skirt-overskirt', label: 'OVERSKIRT',       pixels: EMPTY_PIXELS },
 ];
 
 const PNG_ACCESSORY_OPTIONS: TrainerOption[] = [
@@ -726,6 +747,10 @@ const PNG_ACCESSORY_OPTIONS: TrainerOption[] = [
   { id: 'tophat',      label: 'TOP HAT',     pixels: EMPTY_PIXELS },
   { id: 'bowler',      label: 'BOWLER',      pixels: EMPTY_PIXELS },
   { id: 'visor',       label: 'VISOR',       pixels: EMPTY_PIXELS },
+  // --- New hats from the 25-item expansion ---
+  { id: 'headband-thick', label: 'HEADBAND',     pixels: EMPTY_PIXELS },
+  { id: 'headband-tied',  label: 'TIED BAND',    pixels: EMPTY_PIXELS },
+  { id: 'crown',          label: 'CROWN',        pixels: EMPTY_PIXELS },
   { id: 'none',        label: 'NONE',        pixels: EMPTY_PIXELS },
 ];
 
@@ -735,6 +760,8 @@ const PNG_SHOES_OPTIONS: TrainerOption[] = [
   { id: 'hi-tops',   label: 'HI-TOPS',   pixels: EMPTY_PIXELS },
   { id: 'low-tops',  label: 'LOW-TOPS',  pixels: EMPTY_PIXELS },
   { id: 'fold-boot', label: 'FOLD BOOT', pixels: EMPTY_PIXELS },
+  // --- New shoes from the 25-item expansion ---
+  { id: 'ghillies',  label: 'GHILLIES',  pixels: EMPTY_PIXELS },
   { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
 ];
 
@@ -752,6 +779,9 @@ const PNG_NECK_OPTIONS: TrainerOption[] = [
   { id: 'simple',    label: 'SIMPLE',    pixels: EMPTY_PIXELS },
   { id: 'beaded-lg', label: 'BEADED LG', pixels: EMPTY_PIXELS },
   { id: 'beaded-sm', label: 'BEADED SM', pixels: EMPTY_PIXELS },
+  // --- New neck items from the 25-item expansion ---
+  { id: 'scarf',     label: 'SCARF',     pixels: EMPTY_PIXELS },
+  { id: 'tie',       label: 'NECKTIE',   pixels: EMPTY_PIXELS },
   { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
 ];
 

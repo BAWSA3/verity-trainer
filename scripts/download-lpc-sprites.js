@@ -115,7 +115,30 @@ const TOPS = [
   { id: 'sleeves',    base: 'torso/clothes/shortsleeve/shortsleeves' },
   { id: 'polo',       base: 'torso/clothes/shortsleeve/shortsleeve_polo' },
   { id: 'cardigan-s', base: 'torso/clothes/shortsleeve/shortsleeve_cardigan' },
+  // --- New designs added in the 25-item expansion ---
+  // jacket/trench-jacket/suit only ship as `male` in LPC — the loop below
+  // falls back to copying the male PNG into the female directory so the item
+  // still appears for female users (may look slightly off-proportion, but
+  // visible is better than a broken thumbnail).
+  // Collared jacket + trench jacket use LPC's `walk/{color}.png` layout so
+  // we pin an explicit color file via fromPath.
+  { id: 'jacket',       fromPath: 'torso/jacket/collared/male/walk/black.png', maleOnly: true },
+  { id: 'biker-jacket', fromPath: 'torso/jacket/trench/male/walk/dark_gray.png', maleOnly: true },
+  { id: 'suit',         base: 'torso/clothes/longsleeve/formal',               maleOnly: true },
 ];
+
+// Tops that get palette-swapped color variants. Each gets 3 additional color
+// PNGs saved alongside the original at `tops/{gender}/{id}-{color}.png`.
+// Source palette is auto-extracted from the first downloaded frame (6 most
+// frequent opaque colors, sorted dark → light by luminance). Targets below
+// are tuned to match that 6-stop dark→light shading.
+const TOP_COLOR_VARIANTS = ['hoodie', 'tee', 'longsleeve', 'polo'];
+
+const TOP_COLORS = {
+  red:  ['#1C0606', '#4A0F0F', '#7A1A1A', '#B22929', '#E04F4F', '#F28888'],
+  blue: ['#05102A', '#0C2055', '#1A3A85', '#2B5FC0', '#4A8BE0', '#7FB5F0'],
+  navy: ['#05081A', '#0A102D', '#131D48', '#1F2E6A', '#35488C', '#5068AB'],
+};
 
 // Bottoms — universal (LPC bottoms are male-sprited but layer fine on either body)
 // For each: fromPath = direct walk.png from LPC; colorFile = if the LPC item uses
@@ -129,6 +152,13 @@ const BOTTOMS = [
   { id: 'pantaloons',     fromPath: 'legs/pantaloons/male/walk.png' },
   { id: 'skirt-plain',    fromPath: 'legs/skirts/plain/female/walk/black.png' },
   { id: 'skirt-straight', fromPath: 'legs/skirts/straight/female/walk/black.png' },
+  // --- New bottoms added in the 25-item expansion ---
+  // (LPC pants dir has body-type variants, not style variants, so new bottoms
+  // are all skirts — the only styled bottom category LPC actually offers.)
+  { id: 'skirt-legion',    fromPath: 'legs/skirts/legion/female/walk/black.png' },
+  { id: 'skirt-slit',      fromPath: 'legs/skirts/slit/female/walk/black.png' },
+  { id: 'skirt-belle',     fromPath: 'legs/skirts/belle/female/walk/black.png' },
+  { id: 'skirt-overskirt', fromPath: 'legs/skirts/overskirt/female/walk/black.png' },
 ];
 
 // Accessories — universal
@@ -141,6 +171,10 @@ const ACCESSORIES = [
   { id: 'tophat',      path: 'hat/formal/tophat/adult/walk.png' },
   { id: 'bowler',      path: 'hat/formal/bowler/adult/walk.png' },
   { id: 'visor',       path: 'hat/visor/round/adult/walk.png' },
+  // --- New hats added in the 25-item expansion ---
+  { id: 'headband-thick', path: 'hat/headband/thick/adult/walk.png' },
+  { id: 'headband-tied',  path: 'hat/headband/tied/adult/walk.png' },
+  { id: 'crown',          path: 'hat/formal/crown/adult/walk.png' },
 ];
 
 // Shoes — unisex (LPC serves only male sprites but they layer fine on either body)
@@ -150,6 +184,8 @@ const SHOES = [
   { id: 'hi-tops',   fromPath: 'feet/boots/revised/male/walk.png' },
   { id: 'low-tops',  fromPath: 'feet/shoes/revised/male/walk.png' },
   { id: 'fold-boot', fromPath: 'feet/boots/fold/male/walk.png' },
+  // --- New shoes added in the 25-item expansion ---
+  { id: 'ghillies', fromPath: 'feet/shoes/ghillies/male/walk.png' },
 ];
 
 // Face accessories — universal (glasses, masks sit on top of face)
@@ -167,6 +203,12 @@ const NECK = [
   { id: 'simple',     base: 'neck/necklace/simple' },
   { id: 'beaded-lg',  base: 'neck/necklace/beaded_large' },
   { id: 'beaded-sm',  base: 'neck/necklace/beaded_small' },
+  // --- New neck items added in the 25-item expansion ---
+  // `scarf` uses LPC's single non-gendered walk/{color}.png — fromPath override
+  // writes the same PNG into both gender dirs.
+  // `tie` uses the standard gendered pattern under necktie/.
+  { id: 'scarf',      fromPath: 'neck/scarf/walk/black.png' },
+  { id: 'tie',        base:     'neck/tie/necktie' },
 ];
 
 // Facial hair — effectively male-only (LPC doesn't gender these; hidden for female in UI)
@@ -238,6 +280,36 @@ function hexToRgb(hex) {
     g: parseInt(hex.slice(3, 5), 16),
     b: parseInt(hex.slice(5, 7), 16),
   };
+}
+
+// Sample the 6 most-frequent opaque colors from a sprite buffer and return
+// them sorted dark → light by luminance. Used to derive a TOP's base palette
+// for palette-swap color variants (we don't know LPC's exact shading up front).
+async function extractPalette(buffer, stops = 6) {
+  const { data } = await sharp(buffer)
+    .raw()
+    .ensureAlpha()
+    .toBuffer({ resolveWithObject: true });
+  const counts = new Map();
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 128) continue; // ignore transparent
+    const key = `${data[i]},${data[i + 1]},${data[i + 2]}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const top = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, Math.max(stops * 3, 12))
+    .map(([rgb]) => rgb.split(',').map(Number));
+  // Luminance-sort, then sample evenly across the range to get `stops` shades.
+  top.sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]));
+  const picked = [];
+  for (let i = 0; i < stops; i++) {
+    const idx = Math.floor((i / (stops - 1)) * (top.length - 1));
+    picked.push(top[idx]);
+  }
+  return picked.map(([r, g, b]) =>
+    `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+  );
 }
 
 async function paletteSwap(buffer, fromPalette, toPalette) {
@@ -339,18 +411,40 @@ async function main() {
   }
 
   // --- Tops (per gender) ---
+  // For each top: save base PNG. If the top is in TOP_COLOR_VARIANTS, also
+  // auto-extract its palette and emit 3 palette-swapped variants (red/blue/navy)
+  // at `tops/{gender}/{id}-{color}.png`.
+  // For `maleOnly` tops (e.g. LPC jackets), reuse the male PNG for female users.
   for (const gender of ['male', 'female']) {
     console.log(`\nTOPS / ${gender}`);
     ensureDir(path.join(root, 'tops', gender));
     for (const t of TOPS) {
-      const url = `${BASE_URL}/${t.base}/${gender}/walk.png`;
+      const sourceGender = t.maleOnly ? 'male' : gender;
+      const url = t.fromPath
+        ? `${BASE_URL}/${t.fromPath}`
+        : `${BASE_URL}/${t.base}/${sourceGender}/walk.png`;
       try {
         const buf = await download(url);
         const frame = await extractFrontFrame(buf);
         const enhanced = await enhanceForOutput(frame);
         fs.writeFileSync(path.join(root, 'tops', gender, `${t.id}.png`), enhanced);
         successes.push(`tops/${gender}/${t.id}.png`);
-        console.log(`  ✓ ${t.id}`);
+        console.log(`  ✓ ${t.id}${t.maleOnly && gender === 'female' ? ' (fallback from male)' : ''}`);
+
+        if (TOP_COLOR_VARIANTS.includes(t.id)) {
+          const basePalette = await extractPalette(frame, 6);
+          for (const [colorName, targetPalette] of Object.entries(TOP_COLORS)) {
+            const swapped = await paletteSwap(frame, basePalette, targetPalette);
+            const enhancedVariant = await enhanceForOutput(swapped);
+            const variantId = `${t.id}-${colorName}`;
+            fs.writeFileSync(
+              path.join(root, 'tops', gender, `${variantId}.png`),
+              enhancedVariant
+            );
+            successes.push(`tops/${gender}/${variantId}.png`);
+            console.log(`    ↳ ${variantId}`);
+          }
+        }
       } catch (err) {
         console.error(`  ✗ ${t.id}: ${err.message}`);
         failures.push(`tops/${gender}/${t.id}: ${err.message}`);
@@ -426,12 +520,14 @@ async function main() {
     }
   }
 
-  // --- Neck (gendered) ---
+  // --- Neck (gendered, with fromPath override for items LPC ships non-gendered) ---
   for (const gender of ['male', 'female']) {
     console.log(`\nNECK / ${gender}`);
     ensureDir(path.join(root, 'neck', gender));
     for (const n of NECK) {
-      const url = `${BASE_URL}/${n.base}/${gender}/walk.png`;
+      const url = n.fromPath
+        ? `${BASE_URL}/${n.fromPath}`
+        : `${BASE_URL}/${n.base}/${gender}/walk.png`;
       try {
         const buf = await download(url);
         const frame = await extractFrontFrame(buf);
