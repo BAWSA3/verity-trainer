@@ -44,12 +44,12 @@ function MiniSpritePixel({ pixels, selected }: { pixels: string[][]; selected: b
       ref={canvasRef}
       width={64}
       height={64}
-      className={`border-2 cursor-pointer transition-all ${
+      className={`border-2 cursor-pointer transition-all rounded-[8px] ${
         selected
-          ? 'border-[#39FF14] shadow-[0_0_8px_#39FF14] scale-110'
-          : 'border-[#333] hover:border-[#666] hover:scale-105'
+          ? 'border-[#367d95] shadow-[0_0_12px_rgba(54,125,149,0.4)] scale-110'
+          : 'border-[#333]/15 hover:border-[#90b34d]/60 hover:scale-105'
       }`}
-      style={{ imageRendering: 'pixelated', background: '#0a0a0a' }}
+      style={{ imageRendering: 'pixelated', background: 'rgba(255, 253, 243, 0.6)' }}
     />
   );
 }
@@ -114,14 +114,14 @@ function MiniSpritePNG({
   if (optionId === 'none') {
     return (
       <div
-        className={`w-16 h-16 flex items-center justify-center border-2 cursor-pointer transition-all ${
+        className={`w-16 h-16 flex items-center justify-center border-2 cursor-pointer transition-all rounded-[8px] ${
           selected
-            ? 'border-[#39FF14] shadow-[0_0_8px_#39FF14] scale-110'
-            : 'border-[#333] hover:border-[#666] hover:scale-105'
+            ? 'border-[#367d95] shadow-[0_0_12px_rgba(54,125,149,0.4)] scale-110'
+            : 'border-[#333]/15 hover:border-[#90b34d]/60 hover:scale-105'
         }`}
-        style={{ background: '#0a0a0a' }}
+        style={{ background: 'rgba(255, 253, 243, 0.6)' }}
       >
-        <span className="text-[#555] text-[8px]">NONE</span>
+        <span className="text-[#8a7d4d] text-[8px] tracking-wider">NONE</span>
       </div>
     );
   }
@@ -134,12 +134,12 @@ function MiniSpritePNG({
       alt={optionId}
       width={64}
       height={64}
-      className={`border-2 cursor-pointer transition-all ${
+      className={`border-2 cursor-pointer transition-all rounded-[8px] ${
         selected
-          ? 'border-[#39FF14] shadow-[0_0_8px_#39FF14] scale-110'
-          : 'border-[#333] hover:border-[#666] hover:scale-105'
+          ? 'border-[#367d95] shadow-[0_0_12px_rgba(54,125,149,0.4)] scale-110'
+          : 'border-[#333]/15 hover:border-[#90b34d]/60 hover:scale-105'
       }`}
-      style={{ imageRendering: 'pixelated', background: '#0a0a0a' }}
+      style={{ imageRendering: 'pixelated', background: 'rgba(255, 253, 243, 0.6)' }}
     />
   );
 }
@@ -156,9 +156,11 @@ export default function CategorySelector({
   currentHairColor,
 }: CategorySelectorProps) {
   return (
-    <div className="mb-4">
-      <div className="text-[#39FF14] text-[9px] sm:text-[10px] mb-2 tracking-wider">
-        {'> '}
+    <div className="mb-5">
+      <div
+        className="text-[#367d95] text-[9px] sm:text-[11px] mb-2 tracking-[0.2em] uppercase"
+        style={{ fontFamily: 'var(--font-loos), sans-serif', fontWeight: 700 }}
+      >
         {label}
       </div>
       <div className="flex gap-2 sm:gap-3 flex-wrap">
@@ -184,8 +186,8 @@ export default function CategorySelector({
               <MiniSpritePixel pixels={option.pixels} selected={selected === option.id} />
             )}
             <span
-              className={`text-[6px] sm:text-[7px] tracking-wider ${
-                selected === option.id ? 'text-[#39FF14]' : 'text-[#555]'
+              className={`text-[7px] sm:text-[8px] tracking-[0.15em] uppercase ${
+                selected === option.id ? 'text-[#367d95] font-bold' : 'text-[#8a7d4d]'
               }`}
             >
               {option.label}

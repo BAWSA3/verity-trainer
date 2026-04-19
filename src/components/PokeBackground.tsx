@@ -1,11 +1,14 @@
 'use client';
 
 /**
- * Ambient Pokemon-inspired background for the trainer customizer.
- * - SVG-based pokeballs + grass tiles scattered across the viewport
- * - Heavy blur + pixelated rendering creates an atmospheric color wash
- *   that reads as "retro game overworld" without being copyrighted IP
- * - Fixed behind everything (z-index 0), main UI stays on z-index 5+
+ * Ambient Ghibli-inspired background for the trainer customizer.
+ * Soft cream canvas with floating pokéballs in the VERITY landing palette
+ * (olive, teal, cream, warm cream, deep teal). Heavy blur keeps it atmospheric
+ * without competing with the trainer preview.
+ *
+ * - Fixed behind everything (z-index 0). Main UI layers on z-10+.
+ * - Pokéballs are our own SVG drawings in VERITY colors (no IP).
+ * - Positions are deterministic so SSR and CSR match (no hydration mismatch).
  */
 
 interface Pokeball {
@@ -16,32 +19,35 @@ interface Pokeball {
   color: string;
 }
 
-// Deterministic scatter — not random on each render to avoid hydration mismatch
+// Ghibli palette matching the landing hero
 const POKEBALLS: Pokeball[] = [
-  { x: 8,  y: 12, size: 100, rotation: -15, color: '#FF3B3B' },
-  { x: 68, y: 20, size: 140, rotation: 22,  color: '#3B8BFF' },
-  { x: 22, y: 55, size: 120, rotation: -42, color: '#FFB800' },
-  { x: 82, y: 60, size: 160, rotation: 8,   color: '#FF3B3B' },
-  { x: 45, y: 8,  size: 80,  rotation: 50,  color: '#39FF14' },
-  { x: 12, y: 85, size: 110, rotation: 30,  color: '#FF006E' },
-  { x: 60, y: 88, size: 95,  rotation: -22, color: '#39FF14' },
-  { x: 90, y: 32, size: 70,  rotation: 10,  color: '#FFB800' },
-  { x: 38, y: 70, size: 85,  rotation: -60, color: '#3B8BFF' },
-  { x: 75, y: 45, size: 60,  rotation: 18,  color: '#FF006E' },
-  { x: 4,  y: 38, size: 90,  rotation: -10, color: '#39FF14' },
-  { x: 52, y: 42, size: 55,  rotation: 40,  color: '#FF3B3B' },
+  { x: 8,  y: 12, size: 100, rotation: -15, color: '#90b34d' }, // olive
+  { x: 68, y: 20, size: 140, rotation: 22,  color: '#367d95' }, // teal
+  { x: 22, y: 55, size: 120, rotation: -42, color: '#e6ddb8' }, // warm cream
+  { x: 82, y: 60, size: 160, rotation: 8,   color: '#6fadc2' }, // sage teal
+  { x: 45, y: 8,  size: 80,  rotation: 50,  color: '#819a00' }, // olive deep
+  { x: 12, y: 85, size: 110, rotation: 30,  color: '#367d95' }, // teal
+  { x: 60, y: 88, size: 95,  rotation: -22, color: '#90b34d' }, // olive
+  { x: 90, y: 32, size: 70,  rotation: 10,  color: '#e6ddb8' }, // warm cream
+  { x: 38, y: 70, size: 85,  rotation: -60, color: '#16272c' }, // deep teal (accent)
+  { x: 75, y: 45, size: 60,  rotation: 18,  color: '#6fadc2' }, // sage teal
+  { x: 4,  y: 38, size: 90,  rotation: -10, color: '#90b34d' }, // olive
+  { x: 52, y: 42, size: 55,  rotation: 40,  color: '#819a00' }, // olive deep
 ];
 
-// Background pixel tile pattern — grass-like green blocks
+// Pixel-tile texture — small blocks in cream/olive hues for a painted-mountain feel
 const TILES: { x: number; y: number; size: number; color: string }[] = [];
 for (let i = 0; i < 80; i++) {
   const x = (i * 137) % 100;
   const y = (i * 89) % 100;
   const size = 6 + (i % 5) * 2;
-  const hue = 90 + (i % 20);
-  const sat = 40 + (i % 30);
-  const lit = 18 + (i % 15);
-  TILES.push({ x, y, size, color: `hsl(${hue}, ${sat}%, ${lit}%)` });
+  // Alternate between cream highlights and olive mid-tones
+  const palette = i % 3 === 0
+    ? `hsl(${70 + (i % 20)}, ${35 + (i % 20)}%, ${55 + (i % 15)}%)`  // olive mid
+    : i % 3 === 1
+    ? `hsl(${45 + (i % 15)}, ${40 + (i % 20)}%, ${78 + (i % 10)}%)`  // cream
+    : `hsl(${190 + (i % 15)}, ${30 + (i % 20)}%, ${50 + (i % 15)}%)`; // teal
+  TILES.push({ x, y, size, color: palette });
 }
 
 function PokeballSVG({ ball }: { ball: Pokeball }) {
@@ -52,22 +58,29 @@ function PokeballSVG({ ball }: { ball: Pokeball }) {
         d={`M -${ball.size / 2} 0 A ${ball.size / 2} ${ball.size / 2} 0 0 1 ${ball.size / 2} 0 Z`}
         fill={ball.color}
       />
-      {/* Bottom half (white/light) */}
+      {/* Bottom half (warm cream) */}
       <path
         d={`M -${ball.size / 2} 0 A ${ball.size / 2} ${ball.size / 2} 0 0 0 ${ball.size / 2} 0 Z`}
-        fill="#F5F5F5"
+        fill="#fffdf3"
       />
-      {/* Black band */}
+      {/* Dark teal band */}
       <rect
         x={-ball.size / 2}
         y={-ball.size * 0.08}
         width={ball.size}
         height={ball.size * 0.16}
-        fill="#1a1a1a"
+        fill="#16272c"
       />
       {/* Center button */}
-      <circle cx={0} cy={0} r={ball.size * 0.14} fill="#F5F5F5" stroke="#1a1a1a" strokeWidth={ball.size * 0.03} />
-      <circle cx={0} cy={0} r={ball.size * 0.06} fill="#1a1a1a" />
+      <circle
+        cx={0}
+        cy={0}
+        r={ball.size * 0.14}
+        fill="#fffdf3"
+        stroke="#16272c"
+        strokeWidth={ball.size * 0.03}
+      />
+      <circle cx={0} cy={0} r={ball.size * 0.06} fill="#16272c" />
     </g>
   );
 }
@@ -78,23 +91,22 @@ export default function PokeBackground() {
       aria-hidden
       className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
       style={{
-        // High blur + slight brightness reduction keeps the builder UI readable
-        filter: 'blur(28px) saturate(1.3) brightness(0.45)',
-        // Scale up slightly so blurred edges don't reveal the SVG box
+        // Softer blur + brightness so the cream canvas reads through
+        filter: 'blur(36px) saturate(1.1) brightness(1.0)',
         transform: 'scale(1.15)',
         transformOrigin: 'center',
       }}
     >
-      {/* Base gradient — grass → sky feel */}
+      {/* Cream base gradient matching landing */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(180deg, #0d1b0d 0%, #0a1a22 45%, #14241a 80%, #081018 100%)',
+            'linear-gradient(180deg, #fffdf3 0%, #f5f1d6 45%, #e6ddb8 80%, #d8cf9f 100%)',
         }}
       />
 
-      {/* Pixel tile texture — scattered coloured blocks */}
+      {/* Pixel tile texture */}
       <svg
         className="absolute inset-0 w-full h-full"
         viewBox="0 0 100 100"
@@ -109,12 +121,12 @@ export default function PokeBackground() {
             width={t.size * 0.15}
             height={t.size * 0.15}
             fill={t.color}
-            opacity={0.55}
+            opacity={0.35}
           />
         ))}
       </svg>
 
-      {/* Pokeballs */}
+      {/* Pokéballs */}
       <svg
         className="absolute inset-0 w-full h-full"
         viewBox="0 0 100 100"
@@ -125,7 +137,7 @@ export default function PokeBackground() {
           <g
             key={`p-${i}`}
             transform={`translate(${ball.x} ${ball.y})`}
-            opacity={0.65}
+            opacity={0.55}
           >
             <g transform={`scale(${ball.size / 1000}) rotate(${ball.rotation})`}>
               <PokeballSVG ball={{ ...ball, x: 0, y: 0 }} />
