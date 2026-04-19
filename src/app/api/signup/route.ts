@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'node:crypto';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkTrainerName } from '@/lib/moderation/check-name';
 import { checkHandle } from '@/lib/moderation/check-handle';
+import { checkTrainerConfig } from '@/lib/moderation/check-config';
+import { isDisposableEmail, emailDomain } from '@/lib/moderation/disposable-domains';
 import { checkSignupRate, extractIp, hashIp } from '@/lib/rate-limit';
+
+/**
+ * SHA-256 hash an email for audit-log storage so the audit table never
+ * contains plaintext PII. trainer_signups keeps plaintext for newsletter use.
+ */
+function hashEmail(email: string): string {
+  return crypto.createHash('sha256').update(email.toLowerCase().trim()).digest('hex');
+}
 
 /**
  * POST /api/signup
@@ -30,8 +41,12 @@ export async function POST(req: NextRequest) {
     flagMatch?: string;
   }) {
     try {
+      // Hash the email before writing to audit log — reduces PII blast radius
+      // if the audit table is ever exposed. Plaintext email lives only in
+      // trainer_signups where it's needed for the newsletter.
+      const emailForAudit = params.email ? hashEmail(params.email) : null;
       await supabaseAdmin.from('signup_audit_log').insert({
-        email: params.email ?? null,
+        email: emailForAudit,
         trainer_name: params.trainerName ?? null,
         x_handle: params.xHandle ?? null,
         ip_hash: ipHash,
@@ -101,7 +116,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Trainer name moderation (tri-layer)
+    // 3. Disposable email check — reject known throwaway providers
+    if (isDisposableEmail(email)) {
+      await logAudit({
+        email,
+        trainerName,
+        xHandle,
+        flagged: true,
+        flagReason: 'disposable_email',
+        flagMatch: emailDomain(email) ?? undefined,
+      });
+      return NextResponse.json(
+        {
+          error:
+            'Please use a non-disposable email address — we send drop notifications to your inbox.',
+        },
+        { status: 400 },
+      );
+    }
+
+    // 4. Trainer name moderation (tri-layer)
     const nameCheck = await checkTrainerName(trainerName);
     if (!nameCheck.ok) {
       await logAudit({
@@ -121,7 +155,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: friendly }, { status: 400 });
     }
 
-    // 4. X handle validation (optional field)
+    // 5. X handle validation (optional field)
     if (xHandle) {
       const handleCheck = checkHandle(xHandle);
       if (!handleCheck.ok) {
@@ -141,7 +175,25 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Upsert the signup
+    // 6. Trainer config validation — ensure every field matches the catalog.
+    //    Blocks direct-API bypass of client-side blank-start + required-slot rules.
+    const configCheck = checkTrainerConfig(trainerConfig);
+    if (!configCheck.ok) {
+      await logAudit({
+        email,
+        trainerName,
+        xHandle,
+        flagged: true,
+        flagReason: `config_${configCheck.reason}`,
+        flagMatch: configCheck.field,
+      });
+      return NextResponse.json(
+        { error: "Your trainer isn't fully designed yet. Please finish the customizer and try again." },
+        { status: 400 },
+      );
+    }
+
+    // 7. Upsert the signup
     const { data, error: dbErr } = await supabaseAdmin
       .from('trainer_signups')
       .upsert(
