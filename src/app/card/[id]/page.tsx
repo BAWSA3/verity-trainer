@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { TrainerConfig } from '@/types/trainer';
 import { generateStats } from '@/lib/card-utils';
+import { sanitizeNameForDisplay } from '@/lib/moderation/sanitize';
 import CardPageClient from './CardPageClient';
 
 const supabase = createClient(
@@ -29,7 +30,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!trainer) return { title: 'VERITY Trainer Card' };
 
-  const name = trainer.trainer_name || 'TRAINER';
+  // Backstop: if a bad name somehow landed in the DB, mask it before rendering.
+  const name = sanitizeNameForDisplay(trainer.trainer_name);
   const config = trainer.trainer_config as TrainerConfig;
   const stats = generateStats(config);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg';
@@ -79,7 +81,7 @@ export default async function CardPage({ params }: PageProps) {
     <CardPageClient
       id={id}
       config={trainer.trainer_config as TrainerConfig}
-      trainerName={trainer.trainer_name || 'TRAINER'}
+      trainerName={sanitizeNameForDisplay(trainer.trainer_name)}
     />
   );
 }

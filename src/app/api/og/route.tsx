@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
+import { sanitizeNameForDisplay } from '@/lib/moderation/sanitize';
 
 export const runtime = 'nodejs';
 
@@ -104,7 +105,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
   // Trainer metadata
-  const name = searchParams.get('n') || 'TRAINER';
+  // Sanitize — the n= param is user-controlled via URL, so treat it as untrusted.
+  const name = sanitizeNameForDisplay(searchParams.get('n'));
   const style = parseInt(searchParams.get('s') || '75');
   const drip = parseInt(searchParams.get('d') || '80');
   const flex = parseInt(searchParams.get('f') || '70');

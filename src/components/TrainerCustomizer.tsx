@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { TrainerConfig } from '@/types/trainer';
-import { CATEGORIES, DEFAULT_CONFIG } from '@/lib/trainer-options';
+import { CATEGORIES, INITIAL_CONFIG, isReadyToGenerate } from '@/lib/trainer-options';
 import { playSelect, playGenerate } from '@/lib/sounds';
 import SpriteCanvas from './SpriteCanvas';
 import CategorySelector from './CategorySelector';
@@ -12,9 +12,10 @@ import PokeBackground from './PokeBackground';
 
 export default function TrainerCustomizer() {
   const router = useRouter();
-  const [config, setConfig] = useState<TrainerConfig>(DEFAULT_CONFIG);
+  const [config, setConfig] = useState<TrainerConfig>(INITIAL_CONFIG);
   const [showSignup, setShowSignup] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const canGenerate = isReadyToGenerate(config);
 
   // Fade-in on mount (replaces boot screen)
   useEffect(() => {
@@ -28,9 +29,20 @@ export default function TrainerCustomizer() {
   }
 
   function handleGenerate() {
+    if (!canGenerate) return;
     playGenerate();
     setShowSignup(true);
   }
+
+  // Which required categories are still unpicked — used in helper text
+  const missingLabels: string[] = [];
+  if (!config.gender) missingLabels.push('gender');
+  if (!config.body) missingLabels.push('skin');
+  if (!config.hair) missingLabels.push('hair');
+  if (!config.hairColor) missingLabels.push('hair color');
+  if (!config.top) missingLabels.push('top');
+  if (!config.bottom) missingLabels.push('bottom');
+  if (!config.shoes || config.shoes === 'none') missingLabels.push('shoes');
 
   function handleSignupSuccess(id: string) {
     router.push(`/card/${id}`);
@@ -101,22 +113,26 @@ export default function TrainerCustomizer() {
                 options={cat.options}
                 selected={config[cat.key]}
                 onSelect={(id) => handleSelect(cat.key, id)}
-                gender={config.gender}
-                currentSkin={config.body}
-                currentHairStyle={config.hair}
-                currentHairColor={config.hairColor}
+                gender={config.gender || 'male'}
+                currentSkin={config.body || 'medium'}
+                currentHairStyle={config.hair || 'buzz'}
+                currentHairColor={config.hairColor || 'black'}
               />
             ))}
           </div>
 
-          {/* Generate Button — matches landing Get Started glass aesthetic */}
+          {/* Generate Button — disabled until all required slots filled */}
           <button
             onClick={handleGenerate}
+            disabled={!canGenerate}
+            aria-disabled={!canGenerate}
             className="w-full py-4 sm:py-[20px] rounded-[40px]
                        text-white text-sm sm:text-[20px] tracking-wider
-                       transition-all hover:scale-[1.01]
-                       shadow-[0_10px_30px_-10px_rgba(54,125,149,0.5)]
-                       hover:shadow-[0_15px_40px_-10px_rgba(54,125,149,0.7)]"
+                       transition-all
+                       enabled:hover:scale-[1.01]
+                       enabled:shadow-[0_10px_30px_-10px_rgba(54,125,149,0.5)]
+                       enabled:hover:shadow-[0_15px_40px_-10px_rgba(54,125,149,0.7)]
+                       disabled:opacity-40 disabled:cursor-not-allowed disabled:grayscale"
             style={{
               fontFamily: 'var(--font-sora)',
               fontWeight: 700,
@@ -127,8 +143,10 @@ export default function TrainerCustomizer() {
             Generate My Card
           </button>
 
-          <p className="text-center text-[#8a7d4d] text-[9px] sm:text-[10px] mt-3 tracking-wider">
-            Claim your spot before the drop
+          <p className="text-center text-[#8a7d4d] text-[10px] sm:text-[11px] mt-3 tracking-wider">
+            {canGenerate
+              ? 'Claim your spot before the drop'
+              : `Pick ${missingLabels.join(', ')} to generate your card`}
           </p>
         </div>
       </div>

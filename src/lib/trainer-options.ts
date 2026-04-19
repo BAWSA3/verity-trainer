@@ -822,3 +822,47 @@ export const DEFAULT_CONFIG = {
   neck: 'none',
   accessory: 'none',
 };
+
+// Blank-start state — all render-critical slots empty so the customizer
+// opens on a silhouette placeholder. The 4 optional categories stay at
+// 'none' since they default to "no addition" rather than "not chosen".
+export const INITIAL_CONFIG: import('@/types/trainer').TrainerConfig = {
+  gender: '',
+  body: '',
+  hair: '',
+  hairColor: '',
+  top: '',
+  bottom: '',
+  shoes: '',
+  facialHair: 'none',
+  face: 'none',
+  neck: 'none',
+  accessory: 'none',
+};
+
+// Categories that must be filled before Generate is enabled. Anything
+// not in this list is optional (facialHair / face / neck / accessory).
+export const REQUIRED_FOR_GENERATE = [
+  'gender',
+  'body',
+  'hair',
+  'hairColor',
+  'top',
+  'bottom',
+  'shoes',
+] as const;
+
+export function isReadyToGenerate(config: {
+  gender: string;
+  body: string;
+  hair: string;
+  hairColor: string;
+  top: string;
+  bottom: string;
+  shoes: string;
+}): boolean {
+  return REQUIRED_FOR_GENERATE.every((key) => {
+    const v = config[key];
+    return typeof v === 'string' && v.length > 0 && v !== 'none';
+  });
+}

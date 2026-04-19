@@ -1,5 +1,9 @@
 export type Gender = 'male' | 'female';
 
+// Empty-string sentinel used in INITIAL_CONFIG to mean "user hasn't picked
+// this trait yet". Required-for-generate categories use this when blank.
+export type MaybeGender = Gender | '';
+
 export type Category =
   | 'gender'
   | 'body'
@@ -20,17 +24,22 @@ export interface TrainerOption {
 }
 
 export interface TrainerConfig {
-  gender: Gender;
-  body: string;       // skin tone id (porcelain, light, ..., ebony)
-  facialHair: string; // 'none' | shadow | beard | trimmed | goatee | chevron | handlebar
-  hair: string;       // style id
-  hairColor: string;  // black | brown | blonde | red | auburn | platinum | blue | pink | green | purple
-  face: string;       // 'none' | sunnies | nerd | round-frame | secretary | mask
-  top: string;
-  bottom: string;
-  shoes: string;      // 'none' | sneakers | boots | hi-tops | low-tops | fold-boot
-  neck: string;       // 'none' | chain | simple | beaded-lg | beaded-sm
-  accessory: string;  // hat (existing)
+  // Required-for-generate categories use '' as the "not yet picked" sentinel.
+  // Once the user hits Generate, all of these are guaranteed non-empty
+  // (enforced by isReadyToGenerate + SignupGate client gate).
+  gender: MaybeGender;
+  body: string;       // skin tone id; '' if unset
+  hair: string;       // style id; '' if unset
+  hairColor: string;  // '' if unset
+  top: string;        // '' if unset
+  bottom: string;     // '' if unset
+  shoes: string;      // '' if unset
+
+  // Optional categories — default to 'none', never empty.
+  facialHair: string; // 'none' | shadow | beard | ...
+  face: string;       // 'none' | sunnies | ...
+  neck: string;       // 'none' | chain | ...
+  accessory: string;  // 'none' | hat id ...
 }
 
 export interface SignupData {

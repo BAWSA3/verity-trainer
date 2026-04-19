@@ -18,8 +18,13 @@ export default function SignupGate({ config, onSuccess, onClose }: SignupGatePro
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !trainerName) {
+    const trimmedName = trainerName.trim();
+    if (!email || !trimmedName) {
       setError('Email and trainer name required');
+      return;
+    }
+    if (trimmedName.length < 2) {
+      setError('Trainer name must be at least 2 characters');
       return;
     }
 
@@ -33,20 +38,28 @@ export default function SignupGate({ config, onSuccess, onClose }: SignupGatePro
         body: JSON.stringify({
           email,
           xHandle: xHandle.replace('@', ''),
-          trainerName: trainerName.toUpperCase().slice(0, 12),
+          trainerName: trimmedName.toUpperCase().slice(0, 12),
           trainerConfig: config,
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const data = await res.json();
+        // Friendlier messages for known cases
+        if (res.status === 429) {
+          const secs = data.retryAfter ?? 60;
+          const mins = Math.max(1, Math.ceil(secs / 60));
+          throw new Error(
+            `Too many signups from your network. Try again in ${mins} minute${mins > 1 ? 's' : ''}.`,
+          );
+        }
         throw new Error(data.error || 'Signup failed');
       }
 
-      const { id } = await res.json();
-      onSuccess(id);
+      onSuccess(data.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'System error');
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }

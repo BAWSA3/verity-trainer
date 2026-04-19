@@ -43,25 +43,34 @@ export default function SpriteCanvas({ config, size = 256 }: SpriteCanvasProps) 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pixelSize = size / GRID_SIZE;
 
+  // Blank-start state: gender or body not picked yet → render silhouette.
+  // Sprites need both to know which body/head PNG to load, so anything
+  // less than both leaves the preview meaningless.
+  const isBlank = !config.gender || !config.body;
+
   const drawPNG = useCallback(async (ctx: CanvasRenderingContext2D) => {
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, size, size);
 
     // PNG layer paths — z-order is head-to-toe + sensible layering.
     // Gender-aware for body/head/tops/neck; others are universal.
-    const g = config.gender ?? 'male';
+    // During progressive selection, some required slots may still be empty —
+    // skip those paths rather than 404 them.
+    const g = (config.gender || 'male') as 'male' | 'female';
     const layers = [
-      `/sprites/body/${g}/${config.body}.png`,
-      `/sprites/head/${g}/${config.body}.png`,
+      config.body ? `/sprites/body/${g}/${config.body}.png` : null,
+      config.body ? `/sprites/head/${g}/${config.body}.png` : null,
       // Facial hair only renders for male characters (no female sprite in LPC)
       g === 'male' && config.facialHair && config.facialHair !== 'none'
         ? `/sprites/facial-hair/${config.facialHair}.png`
         : null,
-      `/sprites/bottoms/${config.bottom}.png`,
+      config.bottom ? `/sprites/bottoms/${config.bottom}.png` : null,
       config.shoes && config.shoes !== 'none' ? `/sprites/shoes/${config.shoes}.png` : null,
-      `/sprites/tops/${g}/${config.top}.png`,
+      config.top ? `/sprites/tops/${g}/${config.top}.png` : null,
       config.neck && config.neck !== 'none' ? `/sprites/neck/${g}/${config.neck}.png` : null,
-      `/sprites/hair/${config.hairColor ?? 'black'}/${config.hair}.png`,
+      config.hair && config.hairColor
+        ? `/sprites/hair/${config.hairColor}/${config.hair}.png`
+        : null,
       config.face && config.face !== 'none' ? `/sprites/face/${config.face}.png` : null,
       config.accessory !== 'none' ? `/sprites/accessories/${config.accessory}.png` : null,
     ].filter(Boolean) as string[];
@@ -97,6 +106,7 @@ export default function SpriteCanvas({ config, size = 256 }: SpriteCanvasProps) 
   }, [config, size, pixelSize]);
 
   useEffect(() => {
+    if (isBlank) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -107,14 +117,64 @@ export default function SpriteCanvas({ config, size = 256 }: SpriteCanvasProps) 
     } else {
       drawPixels(ctx);
     }
-  }, [drawPNG, drawPixels]);
+  }, [drawPNG, drawPixels, isBlank]);
+
+  // Silhouette placeholder — soft teal figure on cream bg.
+  // Communicates "your trainer will appear here" without showing a naked body.
+  if (isBlank) {
+    return (
+      <div
+        className="flex items-center justify-center rounded-[8px] bg-[#fffdf3] border-2 border-[#90b34d]/25"
+        style={{ width: size, height: size, imageRendering: 'pixelated' }}
+        aria-label="Trainer silhouette — pick gender and skin to begin"
+      >
+        <svg
+          viewBox="0 0 32 32"
+          width={size * 0.85}
+          height={size * 0.85}
+          shapeRendering="crispEdges"
+          style={{ imageRendering: 'pixelated' }}
+        >
+          {/* Pixel silhouette — generic humanoid trainer outline */}
+          {/* Head */}
+          <rect x="12" y="5"  width="8" height="1" fill="#367d95" opacity="0.4" />
+          <rect x="11" y="6"  width="10" height="1" fill="#367d95" opacity="0.45" />
+          <rect x="11" y="7"  width="10" height="1" fill="#367d95" opacity="0.5" />
+          <rect x="11" y="8"  width="10" height="1" fill="#367d95" opacity="0.5" />
+          <rect x="11" y="9"  width="10" height="1" fill="#367d95" opacity="0.5" />
+          <rect x="12" y="10" width="8"  height="1" fill="#367d95" opacity="0.45" />
+          {/* Neck */}
+          <rect x="14" y="11" width="4"  height="1" fill="#367d95" opacity="0.4" />
+          {/* Torso */}
+          <rect x="10" y="12" width="12" height="1" fill="#367d95" opacity="0.5" />
+          <rect x="9"  y="13" width="14" height="1" fill="#367d95" opacity="0.55" />
+          <rect x="9"  y="14" width="14" height="1" fill="#367d95" opacity="0.55" />
+          <rect x="9"  y="15" width="14" height="1" fill="#367d95" opacity="0.55" />
+          <rect x="10" y="16" width="12" height="1" fill="#367d95" opacity="0.5" />
+          <rect x="10" y="17" width="12" height="1" fill="#367d95" opacity="0.5" />
+          <rect x="10" y="18" width="12" height="1" fill="#367d95" opacity="0.5" />
+          {/* Arms */}
+          <rect x="7"  y="13" width="2"  height="5" fill="#367d95" opacity="0.4" />
+          <rect x="23" y="13" width="2"  height="5" fill="#367d95" opacity="0.4" />
+          {/* Legs */}
+          <rect x="11" y="19" width="4"  height="1" fill="#367d95" opacity="0.5" />
+          <rect x="17" y="19" width="4"  height="1" fill="#367d95" opacity="0.5" />
+          <rect x="11" y="20" width="3"  height="5" fill="#367d95" opacity="0.45" />
+          <rect x="18" y="20" width="3"  height="5" fill="#367d95" opacity="0.45" />
+          {/* Feet */}
+          <rect x="10" y="25" width="5"  height="1" fill="#367d95" opacity="0.35" />
+          <rect x="17" y="25" width="5"  height="1" fill="#367d95" opacity="0.35" />
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <canvas
       ref={canvasRef}
       width={size}
       height={size}
-      className="border-4 border-[#39FF14] bg-[#0a0a0a]"
+      className="rounded-[8px] bg-[#fffdf3]"
       style={{ imageRendering: 'pixelated' }}
     />
   );
