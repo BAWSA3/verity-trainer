@@ -23,3 +23,24 @@ export function sanitizeNameForDisplay(name: string | null | undefined): string 
   if (findBlocklistMatch(trimmed, BRANDS)) return FALLBACK;
   return trimmed.toUpperCase().slice(0, 12);
 }
+
+/**
+ * Read-time chip sanitizer for likes/dislikes on public pages.
+ * Drops any chip that hits the static blocklists. Static-only — no OpenAI.
+ * Returns up to 5 chips, each truncated to 24 chars.
+ */
+export function sanitizeChipsForDisplay(chips: string[] | null | undefined): string[] {
+  if (!Array.isArray(chips)) return [];
+  const out: string[] = [];
+  for (const chip of chips) {
+    if (typeof chip !== 'string') continue;
+    const trimmed = chip.trim();
+    if (!trimmed) continue;
+    if (findBlocklistMatch(trimmed, SLURS)) continue;
+    if (findBlocklistMatch(trimmed, PROFANITY)) continue;
+    if (findBlocklistMatch(trimmed, BRANDS)) continue;
+    out.push(trimmed.slice(0, 24));
+    if (out.length >= 5) break;
+  }
+  return out;
+}

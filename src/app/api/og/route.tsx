@@ -3,97 +3,119 @@ import { NextRequest } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import { sanitizeNameForDisplay } from '@/lib/moderation/sanitize';
+import { sanitizeNameForDisplay, sanitizeChipsForDisplay } from '@/lib/moderation/sanitize';
+import { ZODIAC_GLYPHS, VALID_ZODIACS } from '@/lib/personality';
+import type { Zodiac } from '@/types/trainer';
 
 export const runtime = 'nodejs';
 
-// Internal compositing resolution — sprites are stored at 192x192 source,
-// composited at this size for final OG image. Larger = crisper printout.
-const SPRITE_SIZE = 1024;
+// V1 hi-fi pixel sprites are 64x96 source. Composite at 1024 wide for crisp output.
+const SPRITE_W = 1024;
+const SPRITE_H = 1536;     // 64x96 ratio at 1024 width
+const BUST_W = 512;        // bust crop width in OG image (left third of card)
+const BUST_H = 640;        // bust crop height (40/64 ratio at 512 → 320; padded for visual breathing room)
 
-// Paths are now gender-aware for body/head/tops. Others stay universal.
+// Bust source crop in 64x96 sprite-space — mirrors manifest.bustCrop.
+const BUST_CROP = { left: 16, top: 0, width: 32, height: 40 };
+
+// Cache the rendered OG aggressively — URL is keyed by full config so different
+// trainers get different URLs.
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, max-age=31536000, immutable',
+};
+
 async function loadSprite(relPath: string): Promise<Buffer | null> {
   try {
-    const filePath = path.join(process.cwd(), 'public', 'sprites', relPath);
+    const filePath = path.join(process.cwd(), 'public', 'sprites', 'limezu', relPath);
     return await readFile(filePath);
   } catch {
     return null;
   }
 }
 
-async function compositeTrainer(
-  gender: 'male' | 'female',
-  body: string,
-  hair: string,
-  hairColor: string,
-  top: string,
-  bottom: string,
-  accessory: string,
-  facialHair: string,
-  face: string,
-  neck: string,
-  shoes: string,
-): Promise<string | null> {
-  const layers = [
-    { rel: `body/${gender}/${body}.png` },
-    { rel: `head/${gender}/${body}.png` },
-    ...(gender === 'male' && facialHair && facialHair !== 'none'
-      ? [{ rel: `facial-hair/${facialHair}.png` }]
-      : []),
-    { rel: `bottoms/${bottom}.png` },
-    ...(shoes && shoes !== 'none' ? [{ rel: `shoes/${shoes}.png` }] : []),
-    { rel: `tops/${gender}/${top}.png` },
-    ...(neck && neck !== 'none' ? [{ rel: `neck/${gender}/${neck}.png` }] : []),
-    { rel: `hair/${hairColor}/${hair}.png` },
-    ...(face && face !== 'none' ? [{ rel: `face/${face}.png` }] : []),
-    ...(accessory !== 'none' ? [{ rel: `accessories/${accessory}.png` }] : []),
-  ];
+interface CompositeArgs {
+  gender: 'm' | 'f';
+  body: string;
+  hair: string;
+  hairColor: string;
+  top: string;
+  bottom: string;
+  shoes: string;
+  outerwear: string;
+  hat: string;
+  glasses: string;
+  expression: string;
+}
+
+async function compositeBust(args: CompositeArgs): Promise<string | null> {
+  // Layer order mirrors TrainerSprite.buildLayers().
+  const layerPaths = [
+    `body/${args.gender}/${args.body}.png`,
+    args.bottom !== 'none'    ? `bottom/${args.gender}/${args.bottom}.png` : null,
+    args.shoes !== 'none'     ? `shoes/${args.shoes}.png` : null,
+    args.top !== 'none'       ? `top/${args.gender}/${args.top}.png` : null,
+    args.outerwear !== 'none' ? `outerwear/${args.gender}/${args.outerwear}.png` : null,
+    args.expression !== 'none'? `expression/${args.expression}.png` : null,
+    args.glasses !== 'none'   ? `glasses/${args.glasses}.png` : null,
+    `hair/${args.hairColor}/${args.hair}.png`,
+    args.hat !== 'none'       ? `hat/${args.hat}.png` : null,
+  ].filter((p): p is string => p !== null);
 
   try {
-    // Load all layer buffers in parallel
     const buffers = await Promise.all(
-      layers.map(async ({ rel }) => {
+      layerPaths.map(async (rel) => {
         const buf = await loadSprite(rel);
         if (!buf) return null;
-        return sharp(buf).resize(SPRITE_SIZE, SPRITE_SIZE, { kernel: 'nearest' }).toBuffer();
+        // Resize each layer to the full-body output size with nearest-neighbor.
+        return sharp(buf).resize(SPRITE_W, SPRITE_H, { kernel: 'nearest', fit: 'fill' }).toBuffer();
       }),
     );
+    const valid = buffers.filter((b): b is Buffer => b !== null);
+    if (valid.length === 0) return null;
 
-    const validBuffers = (await Promise.all(buffers)).filter((b): b is Buffer => b !== null);
-    if (validBuffers.length === 0) return null;
-
-    const composite = await sharp({
-      create: {
-        width: SPRITE_SIZE,
-        height: SPRITE_SIZE,
-        channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      },
+    // Composite full body, then crop to bust.
+    const fullBody = await sharp({
+      create: { width: SPRITE_W, height: SPRITE_H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
     })
-      .composite(validBuffers.map((input) => ({ input, top: 0, left: 0 })))
+      .composite(valid.map((input) => ({ input, top: 0, left: 0 })))
       .png()
       .toBuffer();
 
-    return `data:image/png;base64,${composite.toString('base64')}`;
+    // Bust extract: scale crop region from sprite-space (64x96) to output-space.
+    const scaleX = SPRITE_W / 64;
+    const scaleY = SPRITE_H / 96;
+    const extractRegion = {
+      left: Math.round(BUST_CROP.left * scaleX),
+      top: Math.round(BUST_CROP.top * scaleY),
+      width: Math.round(BUST_CROP.width * scaleX),
+      height: Math.round(BUST_CROP.height * scaleY),
+    };
+
+    const bust = await sharp(fullBody)
+      .extract(extractRegion)
+      .resize(BUST_W, BUST_H, { kernel: 'nearest', fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+
+    return `data:image/png;base64,${bust.toString('base64')}`;
   } catch (err) {
-    console.error('[og] compositeTrainer error:', err);
+    console.error('[og] compositeBust error:', err);
     return null;
   }
 }
 
-function StatBar({ value, color = '#39FF14' }: { value: number; color?: string }) {
-  const cells = 12;
+function StatBar({ value }: { value: number }) {
+  const cells = 10;
   const filled = Math.round((value / 100) * cells);
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
+    <div style={{ display: 'flex', gap: 3 }}>
       {Array.from({ length: cells }).map((_, i) => (
         <div
           key={i}
           style={{
-            width: 18,
-            height: 18,
-            backgroundColor: i < filled ? color : '#1a1a1a',
-            border: i < filled ? `1px solid ${color}` : '1px solid #2a2a2a',
+            width: 22,
+            height: 14,
+            backgroundColor: i < filled ? '#90b34d' : 'rgba(22, 39, 44, 0.15)',
           }}
         />
       ))}
@@ -101,43 +123,54 @@ function StatBar({ value, color = '#39FF14' }: { value: number; color?: string }
   );
 }
 
+function StatRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+      <span style={{ color: '#367d95', fontSize: 16, width: 110, letterSpacing: '3px', fontWeight: 700 }}>
+        {label}
+      </span>
+      <StatBar value={value} />
+      <span style={{ color: '#16272c', fontSize: 18 }}>{value}</span>
+    </div>
+  );
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
-  // Trainer metadata
-  // Sanitize — the n= param is user-controlled via URL, so treat it as untrusted.
   const name = sanitizeNameForDisplay(searchParams.get('n'));
-  const style = parseInt(searchParams.get('s') || '75');
-  const drip = parseInt(searchParams.get('d') || '80');
-  const flex = parseInt(searchParams.get('f') || '70');
 
-  // Trainer config (fall back to sensible defaults)
+  const style    = clamp(parseInt(searchParams.get('s')   || '70'));
+  const charisma = clamp(parseInt(searchParams.get('c')   || '70'));
+  const street   = clamp(parseInt(searchParams.get('st')  || '70'));
+  const luck     = clamp(parseInt(searchParams.get('lk_v')|| '70'));
+
+  // Trainer config (fall back to safe defaults). Keep parsing tight — these are
+  // already sanitized by /api/signup before being committed to DB, but query
+  // params are URL-controlled so re-validate.
   const genderParam = searchParams.get('g');
-  const gender: 'male' | 'female' = genderParam === 'female' ? 'female' : 'male';
-  const body = searchParams.get('b') || 'medium';
-  const hair = searchParams.get('h') || 'buzz';
-  const hairColor = searchParams.get('hc') || 'black';
-  const top = searchParams.get('t') || 'hoodie';
-  const bottom = searchParams.get('bo') || 'pants';
-  const accessory = searchParams.get('a') || 'none';
-  const facialHair = searchParams.get('fh') || 'none';
-  const face = searchParams.get('fa') || 'none';
-  const neck = searchParams.get('ne') || 'none';
-  const shoes = searchParams.get('sh') || 'sneakers';
-
-  const spriteDataUri = await compositeTrainer(
+  const gender: 'm' | 'f' = genderParam === 'f' ? 'f' : 'm';
+  const args: CompositeArgs = {
     gender,
-    body,
-    hair,
-    hairColor,
-    top,
-    bottom,
-    accessory,
-    facialHair,
-    face,
-    neck,
-    shoes,
-  );
+    body:       safeId(searchParams.get('b'),  ''),
+    hair:       safeId(searchParams.get('h'),  ''),
+    hairColor:  safeId(searchParams.get('hc'), 'black'),
+    top:        safeId(searchParams.get('t'),  ''),
+    bottom:     safeId(searchParams.get('bo'), ''),
+    shoes:      safeId(searchParams.get('sh'), 'none'),
+    outerwear:  safeId(searchParams.get('ow'), 'none'),
+    hat:        safeId(searchParams.get('ht'), 'none'),
+    glasses:    safeId(searchParams.get('gl'), 'none'),
+    expression: safeId(searchParams.get('ex'), 'none'),
+  };
+
+  // Personality
+  const zodiacRaw = searchParams.get('z') || '';
+  const zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
+  const likes = sanitizeChipsForDisplay(splitPipe(searchParams.get('lk'))).slice(0, 3);
+  const dislikes = sanitizeChipsForDisplay(splitPipe(searchParams.get('dl'))).slice(0, 3);
+
+  const bustDataUri = await compositeBust(args);
 
   return new ImageResponse(
     (
@@ -147,149 +180,120 @@ export async function GET(req: NextRequest) {
           height: 630,
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#0a0a0a',
-          border: '8px solid #39FF14',
-          padding: '40px',
-          fontFamily: 'monospace',
+          backgroundColor: '#fffdf3',
+          border: '8px solid #16272c',
+          borderRadius: 12,
+          fontFamily: 'sans-serif',
         }}
       >
-        {/* Header */}
+        {/* title bar */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: 24,
+            padding: '14px 28px',
+            borderBottom: '2px solid #16272c',
+            backgroundColor: '#fffdf3',
           }}
         >
-          <div
-            style={{
-              color: '#39FF14',
-              fontSize: 16,
-              letterSpacing: '4px',
-              display: 'flex',
-            }}
-          >
-            VERITY TRAINER CARD
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ color: '#90b34d', fontSize: 22 }}>▣</span>
+            <span style={{ color: '#16272c', fontSize: 16, letterSpacing: '4px', fontWeight: 700 }}>
+              TRAINER CARD — VERITY
+            </span>
           </div>
-          <div
-            style={{
-              color: '#FF006E',
-              fontSize: 12,
-              letterSpacing: '3px',
-              display: 'flex',
-            }}
-          >
-            #EXCLUSIVE-DROP
+          <div style={{ display: 'flex', gap: 8 }}>
+            <span style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, color: '#16272c', textAlign: 'center', fontSize: 14, lineHeight: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>_</span>
+            <span style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, color: '#16272c', textAlign: 'center', fontSize: 14, lineHeight: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>▢</span>
+            <span style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, color: '#16272c', textAlign: 'center', fontSize: 14, lineHeight: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>✕</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flex: 1, gap: 48 }}>
-          {/* Sprite */}
+        {/* body */}
+        <div style={{ display: 'flex', flex: 1, padding: 32, gap: 32 }}>
+          {/* Bust */}
           <div
             style={{
-              width: 380,
-              height: 380,
-              border: '4px solid #39FF14',
-              backgroundColor: '#111',
+              width: 360,
+              height: 460,
+              border: '3px solid #90b34d',
+              borderRadius: 6,
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               justifyContent: 'center',
-              position: 'relative',
+              backgroundColor: 'rgba(144, 179, 77, 0.08)',
+              overflow: 'hidden',
             }}
           >
-            {spriteDataUri ? (
+            {bustDataUri ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={spriteDataUri}
+                src={bustDataUri}
                 alt=""
-                width={340}
-                height={340}
-                style={{ imageRendering: 'pixelated' }}
+                width={360}
+                height={450}
+                style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
               />
             ) : (
-              <div style={{ color: '#39FF14', fontSize: 60, display: 'flex' }}>V</div>
+              <div style={{ color: '#90b34d', fontSize: 90, display: 'flex', alignItems: 'center', height: '100%' }}>V</div>
             )}
           </div>
 
-          {/* Stats */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              gap: 20,
-              flex: 1,
-            }}
-          >
-            <div style={{ color: 'white', fontSize: 48, display: 'flex', fontWeight: 700 }}>
+          {/* Right column */}
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 14 }}>
+            <div style={{ color: '#16272c', fontSize: 56, fontWeight: 700, display: 'flex', letterSpacing: '2px' }}>
               {name}
             </div>
-            <div
-              style={{
-                color: '#FF006E',
-                fontSize: 14,
-                letterSpacing: '4px',
-                display: 'flex',
-                marginBottom: 8,
-              }}
-            >
-              STREETWEAR LEGEND
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#367d95', fontSize: 16, letterSpacing: '4px', textTransform: 'uppercase' }}>
+              {zodiac ? (
+                <>
+                  <span style={{ fontSize: 22 }}>{ZODIAC_GLYPHS[zodiac]}</span>
+                  <span>{zodiac} · streetwear class</span>
+                </>
+              ) : (
+                <span>streetwear class</span>
+              )}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-                <span
-                  style={{ color: '#888', fontSize: 14, width: 110, letterSpacing: '2px' }}
-                >
-                  STYLE LVL
-                </span>
-                <StatBar value={style} />
-                <span style={{ color: '#39FF14', fontSize: 16, display: 'flex' }}>{style}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-                <span
-                  style={{ color: '#888', fontSize: 14, width: 110, letterSpacing: '2px' }}
-                >
-                  DRIP STAT
-                </span>
-                <StatBar value={drip} color="#FF006E" />
-                <span style={{ color: '#FF006E', fontSize: 16, display: 'flex' }}>{drip}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-                <span
-                  style={{ color: '#888', fontSize: 14, width: 110, letterSpacing: '2px' }}
-                >
-                  FLEX PWR
-                </span>
-                <StatBar value={flex} />
-                <span style={{ color: '#39FF14', fontSize: 16, display: 'flex' }}>{flex}</span>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+              <StatRow label="STYLE"    value={style} />
+              <StatRow label="CHARISMA" value={charisma} />
+              <StatRow label="STREET"   value={street} />
+              <StatRow label="LUCK"     value={luck} />
             </div>
+
+            {(likes.length > 0 || dislikes.length > 0) && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(22, 39, 44, 0.15)' }}>
+                {likes.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <span style={{ color: '#367d95', fontSize: 13, width: 90, letterSpacing: '3px', fontWeight: 700 }}>LIKES</span>
+                    <span style={{ color: '#16272c', fontSize: 16 }}>{likes.join(' · ')}</span>
+                  </div>
+                )}
+                {dislikes.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <span style={{ color: '#c94d4d', fontSize: 13, width: 90, letterSpacing: '3px', fontWeight: 700 }}>DISLIKES</span>
+                    <span style={{ color: '#16272c', fontSize: 16 }}>{dislikes.join(' · ')}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Footer */}
+        {/* footer */}
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            marginTop: 20,
-            borderTop: '2px solid #222',
-            paddingTop: 20,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '16px 28px',
+            borderTop: '1px solid rgba(22, 39, 44, 0.15)',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ color: '#666', fontSize: 12, letterSpacing: '2px' }}>
-              YOUR STREETWEAR JOURNEY STARTS AT VERITY
-            </span>
-            <span style={{ color: '#39FF14', fontSize: 14, letterSpacing: '3px' }}>
-              LAUNCHING MAY 2026
-            </span>
-          </div>
-          <span style={{ color: '#39FF14', fontSize: 22, letterSpacing: '4px', display: 'flex' }}>
-            VERITY
+          <span style={{ color: '#8a7d4d', fontSize: 13, letterSpacing: '5px', fontWeight: 700 }}>
+            ─── VERITY EARLY ACCESS · MAY 2026 ───
           </span>
         </div>
       </div>
@@ -297,6 +301,23 @@ export async function GET(req: NextRequest) {
     {
       width: 1200,
       height: 630,
+      headers: CACHE_HEADERS,
     },
   );
+}
+
+// ---- helpers ----
+function clamp(n: number): number {
+  if (Number.isNaN(n)) return 70;
+  return Math.max(0, Math.min(100, n));
+}
+function safeId(raw: string | null, fallback: string): string {
+  if (!raw) return fallback;
+  // Limit to slug-safe chars; reject anything weird.
+  if (!/^[a-z0-9_-]+$/i.test(raw)) return fallback;
+  return raw;
+}
+function splitPipe(raw: string | null): string[] {
+  if (!raw) return [];
+  return raw.split('|').filter(Boolean);
 }

@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Licensed sprite source — purchased from Limezu, do not redistribute.
+# Generated PNGs in public/sprites/limezu/ are committed (derivatives).
+/vendor/limezu-pack/

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "generatedAt": null,
+  "spriteWidth": 64,
+  "spriteHeight": 96,
+  "bustCrop": { "x": 16, "y": 0, "w": 32, "h": 40 },
+  "categories": {
+    "body": {
+      "gendered": true,
+      "values": []
+    },
+    "hair": {
+      "gendered": false,
+      "supportsColor": true,
+      "values": []
+    },
+    "hairColor": {
+      "values": [
+        { "id": "black",    "label": "Black",    "hex": "#1a1a1a" },
+        { "id": "brown",    "label": "Brown",    "hex": "#5a3a1f" },
+        { "id": "blonde",   "label": "Blonde",   "hex": "#d8b76a" },
+        { "id": "red",      "label": "Red",      "hex": "#a83939" },
+        { "id": "platinum", "label": "Platinum", "hex": "#dfd9c7" }
+      ]
+    },
+    "top": {
+      "gendered": true,
+      "values": []
+    },
+    "bottom": {
+      "gendered": true,
+      "values": []
+    },
+    "shoes": {
+      "gendered": false,
+      "values": []
+    },
+    "outerwear": {
+      "gendered": true,
+      "optional": true,
+      "values": []
+    },
+    "hat": {
+      "gendered": false,
+      "optional": true,
+      "values": []
+    },
+    "glasses": {
+      "gendered": false,
+      "optional": true,
+      "values": []
+    },
+    "expression": {
+      "gendered": false,
+      "optional": true,
+      "values": []
+    }
+  }
+}

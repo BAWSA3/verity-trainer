@@ -1,13 +1,15 @@
 'use client';
 
-import { useRef, useEffect, useState, useMemo } from 'react';
-import { TrainerOption, Gender } from '@/types/trainer';
-import { USE_PNG_SPRITES } from '@/lib/trainer-options';
+import { useState, useMemo } from 'react';
+import type { TrainerOption, Gender } from '@/types/trainer';
+import {
+  bodyPath, hairPath, topPath, bottomPath, shoesPath,
+  outerwearPath, hatPath, glassesPath, expressionPath,
+} from '@/lib/trainer-options';
 import { playHover } from '@/lib/sounds';
 
 // Categories with more than this many items collapse behind a "+N MORE" toggle
-// to keep the panel scannable. Tuned to fit ~2 rows at the default thumbnail
-// size on mobile + desktop.
+// to keep the panel scannable.
 const PREVIEW_LIMIT = 6;
 
 interface CategorySelectorProps {
@@ -16,114 +18,61 @@ interface CategorySelectorProps {
   options: TrainerOption[];
   selected: string;
   onSelect: (id: string) => void;
-  gender: Gender;              // current gender so thumbnails reflect user's picks
-  currentSkin: string;         // current skin tone so thumbnails use it for clothes/hair/etc
-  currentHairStyle: string;    // current hair style for HAIR COLOR thumbnails
-  currentHairColor: string;    // current hair color for HAIR style thumbnails
-}
-
-function MiniSpritePixel({ pixels, selected }: { pixels: string[][]; selected: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, 64, 64);
-    const pixelSize = 2;
-    for (let y = 0; y < 32; y++) {
-      for (let x = 0; x < 32; x++) {
-        const color = pixels[y]?.[x];
-        if (color) {
-          ctx.fillStyle = color;
-          ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
-        }
-      }
-    }
-  }, [pixels]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      width={64}
-      height={64}
-      className={`border-2 cursor-pointer transition-all rounded-[8px] ${
-        selected
-          ? 'border-[#367d95] shadow-[0_0_12px_rgba(54,125,149,0.4)] scale-110'
-          : 'border-[#333]/15 hover:border-[#90b34d]/60 hover:scale-105'
-      }`}
-      style={{ imageRendering: 'pixelated', background: 'rgba(255, 253, 243, 0.6)' }}
-    />
-  );
-}
-
-function thumbnailSrc(
-  categoryKey: string,
-  optionId: string,
-  gender: Gender,
-  currentSkin: string,
-  currentHairStyle: string,
-  currentHairColor: string,
-): string {
-  switch (categoryKey) {
-    case 'gender':
-      // Show body silhouette in current skin tone — clearly communicates body shape
-      return `/sprites/body/${optionId}/${currentSkin}.png`;
-    case 'body':
-      // Show face only in that skin tone — cleaner than full body
-      return `/sprites/head/${gender}/${optionId}.png`;
-    case 'top':
-      return `/sprites/tops/${gender}/${optionId}.png`;
-    case 'hair':
-      // Style thumbnails show the current hair color
-      return `/sprites/hair/${currentHairColor}/${optionId}.png`;
-    case 'hairColor':
-      // Color thumbnails show the current hair style
-      return `/sprites/hair/${optionId}/${currentHairStyle}.png`;
-    case 'bottom':
-      return `/sprites/bottoms/${optionId}.png`;
-    case 'accessory':
-      return `/sprites/accessories/${optionId}.png`;
-    case 'shoes':
-      return `/sprites/shoes/${optionId}.png`;
-    case 'face':
-      return `/sprites/face/${optionId}.png`;
-    case 'neck':
-      return `/sprites/neck/${gender}/${optionId}.png`;
-    case 'facialHair':
-      return `/sprites/facial-hair/${optionId}.png`;
-    default:
-      return '';
-  }
-}
-
-function MiniSpritePNG({
-  optionId,
-  categoryKey,
-  selected,
-  gender,
-  currentSkin,
-  currentHairStyle,
-  currentHairColor,
-}: {
-  optionId: string;
-  categoryKey: string;
-  selected: boolean;
   gender: Gender;
   currentSkin: string;
   currentHairStyle: string;
   currentHairColor: string;
-}) {
+}
+
+/** Where to source the 64x64 thumbnail for a given trait option. */
+function thumbnailSrc(
+  categoryKey: string,
+  optionId: string,
+  gender: Gender,
+  currentHairStyle: string,
+  currentHairColor: string,
+): string {
+  switch (categoryKey) {
+    // Gender thumbnails are rendered specially (silhouette icon) — no sprite path.
+    case 'gender':     return '';
+    case 'body':       return bodyPath(gender, optionId);
+    case 'hair':       return hairPath(currentHairColor || 'black', optionId);
+    case 'hairColor':  return hairPath(optionId, currentHairStyle || 'default');
+    case 'top':        return topPath(gender, optionId);
+    case 'bottom':     return bottomPath(gender, optionId);
+    case 'shoes':      return shoesPath(optionId);
+    case 'outerwear':  return outerwearPath(gender, optionId);
+    case 'hat':        return hatPath(optionId);
+    case 'glasses':    return glassesPath(optionId);
+    case 'expression': return expressionPath(optionId);
+    default:           return '';
+  }
+}
+
+interface ThumbProps {
+  optionId: string;
+  optionLabel: string;
+  categoryKey: string;
+  selected: boolean;
+  gender: Gender;
+  currentHairStyle: string;
+  currentHairColor: string;
+}
+
+function Thumb({
+  optionId, optionLabel, categoryKey, selected, gender, currentHairStyle, currentHairColor,
+}: ThumbProps) {
+  const baseCls = `border-2 cursor-pointer transition-all rounded-[8px] ${
+    selected
+      ? 'border-[#367d95] shadow-[0_0_12px_rgba(54,125,149,0.4)] scale-110'
+      : 'border-[#333]/15 hover:border-[#90b34d]/60 hover:scale-105'
+  }`;
+
+  // 'none' for optional categories — show a labeled empty box.
   if (optionId === 'none') {
     return (
       <div
-        className={`w-16 h-16 flex items-center justify-center border-2 cursor-pointer transition-all rounded-[8px] ${
-          selected
-            ? 'border-[#367d95] shadow-[0_0_12px_rgba(54,125,149,0.4)] scale-110'
-            : 'border-[#333]/15 hover:border-[#90b34d]/60 hover:scale-105'
-        }`}
+        className={`w-16 h-16 flex items-center justify-center ${baseCls}`}
         style={{ background: 'rgba(255, 253, 243, 0.6)' }}
       >
         <span className="text-[#8a7d4d] text-[8px] tracking-wider">NONE</span>
@@ -131,19 +80,43 @@ function MiniSpritePNG({
     );
   }
 
-  const src = thumbnailSrc(categoryKey, optionId, gender, currentSkin, currentHairStyle, currentHairColor);
+  // Gender — show m/f icon labels rather than sprites.
+  if (categoryKey === 'gender') {
+    return (
+      <div
+        className={`w-16 h-16 flex items-center justify-center ${baseCls}`}
+        style={{ background: 'rgba(255, 253, 243, 0.6)' }}
+      >
+        <span
+          className="text-[#367d95] text-[28px] tracking-wider"
+          style={{ fontFamily: 'var(--font-loos), sans-serif', fontWeight: 700 }}
+        >
+          {optionId === 'm' ? '♂' : '♀'}
+        </span>
+      </div>
+    );
+  }
+
+  const src = thumbnailSrc(categoryKey, optionId, gender, currentHairStyle, currentHairColor);
+  if (!src) {
+    return (
+      <div
+        className={`w-16 h-16 flex items-center justify-center ${baseCls}`}
+        style={{ background: 'rgba(255, 253, 243, 0.6)' }}
+      >
+        <span className="text-[#8a7d4d] text-[7px] tracking-wider">{optionLabel.slice(0, 4).toUpperCase()}</span>
+      </div>
+    );
+  }
 
   return (
     <img
       src={src}
-      alt={optionId}
+      alt={optionLabel}
       width={64}
       height={64}
-      className={`border-2 cursor-pointer transition-all rounded-[8px] ${
-        selected
-          ? 'border-[#367d95] shadow-[0_0_12px_rgba(54,125,149,0.4)] scale-110'
-          : 'border-[#333]/15 hover:border-[#90b34d]/60 hover:scale-105'
-      }`}
+      loading="lazy"
+      className={baseCls}
       style={{ imageRendering: 'pixelated', background: 'rgba(255, 253, 243, 0.6)' }}
     />
   );
@@ -156,19 +129,16 @@ export default function CategorySelector({
   selected,
   onSelect,
   gender,
-  currentSkin,
   currentHairStyle,
   currentHairColor,
 }: CategorySelectorProps) {
   const [expanded, setExpanded] = useState(false);
 
-  // If the currently-selected option lives past the preview cutoff, force-expand
-  // so the user always sees their pick without first clicking "MORE". Tracked as
-  // an effect of the option list rather than one-shot so a fresh random pick
-  // beyond the cutoff still reveals.
+  // Auto-expand when the selected option lives past the preview cutoff so the
+  // user always sees their pick without first clicking "MORE".
   const selectedIndex = useMemo(
     () => options.findIndex((o) => o.id === selected),
-    [options, selected]
+    [options, selected],
   );
   const overflows = options.length > PREVIEW_LIMIT;
   const forceExpanded = overflows && selectedIndex >= PREVIEW_LIMIT;
@@ -198,19 +168,15 @@ export default function CategorySelector({
             title={option.label}
             className="flex flex-col items-center gap-1 transition-transform"
           >
-            {USE_PNG_SPRITES ? (
-              <MiniSpritePNG
-                optionId={option.id}
-                categoryKey={categoryKey}
-                selected={selected === option.id}
-                gender={gender}
-                currentSkin={currentSkin}
-                currentHairStyle={currentHairStyle}
-                currentHairColor={currentHairColor}
-              />
-            ) : (
-              <MiniSpritePixel pixels={option.pixels} selected={selected === option.id} />
-            )}
+            <Thumb
+              optionId={option.id}
+              optionLabel={option.label}
+              categoryKey={categoryKey}
+              selected={selected === option.id}
+              gender={gender}
+              currentHairStyle={currentHairStyle}
+              currentHairColor={currentHairColor}
+            />
             <span
               className={`text-[7px] sm:text-[8px] tracking-[0.15em] uppercase ${
                 selected === option.id ? 'text-[#367d95] font-bold' : 'text-[#8a7d4d]'
@@ -247,9 +213,7 @@ export default function CategorySelector({
                 </span>
               )}
             </div>
-            <span
-              className="text-[7px] sm:text-[8px] tracking-[0.15em] uppercase text-[#367d95] font-bold"
-            >
+            <span className="text-[7px] sm:text-[8px] tracking-[0.15em] uppercase text-[#367d95] font-bold">
               {isExpanded ? 'SHOW LESS' : 'SHOW MORE'}
             </span>
           </button>

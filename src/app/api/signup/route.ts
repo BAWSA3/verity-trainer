@@ -4,8 +4,13 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkTrainerName } from '@/lib/moderation/check-name';
 import { checkHandle } from '@/lib/moderation/check-handle';
 import { checkTrainerConfig } from '@/lib/moderation/check-config';
+import { checkPersonality } from '@/lib/moderation/check-personality';
 import { isDisposableEmail, emailDomain } from '@/lib/moderation/disposable-domains';
 import { checkSignupRate, extractIp, hashIp } from '@/lib/rate-limit';
+import { packTrainer } from '@/lib/trainer-data';
+import type { TrainerPersonality } from '@/types/trainer';
+
+const EMPTY_PERSONALITY: TrainerPersonality = { zodiac: '', likes: [], dislikes: [] };
 
 /**
  * SHA-256 hash an email for audit-log storage so the audit table never
@@ -61,7 +66,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { email, xHandle, trainerName, trainerConfig } = body ?? {};
+    const { email, xHandle, trainerName, trainerConfig, trainerPersonality } = body ?? {};
+    const personality: TrainerPersonality = trainerPersonality ?? EMPTY_PERSONALITY;
 
     // 1. Rate limit
     const rate = await checkSignupRate(ipHash);
@@ -193,7 +199,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 7. Upsert the signup
+    // 7. Personality validation (zodiac + likes/dislikes). Same tri-layer
+    //    blocklist + OpenAI moderation as the trainer name.
+    const personalityCheck = await checkPersonality(personality);
+    if (!personalityCheck.ok) {
+      await logAudit({
+        email,
+        trainerName,
+        xHandle,
+        flagged: true,
+        flagReason: `personality_${personalityCheck.reason}`,
+        flagMatch: personalityCheck.match,
+      });
+      const friendly =
+        personalityCheck.reason === 'count'
+          ? 'Too many likes/dislikes. Max 5 each.'
+          : personalityCheck.reason === 'length'
+          ? 'Each like/dislike must be between 1 and 24 characters.'
+          : personalityCheck.reason === 'invalid_chars'
+          ? 'Likes/dislikes can only contain letters, numbers, spaces, and hyphens.'
+          : personalityCheck.reason === 'invalid_zodiac'
+          ? 'Invalid zodiac selection.'
+          : "That entry isn't allowed. Try something else.";
+      return NextResponse.json({ error: friendly }, { status: 400 });
+    }
+
+    // 8. Upsert the signup (v2 JSONB shape: {schemaVersion, config, personality})
     const { data, error: dbErr } = await supabaseAdmin
       .from('trainer_signups')
       .upsert(
@@ -201,7 +232,7 @@ export async function POST(req: NextRequest) {
           email: email.toLowerCase().trim(),
           x_handle: xHandle?.toLowerCase().trim().replace(/^@/, '') || null,
           trainer_name: trainerName.toUpperCase().slice(0, 12),
-          trainer_config: trainerConfig,
+          trainer_config: packTrainer(trainerConfig, personality),
         },
         { onConflict: 'email' },
       )

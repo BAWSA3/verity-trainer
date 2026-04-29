@@ -1,81 +1,84 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrainerConfig } from '@/types/trainer';
+import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import { playSuccess } from '@/lib/sounds';
 import TrainerCard from '@/components/TrainerCard';
 import ShareButtons from '@/components/ShareButtons';
+import PokeBackground from '@/components/PokeBackground';
 
 interface CardPageClientProps {
   id: string;
   config: TrainerConfig;
+  personality: TrainerPersonality;
   trainerName: string;
 }
 
-export default function CardPageClient({ id, config, trainerName }: CardPageClientProps) {
+export default function CardPageClient({
+  id, config, personality, trainerName,
+}: CardPageClientProps) {
   const [revealed, setRevealed] = useState(false);
   const [showCard, setShowCard] = useState(false);
 
   useEffect(() => {
-    // Reveal animation sequence
-    const t1 = setTimeout(() => {
-      setRevealed(true);
-      playSuccess();
-    }, 600);
+    const t1 = setTimeout(() => { setRevealed(true); playSuccess(); }, 600);
     const t2 = setTimeout(() => setShowCard(true), 1200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <h1 className="text-[#39FF14] text-lg tracking-widest mb-2">
-          VERITY
-        </h1>
-        {!revealed ? (
-          <p className="text-[#FF006E] text-[10px] tracking-wider animate-pulse">
-            GENERATING TRAINER CARD...
-          </p>
-        ) : (
-          <p className="text-[#666] text-[9px] tracking-wider">
-            TRAINER CARD GENERATED
-          </p>
-        )}
-      </div>
+    <div
+      className="min-h-screen bg-[#fffdf3] text-[#16272c] flex flex-col items-center justify-center p-4 relative"
+      style={{ fontFamily: 'var(--font-sora), sans-serif' }}
+    >
+      <PokeBackground />
 
-      {/* Card with reveal animation */}
-      <div
-        className={`transition-all duration-700 ${
-          showCard
-            ? 'opacity-100 translate-y-0 scale-100'
-            : 'opacity-0 translate-y-4 scale-95'
-        }`}
-      >
-        <TrainerCard config={config} trainerName={trainerName} />
-      </div>
-
-      {/* Share buttons */}
-      <div
-        className={`max-w-lg w-full transition-all duration-500 delay-300 ${
-          showCard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-        }`}
-      >
-        <ShareButtons cardId={id} trainerName={trainerName} />
-      </div>
-
-      {/* CTA */}
-      <div
-        className={`mt-8 text-center transition-all duration-500 delay-500 ${
-          showCard ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <a
-          href="/"
-          className="text-[#FF006E] text-[10px] hover:text-[#39FF14] transition-colors"
+      <div className="relative z-10 flex flex-col items-center w-full">
+        <div
+          className="text-center mb-6"
+          style={{ fontFamily: 'var(--font-loos), sans-serif' }}
         >
-          {'<'} CREATE ANOTHER TRAINER
-        </a>
+          <h1 className="text-[#367d95] text-[12px] tracking-[0.3em] uppercase font-bold mb-1">
+            verity
+          </h1>
+          <p
+            className={`text-[10px] tracking-[0.2em] uppercase ${
+              revealed ? 'text-[#8a7d4d]' : 'text-[#90b34d] animate-pulse'
+            }`}
+          >
+            {revealed ? 'Trainer card generated' : 'Generating trainer card…'}
+          </p>
+        </div>
+
+        <div
+          className={`transition-all duration-700 ${
+            showCard ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95'
+          }`}
+        >
+          <TrainerCard config={config} personality={personality} trainerName={trainerName} />
+        </div>
+
+        <div
+          className={`max-w-lg w-full transition-all duration-500 delay-300 ${
+            showCard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <ShareButtons cardId={id} trainerName={trainerName} />
+        </div>
+
+        <div
+          className={`mt-8 text-center transition-all duration-500 delay-500 ${
+            showCard ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{ fontFamily: 'var(--font-loos), sans-serif' }}
+        >
+          <a
+            href="/create"
+            className="text-[#367d95] hover:text-[#16272c] transition-colors text-[10px] tracking-[0.2em] uppercase"
+          >
+            ‹ Create Another Trainer
+          </a>
+        </div>
       </div>
     </div>
   );

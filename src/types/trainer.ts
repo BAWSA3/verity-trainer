@@ -1,45 +1,60 @@
-export type Gender = 'male' | 'female';
+// Trainer schema — V2 (post hi-fi pixel redesign, 2026-04-29)
+//
+// Legacy v1 rows in `trainer_signups.trainer_config` use a flat shape with
+// {face,neck,accessory,facialHair} and 'male'/'female' gender values. The
+// `unpackTrainer()` adapter in `src/lib/trainer-data.ts` normalizes those
+// into this shape on read — no SQL migration runs.
 
-// Empty-string sentinel used in INITIAL_CONFIG to mean "user hasn't picked
-// this trait yet". Required-for-generate categories use this when blank.
+export type Gender = 'm' | 'f';
+
+// '' is the "user hasn't picked this required slot yet" sentinel for the
+// customizer's blank-start UX. Server-side `checkTrainerConfig` rejects
+// '' for any REQUIRED_FOR_GENERATE field, blocking direct-API bypass.
 export type MaybeGender = Gender | '';
+
+export type Zodiac =
+  | 'aries' | 'taurus' | 'gemini' | 'cancer' | 'leo' | 'virgo'
+  | 'libra' | 'scorpio' | 'sagittarius' | 'capricorn' | 'aquarius' | 'pisces';
 
 export type Category =
   | 'gender'
   | 'body'
-  | 'facialHair'
   | 'hair'
   | 'hairColor'
-  | 'face'
   | 'top'
   | 'bottom'
   | 'shoes'
-  | 'neck'
-  | 'accessory';
+  | 'outerwear'
+  | 'hat'
+  | 'glasses'
+  | 'expression';
 
 export interface TrainerOption {
   id: string;
   label: string;
-  pixels: string[][]; // 32x32 grid of hex colors ("" = transparent) — legacy fallback
 }
 
 export interface TrainerConfig {
-  // Required-for-generate categories use '' as the "not yet picked" sentinel.
-  // Once the user hits Generate, all of these are guaranteed non-empty
-  // (enforced by isReadyToGenerate + SignupGate client gate).
+  // Required-for-generate. '' = unpicked.
   gender: MaybeGender;
-  body: string;       // skin tone id; '' if unset
-  hair: string;       // style id; '' if unset
-  hairColor: string;  // '' if unset
-  top: string;        // '' if unset
-  bottom: string;     // '' if unset
-  shoes: string;      // '' if unset
+  body: string;
+  hair: string;
+  hairColor: string;
+  top: string;
+  bottom: string;
+  shoes: string;
 
-  // Optional categories — default to 'none', never empty.
-  facialHair: string; // 'none' | shadow | beard | ...
-  face: string;       // 'none' | sunnies | ...
-  neck: string;       // 'none' | chain | ...
-  accessory: string;  // 'none' | hat id ...
+  // Optional layers — default to 'none', never empty.
+  outerwear: string;
+  hat: string;
+  glasses: string;
+  expression: string;
+}
+
+export interface TrainerPersonality {
+  zodiac: Zodiac | '';
+  likes: string[];     // 0-5 entries, each <=24 chars
+  dislikes: string[];  // 0-5 entries, each <=24 chars
 }
 
 export interface SignupData {
@@ -47,4 +62,13 @@ export interface SignupData {
   xHandle: string;
   trainerName: string;
   trainerConfig: TrainerConfig;
+  trainerPersonality: TrainerPersonality;
+}
+
+// Stored shape for trainer_signups.trainer_config JSONB (v2).
+// v1 rows omit schemaVersion + nest config differently — see trainer-data.ts.
+export interface StoredTrainer {
+  schemaVersion: 2;
+  config: TrainerConfig;
+  personality: TrainerPersonality;
 }

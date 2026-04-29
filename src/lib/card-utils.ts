@@ -1,29 +1,14 @@
-import { TrainerConfig } from '@/types/trainer';
-import {
-  BODY_OPTIONS,
-  HAIR_OPTIONS,
-  TOP_OPTIONS,
-  BOTTOM_OPTIONS,
-  ACCESSORY_OPTIONS,
-} from './trainer-options';
+import type { TrainerConfig, TrainerPersonality, Zodiac } from '@/types/trainer';
+import { ZODIAC_MODIFIERS } from './personality';
 
-// ---------------------------------------------------------------------------
-// Hash + stat generation
-// ---------------------------------------------------------------------------
+// Deterministic stat generation. Same (config, personality) -> same stats,
+// so the OG image's stats always match the page's stats.
 
-export function hashConfig(config: TrainerConfig): number {
+export function hashConfig(c: TrainerConfig, p: TrainerPersonality): number {
   const str = [
-    config.gender,
-    config.body,
-    config.hair,
-    config.hairColor,
-    config.top,
-    config.bottom,
-    config.accessory,
-    config.facialHair,
-    config.face,
-    config.neck,
-    config.shoes,
+    c.gender, c.body, c.hair, c.hairColor, c.top, c.bottom, c.shoes,
+    c.outerwear, c.hat, c.glasses, c.expression,
+    p.zodiac, ...p.likes, ...p.dislikes,
   ].join('-');
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -34,46 +19,26 @@ export function hashConfig(config: TrainerConfig): number {
   return Math.abs(hash);
 }
 
-export function generateStats(config: TrainerConfig) {
-  const h = hashConfig(config);
-  return {
-    style: 40 + (h % 61),         // 40-100
-    drip: 40 + ((h >> 8) % 61),   // 40-100
-    flex: 40 + ((h >> 16) % 61),  // 40-100
-  };
+export interface TrainerStats {
+  style: number;
+  charisma: number;
+  street: number;
+  luck: number;
 }
 
-// ---------------------------------------------------------------------------
-// Encoding (used for shareable short URLs — legacy, may not be actively used)
-// Kept for backward compat; not worth expanding for new categories
-// ---------------------------------------------------------------------------
+const MIN_STAT = 40;
+const MAX_STAT = 100;
+const RANGE = MAX_STAT - MIN_STAT + 1;
+const clamp = (n: number) => Math.max(MIN_STAT, Math.min(MAX_STAT, n));
 
-export function encodeConfig(config: TrainerConfig): string {
-  const g = config.gender === 'female' ? 1 : 0;
-  const bo = BODY_OPTIONS.findIndex(o => o.id === config.body);
-  const h = HAIR_OPTIONS.findIndex(o => o.id === config.hair);
-  const t = TOP_OPTIONS.findIndex(o => o.id === config.top);
-  const b = BOTTOM_OPTIONS.findIndex(o => o.id === config.bottom);
-  const a = ACCESSORY_OPTIONS.findIndex(o => o.id === config.accessory);
-  return `${g}-${bo}-${h}-${t}-${b}-${a}`;
-}
-
-export function decodeConfig(encoded: string): TrainerConfig {
-  const parts = encoded.split('-').map(Number);
-  const hasGender = parts.length === 6;
-  const [g, bo, h, t, b, a] = hasGender ? parts : [0, ...parts];
+export function generateStats(c: TrainerConfig, p: TrainerPersonality): TrainerStats {
+  const h = hashConfig(c, p);
+  const zodiacMod = p.zodiac ? (ZODIAC_MODIFIERS[p.zodiac as Zodiac] ?? 0) : 0;
+  const outerwearBonus = c.outerwear && c.outerwear !== 'none' ? 8 : 0;
   return {
-    gender: g === 1 ? 'female' : 'male',
-    body: BODY_OPTIONS[bo]?.id ?? BODY_OPTIONS[1].id,
-    hair: HAIR_OPTIONS[h]?.id ?? HAIR_OPTIONS[0].id,
-    top: TOP_OPTIONS[t]?.id ?? TOP_OPTIONS[0].id,
-    bottom: BOTTOM_OPTIONS[b]?.id ?? BOTTOM_OPTIONS[0].id,
-    accessory: ACCESSORY_OPTIONS[a]?.id ?? ACCESSORY_OPTIONS[0].id,
-    // New categories default to sensible values; shareable URLs don't encode these
-    hairColor: 'black',
-    facialHair: 'none',
-    face: 'none',
-    neck: 'none',
-    shoes: 'sneakers',
+    style:    clamp(MIN_STAT + (h % RANGE)),
+    charisma: clamp(MIN_STAT + ((h >> 8)  % RANGE) + zodiacMod),
+    street:   clamp(MIN_STAT + ((h >> 16) % RANGE) + outerwearBonus),
+    luck:     clamp(MIN_STAT + ((h >> 24) % RANGE) + p.likes.length * 2),
   };
 }

@@ -30,10 +30,14 @@ export interface ConfigCheckResult {
 }
 
 // Build an { [categoryKey]: Set<validIds> } lookup from the catalog once.
+// Optional categories also accept the 'none' sentinel.
 function buildValidIdMap(): Record<string, Set<string>> {
   const map: Record<string, Set<string>> = {};
   for (const cat of CATEGORIES) {
-    map[cat.key] = new Set(cat.options.map((o) => o.id));
+    const set = new Set(cat.options.map((o) => o.id));
+    // Optional categories may carry 'none' even if the manifest didn't list it.
+    if (!REQUIRED_FOR_GENERATE.includes(cat.key)) set.add('none');
+    map[cat.key] = set;
   }
   return map;
 }
@@ -44,15 +48,15 @@ const VALID_IDS = buildValidIdMap();
 const ALL_KEYS = [
   'gender',
   'body',
-  'facialHair',
   'hair',
   'hairColor',
-  'face',
   'top',
   'bottom',
   'shoes',
-  'neck',
-  'accessory',
+  'outerwear',
+  'hat',
+  'glasses',
+  'expression',
 ] as const;
 
 const REQUIRED = new Set<string>(REQUIRED_FOR_GENERATE);

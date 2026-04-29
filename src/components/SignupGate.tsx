@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { TrainerConfig } from '@/types/trainer';
+import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 
 interface SignupGateProps {
   config: TrainerConfig;
+  personality: TrainerPersonality;
   onSuccess: (id: string) => void;
   onClose: () => void;
 }
 
-export default function SignupGate({ config, onSuccess, onClose }: SignupGateProps) {
+export default function SignupGate({ config, personality, onSuccess, onClose }: SignupGateProps) {
   const [email, setEmail] = useState('');
   const [xHandle, setXHandle] = useState('');
   const [trainerName, setTrainerName] = useState('');
@@ -40,6 +41,7 @@ export default function SignupGate({ config, onSuccess, onClose }: SignupGatePro
           xHandle: xHandle.replace('@', ''),
           trainerName: trimmedName.toUpperCase().slice(0, 12),
           trainerConfig: config,
+          trainerPersonality: personality,
         }),
       });
 

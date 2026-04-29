@@ -1,898 +1,163 @@
-import { TrainerOption } from '@/types/trainer';
+// Trait catalog adapter — thin layer over public/sprites/limezu/manifest.json.
+//
+// Pre-V1 redesign this file was 54KB of hand-coded pixel arrays. It's now a
+// shim that exposes the same public surface (CATEGORIES, INITIAL_CONFIG,
+// REQUIRED_FOR_GENERATE, isReadyToGenerate) sourced from the generated
+// manifest. Adding/removing trait options is a manifest change, not a code
+// change.
 
-// Set to true when PNG sprites are placed in /public/sprites/
-// Set to false to use programmatic pixel grids (fallback)
-export const USE_PNG_SPRITES = true;
+import type { Category, TrainerConfig, TrainerOption } from '@/types/trainer';
+import manifest from '../../public/sprites/limezu/manifest.json';
 
-const _ = ''; // transparent shorthand
+// ---- manifest types (loose — matches the JSON shape) ----
+interface ManifestValue {
+  id: string;
+  label?: string;
+  file?: string;
+  gender?: 'm' | 'f';
+  hex?: string;
+}
+interface ManifestCategory {
+  values: ManifestValue[];
+  gendered?: boolean;
+  optional?: boolean;
+  supportsColor?: boolean;
+}
+interface Manifest {
+  version: number;
+  spriteWidth: number;
+  spriteHeight: number;
+  bustCrop: { x: number; y: number; w: number; h: number };
+  categories: Record<string, ManifestCategory>;
+}
+const MANIFEST = manifest as Manifest;
 
-// Skin tone palettes
-interface SkinTone {
-  base: string;
-  shadow: string;
-  highlight: string;
-  eye: string;
-  mouth: string;
+// ---- public surface ----
+
+export interface TraitCategory {
+  key: keyof TrainerConfig;
+  label: string;
+  options: TrainerOption[];
+  /** True when the user MUST pick a value before Generate is allowed. */
+  required: boolean;
+  /** When true, the option list is filtered by current `gender`. */
+  gendered: boolean;
 }
 
-const SKIN_TONES: Record<string, SkinTone> = {
-  light:  { base: '#FADCBC', shadow: '#E8C4A0', highlight: '#FFF0E0', eye: '#2C1810', mouth: '#E8C4A0' },
-  medium: { base: '#D4956A', shadow: '#B87A4B', highlight: '#E8B78A', eye: '#2C1810', mouth: '#B87A4B' },
-  tan:    { base: '#C68642', shadow: '#A66A2E', highlight: '#D9A064', eye: '#1A1008', mouth: '#A66A2E' },
-  brown:  { base: '#8D5524', shadow: '#6B3F1A', highlight: '#A36B30', eye: '#0F0A05', mouth: '#6B3F1A' },
-  dark:   { base: '#5C3310', shadow: '#3D210A', highlight: '#7A4B20', eye: '#050302', mouth: '#3D210A' },
-};
+// Order is the order the categories appear in the customizer (and check-config
+// validates). Keep `gender` first — it gates the gendered lookups for body/top/bottom/outerwear.
+const CATEGORY_LABELS: { key: keyof TrainerConfig; label: string }[] = [
+  { key: 'gender',     label: 'Gender' },
+  { key: 'body',       label: 'Skin' },
+  { key: 'hair',       label: 'Hair' },
+  { key: 'hairColor',  label: 'Hair Color' },
+  { key: 'top',        label: 'Top' },
+  { key: 'bottom',     label: 'Bottom' },
+  { key: 'shoes',      label: 'Shoes' },
+  { key: 'outerwear',  label: 'Outerwear' },
+  { key: 'hat',        label: 'Hat' },
+  { key: 'glasses',    label: 'Glasses' },
+  { key: 'expression', label: 'Expression' },
+];
 
-function buildBody(tone: SkinTone): string[][] {
-  const S = tone.base;
-  const Sd = tone.shadow;
-  const Sh = tone.highlight;
-  const E = tone.eye;
-  const M = tone.mouth;
-  const Bk = '#1A1A1A';
-  const Bk2 = '#2C2C2C';
-  const Bk3 = '#111111';
+// Required-for-generate categories — empty string for any of these blocks Generate.
+// Optional categories use 'none' as the "not picked" sentinel and are always allowed empty.
+export const REQUIRED_FOR_GENERATE: ReadonlyArray<keyof TrainerConfig> = [
+  'gender', 'body', 'hair', 'hairColor', 'top', 'bottom', 'shoes',
+];
 
-  return [
-    // Row 0: empty
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    // Row 1: empty
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    // Row 2: top of head
-    [_,_,_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_,_,_],
-    // Row 3: head
-    [_,_,_,_,_,_,_,_,_,_,Sd,S, S, Sh,Sh,Sh,Sh,Sh,S, S, S, Sd,_,_,_,_,_,_,_,_,_,_],
-    // Row 4: head upper
-    [_,_,_,_,_,_,_,_,_,Sd,S, S, Sh,Sh,Sh,Sh,Sh,Sh,Sh,S, S, S, Sd,_,_,_,_,_,_,_,_,_],
-    // Row 5: head - forehead
-    [_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_],
-    // Row 6: head - eyes row
-    [_,_,_,_,_,_,_,_,_,Sd,S, S, E, E, S, S, S, S, E, E, S, S, Sd,_,_,_,_,_,_,_,_,_],
-    // Row 7: head - below eyes
-    [_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, Sh,Sh,S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_],
-    // Row 8: head - mouth
-    [_,_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, M, M, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_,_],
-    // Row 9: chin
-    [_,_,_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_,_,_],
-    // Row 10: neck
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, Sd,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    // Row 11: neck/shoulders
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, Sd,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    // Row 12: upper torso
-    [_,_,_,_,_,_,_,_,_,_,Sd,Sd,S, S, S, S, S, S, S, S, Sd,Sd,_,_,_,_,_,_,_,_,_,_],
-    // Row 13: torso
-    [_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_],
-    // Row 14-17: torso
-    [_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_],
-    // Row 18-19: lower torso
-    [_,_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_,_],
-    // Row 20: waist
-    [_,_,_,_,_,_,_,_,_,_,_,Sd,S, S, S, S, S, S, S, S, Sd,_,_,_,_,_,_,_,_,_,_,_],
-    // Rows 21-27: legs
-    [_,_,_,_,_,_,_,_,_,_,_,S, S, S, Sd,_,_,Sd,S, S, S, _,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,S, S, S, Sd,_,_,Sd,S, S, S, _,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,S, S, S, Sd,_,_,Sd,S, S, S, _,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,S, S, S, Sd,_,_,Sd,S, S, S, _,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,S, S, S, Sd,_,_,Sd,S, S, S, _,_,_,_,_,_,_,_,_,_,_],
-    // Row 26-27: lower legs
-    [_,_,_,_,_,_,_,_,_,_,_,Sd,S, S, Sd,_,_,Sd,S, S, Sd,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,Sd,S, S, Sd,_,_,Sd,S, S, Sd,_,_,_,_,_,_,_,_,_,_,_],
-    // Rows 28-31: shoes
-    [_,_,_,_,_,_,_,_,_,_,Bk,Bk,Bk2,Bk2,Bk,_,_,Bk,Bk2,Bk2,Bk,Bk,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,Bk,Bk2,Bk2,Bk2,Bk2,Bk,_,_,Bk,Bk2,Bk2,Bk2,Bk2,Bk,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,Bk,Bk3,Bk2,Bk2,Bk3,Bk,_,_,Bk,Bk3,Bk2,Bk2,Bk3,Bk,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,Bk3,Bk3,Bk3,Bk3,Bk3,Bk3,Bk3,_,_,Bk3,Bk3,Bk3,Bk3,Bk3,Bk3,Bk3,_,_,_,_,_,_,_,_],
-  ];
+const REQUIRED_SET: ReadonlySet<string> = new Set<string>(REQUIRED_FOR_GENERATE as readonly string[]);
+
+// Hardcoded gender options — not from manifest because gender doesn't have sprites of its own.
+const GENDER_OPTIONS: TrainerOption[] = [
+  { id: 'm', label: 'Male' },
+  { id: 'f', label: 'Female' },
+];
+
+function manifestToOptions(cat: ManifestCategory | undefined): TrainerOption[] {
+  if (!cat) return [];
+  return cat.values.map((v) => ({ id: v.id, label: v.label ?? v.id }));
 }
 
-// Generate body options from skin tones
-export const BODY_OPTIONS: TrainerOption[] = Object.entries(SKIN_TONES).map(([id, tone]) => ({
-  id,
-  label: id.toUpperCase(),
-  pixels: buildBody(tone),
-}));
+export const CATEGORIES: TraitCategory[] = CATEGORY_LABELS.map(({ key, label }) => {
+  if (key === 'gender') {
+    return { key, label, options: GENDER_OPTIONS, required: true, gendered: false };
+  }
+  const cat = MANIFEST.categories[key as Category];
+  let options = manifestToOptions(cat);
 
-// Default body for backward compat
-export const BASE_BODY = BODY_OPTIONS[1].pixels; // 'medium' tone
+  // For optional categories, prepend a 'none' option so the customizer can show "no hat".
+  if (cat?.optional) {
+    options = [{ id: 'none', label: 'None' }, ...options];
+  }
 
-// Old color aliases (used by existing hair/clothing sprites)
-const S = '#D4956A';
-const Sd = '#B87A4B';
-const Sh = '#E8B78A';
-const E = '#2C1810';
-const M = '#B87A4B';
+  return {
+    key,
+    label,
+    options,
+    required: REQUIRED_SET.has(key),
+    gendered: cat?.gendered ?? false,
+  };
+});
 
-// Shoe colors
-// Helper: 32 transparent pixels row
-const R = [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_];
-
-// ============================================================
-// HAIR OPTIONS — only draw in rows 2-6 area (head region)
-// ============================================================
-export const HAIR_OPTIONS: TrainerOption[] = [
-  {
-    id: 'buzz',
-    label: 'BUZZ CUT',
-    pixels: [
-      // Rows 0-1: empty
-      [...R],
-      [...R],
-      // Row 2: buzz top - very short hair hugging skull shape
-      [_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_,_],
-      // Row 3: buzz covers top of head
-      [_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_],
-      // Row 4: buzz sides
-      [_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C',_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_],
-      // Row 5: buzz side edges only
-      [_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_],
-      // Rows 6-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'spiky',
-    label: 'SPIKY',
-    pixels: [
-      // Row 0: spike tips
-      [_,_,_,_,_,_,_,_,'#1A1A1A',_,_,'#1A1A1A',_,_,'#1A1A1A',_,_,'#1A1A1A',_,_,'#1A1A1A',_,_,'#1A1A1A',_,_,_,_,_,_,_,_],
-      // Row 1: spikes growing
-      [_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#1A1A1A','#1A1A1A','#2C2C2C','#1A1A1A','#1A1A1A','#2C2C2C','#1A1A1A','#1A1A1A','#2C2C2C','#1A1A1A','#1A1A1A','#2C2C2C','#1A1A1A','#1A1A1A',_,_,_,_,_,_,_,_,_],
-      // Row 2: spiky base top
-      [_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#1A1A1A','#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#1A1A1A','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_,_],
-      // Row 3: hair mass
-      [_,_,_,_,_,_,_,_,_,'#1A1A1A','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#1A1A1A',_,_,_,_,_,_,_,_,_,_],
-      // Row 4: hair sides
-      [_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C',_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_],
-      // Row 5: side wisps
-      [_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_],
-      // Rows 6-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'dreads',
-    label: 'DREADS',
-    pixels: [
-      // Row 0: empty
-      [...R],
-      // Row 1: dreads top
-      [_,_,_,_,_,_,_,_,_,'#3D2B1F','#3D2B1F','#5C3A1E','#5C3A1E','#5C3A1E','#5C3A1E','#5C3A1E','#5C3A1E','#5C3A1E','#5C3A1E','#5C3A1E','#3D2B1F','#3D2B1F',_,_,_,_,_,_,_,_,_,_],
-      // Row 2: dreads crown
-      [_,_,_,_,_,_,_,_,'#3D2B1F','#5C3A1E','#5C3A1E','#8B5E3C','#5C3A1E','#8B5E3C','#5C3A1E','#8B5E3C','#5C3A1E','#8B5E3C','#5C3A1E','#8B5E3C','#5C3A1E','#5C3A1E','#3D2B1F',_,_,_,_,_,_,_,_,_],
-      // Row 3: dreads sides begin
-      [_,_,_,_,_,_,_,'#3D2B1F','#5C3A1E','#8B5E3C',_,_,_,_,_,_,_,_,_,_,_,_,'#8B5E3C','#5C3A1E','#3D2B1F',_,_,_,_,_,_,_],
-      // Row 4: dreads hanging left and right
-      [_,_,_,_,_,_,_,'#3D2B1F','#5C3A1E','#8B5E3C',_,_,_,_,_,_,_,_,_,_,_,_,'#8B5E3C','#5C3A1E','#3D2B1F',_,_,_,_,_,_,_],
-      // Row 5: dreads continue
-      [_,_,_,_,_,_,_,'#5C3A1E','#3D2B1F','#5C3A1E',_,_,_,_,_,_,_,_,_,_,_,_,'#5C3A1E','#3D2B1F','#5C3A1E',_,_,_,_,_,_,_],
-      // Row 6: dreads mid
-      [_,_,_,_,_,_,_,'#5C3A1E','#3D2B1F','#5C3A1E',_,_,_,_,_,_,_,_,_,_,_,_,'#5C3A1E','#3D2B1F','#5C3A1E',_,_,_,_,_,_,_],
-      // Row 7: dreads
-      [_,_,_,_,_,_,_,'#3D2B1F','#5C3A1E','#8B5E3C',_,_,_,_,_,_,_,_,_,_,_,_,'#8B5E3C','#5C3A1E','#3D2B1F',_,_,_,_,_,_,_],
-      // Row 8: dreads lower
-      [_,_,_,_,_,_,_,'#3D2B1F','#5C3A1E',_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#5C3A1E','#3D2B1F',_,_,_,_,_,_,_],
-      // Row 9: dreads tips
-      [_,_,_,_,_,_,_,_,'#3D2B1F',_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#3D2B1F',_,_,_,_,_,_,_,_],
-      // Rows 10-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],
-    ],
-  },
-  {
-    id: 'afro',
-    label: 'AFRO',
-    pixels: [
-      // Row 0: afro top
-      [_,_,_,_,_,_,_,_,'#1A1A1A','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#1A1A1A',_,_,_,_,_,_,_,_,_,_],
-      // Row 1: afro expanding
-      [_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_],
-      // Row 2: afro full width
-      [_,_,_,_,_,'#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#1A1A1A',_,_,_,_,_,_],
-      // Row 3: afro sides
-      [_,_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_,_],
-      // Row 4: afro sides
-      [_,_,_,_,'#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#2C2C2C',_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A',_,_,_,_],
-      // Row 5: afro sides lower
-      [_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_],
-      // Row 6: afro sides
-      [_,_,_,_,'#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A',_,_,_,_],
-      // Row 7: afro bottom sides
-      [_,_,_,_,_,'#1A1A1A','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#1A1A1A',_,_,_,_,_],
-      // Row 8: afro closing
-      [_,_,_,_,_,_,'#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A',_,_,_,_,_,_],
-      // Row 9: empty
-      [...R],
-      // Rows 10-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],
-    ],
-  },
-  {
-    id: 'mullet',
-    label: 'MULLET',
-    pixels: [
-      // Row 0: empty
-      [...R],
-      // Row 1: mullet top
-      [_,_,_,_,_,_,_,_,_,'#3D2B1F','#5C3A1E','#5C3A1E','#8B5E3C','#5C3A1E','#8B5E3C','#5C3A1E','#8B5E3C','#5C3A1E','#8B5E3C','#5C3A1E','#5C3A1E','#3D2B1F',_,_,_,_,_,_,_,_,_,_],
-      // Row 2: mullet crown
-      [_,_,_,_,_,_,_,_,'#3D2B1F','#5C3A1E','#8B5E3C','#5C3A1E','#5C3A1E','#8B5E3C','#5C3A1E','#8B5E3C','#5C3A1E','#8B5E3C','#5C3A1E','#5C3A1E','#8B5E3C','#5C3A1E','#3D2B1F',_,_,_,_,_,_,_,_,_],
-      // Row 3: short on top, back starts going down
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#5C3A1E','#3D2B1F',_,_,_,_,_,_,_,_],
-      // Row 4: back grows longer
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#8B5E3C','#5C3A1E','#3D2B1F',_,_,_,_,_,_,_],
-      // Row 5: mullet back
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#5C3A1E','#8B5E3C','#3D2B1F',_,_,_,_,_,_,_],
-      // Row 6: mullet back continues
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#8B5E3C','#5C3A1E','#3D2B1F',_,_,_,_,_,_,_],
-      // Row 7: mullet back longer
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#5C3A1E','#8B5E3C','#3D2B1F',_,_,_,_,_,_,_],
-      // Row 8: mullet back
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#3D2B1F','#5C3A1E','#3D2B1F',_,_,_,_,_,_,_],
-      // Row 9: mullet tail end
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#3D2B1F','#5C3A1E',_,_,_,_,_,_,_],
-      // Rows 10-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],
-    ],
-  },
-];
-
-// ============================================================
-// TOP OPTIONS (streetwear) — only draw in rows 10-20 (neck/torso)
-// ============================================================
-export const TOP_OPTIONS: TrainerOption[] = [
-  {
-    id: 'hoodie-black',
-    label: 'BLACK HOODIE',
-    pixels: [
-      // Rows 0-9: empty (head area)
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 10: hood bump behind head / collar
-      [_,_,_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 11: collar / drawstrings
-      [_,_,_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#1A1A1A','#FFFFFF','#1A1A1A','#1A1A1A','#FFFFFF','#1A1A1A','#2C2C2C',_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 12: upper hoodie - shoulders
-      [_,_,_,_,_,_,_,_,'#111111','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#111111',_,_,_,_,_,_,_,_],
-      // Row 13: hoodie body
-      [_,_,_,_,_,_,_,'#111111','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#111111',_,_,_,_,_,_,_],
-      // Row 14: hoodie body
-      [_,_,_,_,_,_,_,'#111111','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#111111',_,_,_,_,_,_,_],
-      // Row 15: hoodie body mid
-      [_,_,_,_,_,_,_,_,'#111111','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#111111',_,_,_,_,_,_,_,_],
-      // Row 16: hoodie kangaroo pocket area
-      [_,_,_,_,_,_,_,_,'#111111','#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A','#111111',_,_,_,_,_,_,_,_],
-      // Row 17: kangaroo pocket
-      [_,_,_,_,_,_,_,_,'#111111','#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A','#111111',_,_,_,_,_,_,_,_],
-      // Row 18: hoodie lower
-      [_,_,_,_,_,_,_,_,_,'#111111','#1A1A1A','#2C2C2C','#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A','#2C2C2C','#1A1A1A','#111111',_,_,_,_,_,_,_,_,_],
-      // Row 19: hoodie bottom band
-      [_,_,_,_,_,_,_,_,_,'#111111','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#111111',_,_,_,_,_,_,_,_,_],
-      // Row 20: ribbed bottom
-      [_,_,_,_,_,_,_,_,_,_,'#111111','#111111','#1A1A1A','#111111','#1A1A1A','#111111','#1A1A1A','#111111','#1A1A1A','#111111','#111111','#111111',_,_,_,_,_,_,_,_,_,_],
-      // Rows 21-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'varsity',
-    label: 'VARSITY JKT',
-    pixels: [
-      // Rows 0-9: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 10: collar
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,'#F5F0DC','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#F5F0DC',_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 11: collar lower
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,'#DDD8C4','#142D54','#142D54','#142D54','#142D54','#DDD8C4',_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 12: shoulders — cream sleeves, navy body
-      [_,_,_,_,_,_,_,'#DDD8C4','#F5F0DC','#F5F0DC','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#F5F0DC','#F5F0DC','#DDD8C4',_,_,_,_,_,_,_,_],
-      // Row 13: cream sleeves + navy body
-      [_,_,_,_,_,_,'#DDD8C4','#F5F0DC','#F5F0DC','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#F5F0DC','#F5F0DC','#DDD8C4',_,_,_,_,_,_,_],
-      // Row 14: Gold V on chest
-      [_,_,_,_,_,_,'#DDD8C4','#F5F0DC','#F5F0DC','#1B3A6B','#1B3A6B','#1B3A6B','#FFD700','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#FFD700','#1B3A6B','#1B3A6B','#F5F0DC','#F5F0DC','#DDD8C4',_,_,_,_,_,_,_],
-      // Row 15: V middle
-      [_,_,_,_,_,_,_,'#DDD8C4','#F5F0DC','#142D54','#1B3A6B','#1B3A6B','#1B3A6B','#FFD700','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#FFD700','#1B3A6B','#1B3A6B','#1B3A6B','#F5F0DC','#DDD8C4',_,_,_,_,_,_,_,_],
-      // Row 16: V bottom point
-      [_,_,_,_,_,_,_,'#DDD8C4','#F5F0DC','#142D54','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#FFD700','#FFD700','#FFD700','#FFD700','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#F5F0DC','#DDD8C4',_,_,_,_,_,_,_,_],
-      // Row 17: body below V
-      [_,_,_,_,_,_,_,'#DDD8C4','#F5F0DC','#142D54','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#142D54','#142D54','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#F5F0DC','#DDD8C4',_,_,_,_,_,_,_,_],
-      // Row 18: lower body
-      [_,_,_,_,_,_,_,_,'#DDD8C4','#142D54','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#142D54','#142D54','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#1B3A6B','#DDD8C4',_,_,_,_,_,_,_,_,_],
-      // Row 19: ribbed bottom
-      [_,_,_,_,_,_,_,_,_,'#142D54','#1B3A6B','#142D54','#1B3A6B','#142D54','#1B3A6B','#142D54','#1B3A6B','#142D54','#1B3A6B','#142D54','#1B3A6B','#142D54',_,_,_,_,_,_,_,_,_,_],
-      // Row 20: band
-      [_,_,_,_,_,_,_,_,_,_,'#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54',_,_,_,_,_,_,_,_,_,_],
-      // Rows 21-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'oversized-tee',
-    label: 'OVERSIZED TEE',
-    pixels: [
-      // Rows 0-9: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 10: collar
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,'#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE',_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 11: neck opening
-      [_,_,_,_,_,_,_,_,_,_,_,_,'#EEEEEE','#E0E0E0','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#E0E0E0','#EEEEEE',_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 12: shoulders - extra wide for oversized look
-      [_,_,_,_,_,_,'#E0E0E0','#EEEEEE','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#EEEEEE','#E0E0E0',_,_,_,_,_,_,_],
-      // Row 13: wide body
-      [_,_,_,_,_,_,'#EEEEEE','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#EEEEEE',_,_,_,_,_,_,_],
-      // Row 14: body with fold lines
-      [_,_,_,_,_,_,'#EEEEEE','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#E0E0E0','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#E0E0E0','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#EEEEEE',_,_,_,_,_,_,_],
-      // Row 15: body
-      [_,_,_,_,_,_,_,'#EEEEEE','#FFFFFF','#FFFFFF','#FFFFFF','#E0E0E0','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#E0E0E0','#FFFFFF','#FFFFFF','#FFFFFF','#EEEEEE',_,_,_,_,_,_,_,_],
-      // Row 16: body
-      [_,_,_,_,_,_,_,'#EEEEEE','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#EEEEEE',_,_,_,_,_,_,_,_],
-      // Row 17: body
-      [_,_,_,_,_,_,_,'#EEEEEE','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#EEEEEE',_,_,_,_,_,_,_,_],
-      // Row 18: body lower - still wide (oversized)
-      [_,_,_,_,_,_,_,_,'#EEEEEE','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#FFFFFF','#EEEEEE',_,_,_,_,_,_,_,_,_],
-      // Row 19: hem - hangs low
-      [_,_,_,_,_,_,_,_,'#E0E0E0','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#E0E0E0',_,_,_,_,_,_,_,_,_],
-      // Row 20: bottom edge (oversize drapes past waist)
-      [_,_,_,_,_,_,_,_,_,'#E0E0E0','#E0E0E0','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#EEEEEE','#E0E0E0',_,_,_,_,_,_,_,_,_,_],
-      // Rows 21-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'bomber',
-    label: 'BOMBER',
-    pixels: [
-      // Rows 0-9: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 10: orange lining visible at collar
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,'#FF6600','#FF6600','#FF6600','#FF6600','#FF6600','#FF6600',_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 11: collar ribbing green
-      [_,_,_,_,_,_,_,_,_,_,_,_,'#2D5A27','#2D5A27','#3A7233','#2D5A27','#2D5A27','#3A7233','#2D5A27','#2D5A27',_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 12: shoulders
-      [_,_,_,_,_,_,_,_,'#2D5A27','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#2D5A27',_,_,_,_,_,_,_,_],
-      // Row 13: body - zipper down center
-      [_,_,_,_,_,_,_,'#2D5A27','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#DAA520','#DAA520','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#2D5A27',_,_,_,_,_,_,_],
-      // Row 14: body
-      [_,_,_,_,_,_,_,'#2D5A27','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#DAA520','#DAA520','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#2D5A27',_,_,_,_,_,_,_],
-      // Row 15: body mid
-      [_,_,_,_,_,_,_,_,'#2D5A27','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#DAA520','#DAA520','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#2D5A27',_,_,_,_,_,_,_,_],
-      // Row 16: body with pocket flaps
-      [_,_,_,_,_,_,_,_,'#2D5A27','#3A7233','#2D5A27','#2D5A27','#3A7233','#3A7233','#3A7233','#DAA520','#DAA520','#3A7233','#3A7233','#3A7233','#2D5A27','#2D5A27','#3A7233','#2D5A27',_,_,_,_,_,_,_,_],
-      // Row 17: body
-      [_,_,_,_,_,_,_,_,'#2D5A27','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#DAA520','#DAA520','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#2D5A27',_,_,_,_,_,_,_,_],
-      // Row 18: lower body
-      [_,_,_,_,_,_,_,_,_,'#2D5A27','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#DAA520','#DAA520','#3A7233','#3A7233','#3A7233','#3A7233','#3A7233','#2D5A27',_,_,_,_,_,_,_,_,_],
-      // Row 19: ribbed bottom band
-      [_,_,_,_,_,_,_,_,_,'#2D5A27','#2D5A27','#3A7233','#2D5A27','#3A7233','#2D5A27','#3A7233','#2D5A27','#3A7233','#2D5A27','#3A7233','#2D5A27','#3A7233','#2D5A27',_,_,_,_,_,_,_,_,_],
-      // Row 20: bottom edge
-      [_,_,_,_,_,_,_,_,_,_,'#2D5A27','#2D5A27','#2D5A27','#2D5A27','#2D5A27','#2D5A27','#2D5A27','#2D5A27','#2D5A27','#2D5A27','#2D5A27','#2D5A27',_,_,_,_,_,_,_,_,_,_],
-      // Rows 21-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'puffer',
-    label: 'PUFFER',
-    pixels: [
-      // Rows 0-9: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 10: puffer collar (puffy, stands up)
-      [_,_,_,_,_,_,_,_,_,_,_,'#CC0000','#FF2222','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#FF2222','#CC0000',_,_,_,_,_,_,_,_,_,_,_],
-      // Row 11: collar lower
-      [_,_,_,_,_,_,_,_,_,_,_,'#8B0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#8B0000',_,_,_,_,_,_,_,_,_,_,_],
-      // Row 12: first quilted section - wide puff
-      [_,_,_,_,_,_,_,'#8B0000','#CC0000','#CC0000','#FF2222','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#FF2222','#CC0000','#CC0000','#8B0000',_,_,_,_,_,_,_,_],
-      // Row 13: quilted section 1 bottom + stitch line
-      [_,_,_,_,_,_,'#8B0000','#CC0000','#FF2222','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#FF2222','#CC0000','#8B0000',_,_,_,_,_,_,_],
-      // Row 14: stitch line between quilted sections
-      [_,_,_,_,_,_,'#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000',_,_,_,_,_,_,_],
-      // Row 15: quilted section 2
-      [_,_,_,_,_,_,'#8B0000','#CC0000','#FF2222','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#FF2222','#CC0000','#8B0000',_,_,_,_,_,_,_],
-      // Row 16: quilted section 2 bottom
-      [_,_,_,_,_,_,_,'#8B0000','#CC0000','#FF2222','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#FF2222','#CC0000','#CC0000','#8B0000',_,_,_,_,_,_,_,_],
-      // Row 17: stitch line
-      [_,_,_,_,_,_,_,'#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000',_,_,_,_,_,_,_,_],
-      // Row 18: quilted section 3
-      [_,_,_,_,_,_,_,_,'#8B0000','#CC0000','#FF2222','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#FF2222','#CC0000','#CC0000','#8B0000',_,_,_,_,_,_,_,_,_],
-      // Row 19: bottom band
-      [_,_,_,_,_,_,_,_,'#8B0000','#8B0000','#CC0000','#8B0000','#CC0000','#8B0000','#CC0000','#8B0000','#CC0000','#8B0000','#CC0000','#8B0000','#CC0000','#8B0000','#8B0000',_,_,_,_,_,_,_,_,_],
-      // Row 20: elastic bottom
-      [_,_,_,_,_,_,_,_,_,'#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000','#8B0000',_,_,_,_,_,_,_,_,_,_],
-      // Rows 21-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-];
-
-// ============================================================
-// BOTTOM OPTIONS — only draw in rows 21-27 (leg area)
-// ============================================================
-export const BOTTOM_OPTIONS: TrainerOption[] = [
-  {
-    id: 'cargo',
-    label: 'CARGO PANTS',
-    pixels: [
-      // Rows 0-20: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 21: waistband
-      [_,_,_,_,_,_,_,_,_,_,'#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A',_,_,_,_,_,_,_,_,_,_],
-      // Row 22: upper cargo - two legs with gap, side pockets
-      [_,_,_,_,_,_,_,_,_,_,'#6B7B5A','#6B7B5A','#6B7B5A','#6B7B5A','#5B6B4A',_,_,'#5B6B4A','#6B7B5A','#6B7B5A','#6B7B5A','#6B7B5A',_,_,_,_,_,_,_,_,_,_],
-      // Row 23: cargo pocket on left leg, right side
-      [_,_,_,_,_,_,_,_,_,'#7B8B6A','#6B7B5A','#6B7B5A','#6B7B5A','#6B7B5A','#5B6B4A',_,_,'#5B6B4A','#6B7B5A','#6B7B5A','#6B7B5A','#6B7B5A','#7B8B6A',_,_,_,_,_,_,_,_,_],
-      // Row 24: pocket detail - left has pocket flap
-      [_,_,_,_,_,_,_,_,_,'#5B6B4A','#5B6B4A','#6B7B5A','#6B7B5A','#6B7B5A','#5B6B4A',_,_,'#5B6B4A','#6B7B5A','#6B7B5A','#6B7B5A','#5B6B4A','#5B6B4A',_,_,_,_,_,_,_,_,_],
-      // Row 25: cargo mid
-      [_,_,_,_,_,_,_,_,_,'#7B8B6A','#6B7B5A','#6B7B5A','#6B7B5A','#6B7B5A','#5B6B4A',_,_,'#5B6B4A','#6B7B5A','#6B7B5A','#6B7B5A','#6B7B5A','#7B8B6A',_,_,_,_,_,_,_,_,_],
-      // Row 26: cargo lower
-      [_,_,_,_,_,_,_,_,_,_,'#5B6B4A','#6B7B5A','#6B7B5A','#6B7B5A','#5B6B4A',_,_,'#5B6B4A','#6B7B5A','#6B7B5A','#6B7B5A','#5B6B4A',_,_,_,_,_,_,_,_,_,_],
-      // Row 27: cargo cuff
-      [_,_,_,_,_,_,_,_,_,_,'#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A',_,_,'#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A','#5B6B4A',_,_,_,_,_,_,_,_,_,_],
-      // Rows 28-31: empty
-      [...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'joggers',
-    label: 'JOGGERS',
-    pixels: [
-      // Rows 0-20: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 21: waistband with drawstring
-      [_,_,_,_,_,_,_,_,_,_,'#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A',_,_,_,_,_,_,_,_,_,_],
-      // Row 22: upper joggers - slim fit
-      [_,_,_,_,_,_,_,_,_,_,'#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A',_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#2C2C2C',_,_,_,_,_,_,_,_,_,_],
-      // Row 23: joggers body
-      [_,_,_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A',_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_,_,_],
-      // Row 24: tapered
-      [_,_,_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A',_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_,_,_],
-      // Row 25: more tapered
-      [_,_,_,_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A',_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_,_,_,_],
-      // Row 26: slim near ankle
-      [_,_,_,_,_,_,_,_,_,_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A',_,_,'#1A1A1A','#2C2C2C','#2C2C2C','#1A1A1A',_,_,_,_,_,_,_,_,_,_,_],
-      // Row 27: elastic cuff at ankle
-      [_,_,_,_,_,_,_,_,_,_,_,'#111111','#1A1A1A','#1A1A1A','#111111',_,_,'#111111','#1A1A1A','#1A1A1A','#111111',_,_,_,_,_,_,_,_,_,_,_],
-      // Rows 28-31: empty
-      [...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'baggy-jeans',
-    label: 'BAGGY JEANS',
-    pixels: [
-      // Rows 0-20: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 21: waistband denim
-      [_,_,_,_,_,_,_,_,_,'#3B5998','#3B5998','#3B5998','#3B5998','#3B5998','#3B5998','#3B5998','#3B5998','#3B5998','#3B5998','#3B5998','#3B5998','#3B5998','#3B5998',_,_,_,_,_,_,_,_,_],
-      // Row 22: wide baggy upper
-      [_,_,_,_,_,_,_,_,'#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998',_,_,'#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998',_,_,_,_,_,_,_,_],
-      // Row 23: baggy body - wide
-      [_,_,_,_,_,_,_,'#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998',_,_,'#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998',_,_,_,_,_,_,_],
-      // Row 24: still wide
-      [_,_,_,_,_,_,_,'#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998',_,_,'#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998',_,_,_,_,_,_,_],
-      // Row 25: wide leg continues
-      [_,_,_,_,_,_,_,'#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998',_,_,'#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998',_,_,_,_,_,_,_],
-      // Row 26: stacking at bottom
-      [_,_,_,_,_,_,_,'#3B5998','#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998','#3B5998',_,_,'#3B5998','#3B5998','#4A6FB5','#4A6FB5','#4A6FB5','#4A6FB5','#3B5998','#3B5998',_,_,_,_,_,_,_],
-      // Row 27: stacked hem (fabric bunching)
-      [_,_,_,_,_,_,'#3B5998','#3B5998','#4A6FB5','#4A6FB5','#3B5998','#4A6FB5','#3B5998','#4A6FB5','#3B5998',_,_,'#3B5998','#4A6FB5','#3B5998','#4A6FB5','#3B5998','#4A6FB5','#4A6FB5','#3B5998','#3B5998',_,_,_,_,_,_],
-      // Rows 28-31: empty
-      [...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'shorts',
-    label: 'SHORTS',
-    pixels: [
-      // Rows 0-20: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 21: waistband
-      [_,_,_,_,_,_,_,_,_,_,'#8B0000','#8B0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#8B0000','#8B0000',_,_,_,_,_,_,_,_,_,_],
-      // Row 22: shorts body - wide basketball style
-      [_,_,_,_,_,_,_,_,_,'#8B0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000',_,_,'#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#8B0000',_,_,_,_,_,_,_,_,_],
-      // Row 23: shorts body
-      [_,_,_,_,_,_,_,_,_,'#8B0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000',_,_,'#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#8B0000',_,_,_,_,_,_,_,_,_],
-      // Row 24: shorts hem (above knee) — show skin below
-      [_,_,_,_,_,_,_,_,_,'#8B0000','#8B0000','#CC0000','#CC0000','#CC0000','#8B0000',_,_,'#8B0000','#CC0000','#CC0000','#CC0000','#8B0000','#8B0000',_,_,_,_,_,_,_,_,_],
-      // Rows 25-27: empty (body's skin shows through)
-      [...R],
-      [...R],
-      [...R],
-      // Rows 28-31: empty
-      [...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'track-pants',
-    label: 'TRACK PANTS',
-    pixels: [
-      // Rows 0-20: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 21: waistband
-      [_,_,_,_,_,_,_,_,_,_,'#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54','#142D54',_,_,_,_,_,_,_,_,_,_],
-      // Row 22: upper - white stripe on outer edge
-      [_,_,_,_,_,_,_,_,_,_,'#FFFFFF','#1B3A6B','#1B3A6B','#1B3A6B','#142D54',_,_,'#142D54','#1B3A6B','#1B3A6B','#1B3A6B','#FFFFFF',_,_,_,_,_,_,_,_,_,_],
-      // Row 23: track pants body
-      [_,_,_,_,_,_,_,_,_,_,'#FFFFFF','#1B3A6B','#1B3A6B','#1B3A6B','#142D54',_,_,'#142D54','#1B3A6B','#1B3A6B','#1B3A6B','#FFFFFF',_,_,_,_,_,_,_,_,_,_],
-      // Row 24: track pants mid
-      [_,_,_,_,_,_,_,_,_,_,'#FFFFFF','#1B3A6B','#1B3A6B','#1B3A6B','#142D54',_,_,'#142D54','#1B3A6B','#1B3A6B','#1B3A6B','#FFFFFF',_,_,_,_,_,_,_,_,_,_],
-      // Row 25: tapering slightly
-      [_,_,_,_,_,_,_,_,_,_,_,'#FFFFFF','#1B3A6B','#1B3A6B','#142D54',_,_,'#142D54','#1B3A6B','#1B3A6B','#FFFFFF',_,_,_,_,_,_,_,_,_,_,_],
-      // Row 26: near ankle
-      [_,_,_,_,_,_,_,_,_,_,_,'#FFFFFF','#1B3A6B','#1B3A6B','#142D54',_,_,'#142D54','#1B3A6B','#1B3A6B','#FFFFFF',_,_,_,_,_,_,_,_,_,_,_],
-      // Row 27: ankle cuff
-      [_,_,_,_,_,_,_,_,_,_,_,'#142D54','#142D54','#142D54','#142D54',_,_,'#142D54','#142D54','#142D54','#142D54',_,_,_,_,_,_,_,_,_,_,_],
-      // Rows 28-31: empty
-      [...R],[...R],[...R],[...R],
-    ],
-  },
-];
-
-// ============================================================
-// ACCESSORY OPTIONS — can draw anywhere as overlays
-// ============================================================
-export const ACCESSORY_OPTIONS: TrainerOption[] = [
-  {
-    id: 'chain',
-    label: 'GOLD CHAIN',
-    pixels: [
-      // Rows 0-9: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 10: chain around neck
-      [_,_,_,_,_,_,_,_,_,_,_,_,'#DAA520','#FFD700','#FFD700','#FFD700','#FFD700','#FFD700','#FFD700','#DAA520',_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 11: chain draping down
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,'#DAA520','#FFD700',_,_,'#FFD700','#DAA520',_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 12: chain V shape
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#DAA520','#FFD700','#FFD700','#DAA520',_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 13: chain pendant
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#FFD700','#FFD700',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 14: pendant bottom
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#DAA520','#DAA520',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Rows 15-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'sunglasses',
-    label: 'SUNGLASSES',
-    pixels: [
-      // Rows 0-5: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 6: sunglasses frame across eyes — matching eye row of base body
-      [_,_,_,_,_,_,_,_,'#1A1A1A','#111111','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#111111','#111111','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#111111','#1A1A1A',_,_,_,_,_,_,_,_],
-      // Row 7: lens area (thick lenses)
-      [_,_,_,_,_,_,_,_,_,'#111111','#1A1A1A','#111111','#1A1A1A','#111111',_,_,_,_,'#111111','#1A1A1A','#111111','#1A1A1A','#111111',_,_,_,_,_,_,_,_,_],
-      // Rows 8-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'cap',
-    label: 'SNAPBACK',
-    pixels: [
-      // Row 0: empty
-      [...R],
-      // Row 1: cap crown top
-      [_,_,_,_,_,_,_,_,_,'#8B0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#8B0000',_,_,_,_,_,_,_,_,_,_],
-      // Row 2: cap crown
-      [_,_,_,_,_,_,_,_,'#8B0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#8B0000',_,_,_,_,_,_,_,_,_],
-      // Row 3: cap body with panel lines
-      [_,_,_,_,_,_,_,_,'#8B0000','#CC0000','#CC0000','#8B0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#CC0000','#8B0000','#CC0000','#CC0000','#8B0000',_,_,_,_,_,_,_,_],
-      // Row 4: brim — flat, extending forward
-      [_,_,_,_,_,_,'#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A','#1A1A1A',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 5: brim underside
-      [_,_,_,_,_,_,_,'#111111','#111111','#111111','#111111','#111111','#111111','#111111',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Rows 6-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'crossbody',
-    label: 'CROSSBODY BAG',
-    pixels: [
-      // Rows 0-9: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      // Row 10: strap starts at shoulder
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728',_,_,_,_,_,_,_,_,_,_],
-      // Row 11: strap diagonal
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728',_,_,_,_,_,_,_,_,_,_,_],
-      // Row 12: strap diagonal
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728',_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 13: strap
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728',_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 14: strap
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728',_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 15: strap meets bag
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 16: strap into bag
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728',_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 17: bag top
-      [_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728','#4A3728','#5C4033','#5C4033','#5C4033','#4A3728',_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 18: bag body
-      [_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728','#5C4033','#5C4033','#5C4033','#5C4033','#5C4033','#4A3728',_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 19: bag body with clasp
-      [_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728','#5C4033','#5C4033','#DAA520','#5C4033','#5C4033','#4A3728',_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Row 20: bag bottom
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,'#4A3728','#4A3728','#4A3728','#4A3728','#4A3728',_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // Rows 21-31: empty
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-  {
-    id: 'none',
-    label: 'NONE',
-    pixels: [
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-      [...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],[...R],
-    ],
-  },
-];
-
-// ============================================================
-// PNG OPTIONS (used when USE_PNG_SPRITES = true)
-// These IDs match the filenames in /public/sprites/
-// ============================================================
-const R_PNG = Array(32).fill('') as string[];
-const EMPTY_PIXELS = Array(32).fill([...R_PNG]) as string[][];
-
-const PNG_GENDER_OPTIONS: TrainerOption[] = [
-  { id: 'male',   label: 'MALE',   pixels: EMPTY_PIXELS },
-  { id: 'female', label: 'FEMALE', pixels: EMPTY_PIXELS },
-];
-
-const PNG_BODY_OPTIONS: TrainerOption[] = [
-  { id: 'porcelain', label: 'PORCELAIN', pixels: EMPTY_PIXELS },
-  { id: 'light',     label: 'LIGHT',     pixels: EMPTY_PIXELS },
-  { id: 'fair',      label: 'FAIR',      pixels: EMPTY_PIXELS },
-  { id: 'olive',     label: 'OLIVE',     pixels: EMPTY_PIXELS },
-  { id: 'medium',    label: 'MEDIUM',    pixels: EMPTY_PIXELS },
-  { id: 'tan',       label: 'TAN',       pixels: EMPTY_PIXELS },
-  { id: 'bronze',    label: 'BRONZE',    pixels: EMPTY_PIXELS },
-  { id: 'brown',     label: 'BROWN',     pixels: EMPTY_PIXELS },
-  { id: 'mahogany',  label: 'MAHOGANY',  pixels: EMPTY_PIXELS },
-  { id: 'ebony',     label: 'EBONY',     pixels: EMPTY_PIXELS },
-];
-
-const PNG_HAIR_OPTIONS: TrainerOption[] = [
-  { id: 'buzz',     label: 'BUZZ CUT',   pixels: EMPTY_PIXELS },
-  { id: 'spiky',    label: 'SPIKY',      pixels: EMPTY_PIXELS },
-  { id: 'dreads',   label: 'DREADS',     pixels: EMPTY_PIXELS },
-  { id: 'afro',     label: 'AFRO',       pixels: EMPTY_PIXELS },
-  { id: 'mullet',   label: 'MULLET',     pixels: EMPTY_PIXELS },
-  { id: 'bangs',    label: 'BANGS',      pixels: EMPTY_PIXELS },
-  { id: 'long',     label: 'LONG',       pixels: EMPTY_PIXELS },
-  { id: 'pigtails', label: 'PIGTAILS',   pixels: EMPTY_PIXELS },
-  { id: 'bedhead',  label: 'BEDHEAD',    pixels: EMPTY_PIXELS },
-  { id: 'loose',    label: 'LOOSE',      pixels: EMPTY_PIXELS },
-  { id: 'swoop',    label: 'SWOOP',      pixels: EMPTY_PIXELS },
-  { id: 'halfmess', label: 'HALF-MESSY', pixels: EMPTY_PIXELS },
-  { id: 'unkempt',  label: 'UNKEMPT',    pixels: EMPTY_PIXELS },
-];
-
-const PNG_TOP_OPTIONS: TrainerOption[] = [
-  { id: 'hoodie',        label: 'HOODIE',       pixels: EMPTY_PIXELS },
-  { id: 'hoodie-red',    label: 'HOODIE RED',   pixels: EMPTY_PIXELS },
-  { id: 'hoodie-blue',   label: 'HOODIE BLUE',  pixels: EMPTY_PIXELS },
-  { id: 'hoodie-navy',   label: 'HOODIE NAVY',  pixels: EMPTY_PIXELS },
-  { id: 'longsleeve',       label: 'LONGSLEEVE',      pixels: EMPTY_PIXELS },
-  { id: 'longsleeve-red',   label: 'LONGSLEEVE RED',  pixels: EMPTY_PIXELS },
-  { id: 'longsleeve-blue',  label: 'LONGSLEEVE BLUE', pixels: EMPTY_PIXELS },
-  { id: 'longsleeve-navy',  label: 'LONGSLEEVE NAVY', pixels: EMPTY_PIXELS },
-  { id: 'cardigan',   label: 'CARDIGAN',     pixels: EMPTY_PIXELS },
-  { id: 'buttondown', label: 'BUTTONDOWN',   pixels: EMPTY_PIXELS },
-  { id: 'polo-long',  label: 'POLO (LONG)',  pixels: EMPTY_PIXELS },
-  { id: 'vneck-long', label: 'V-NECK (L)',   pixels: EMPTY_PIXELS },
-  { id: 'scoop-long', label: 'SCOOP (L)',    pixels: EMPTY_PIXELS },
-  { id: 'tee',        label: 'T-SHIRT',      pixels: EMPTY_PIXELS },
-  { id: 'tee-red',    label: 'TEE RED',      pixels: EMPTY_PIXELS },
-  { id: 'tee-blue',   label: 'TEE BLUE',     pixels: EMPTY_PIXELS },
-  { id: 'tee-navy',   label: 'TEE NAVY',     pixels: EMPTY_PIXELS },
-  { id: 'vneck',      label: 'V-NECK',       pixels: EMPTY_PIXELS },
-  { id: 'scoop',      label: 'SCOOP NECK',   pixels: EMPTY_PIXELS },
-  { id: 'sleeves',    label: 'SLEEVES',      pixels: EMPTY_PIXELS },
-  { id: 'polo',       label: 'POLO',         pixels: EMPTY_PIXELS },
-  { id: 'polo-red',   label: 'POLO RED',     pixels: EMPTY_PIXELS },
-  { id: 'polo-blue',  label: 'POLO BLUE',    pixels: EMPTY_PIXELS },
-  { id: 'polo-navy',  label: 'POLO NAVY',    pixels: EMPTY_PIXELS },
-  { id: 'cardigan-s', label: 'CARDIGAN (S)', pixels: EMPTY_PIXELS },
-  // --- New designs from the 25-item expansion ---
-  { id: 'jacket',       label: 'JACKET',       pixels: EMPTY_PIXELS },
-  { id: 'biker-jacket', label: 'TRENCH',       pixels: EMPTY_PIXELS },
-  { id: 'suit',         label: 'SUIT',         pixels: EMPTY_PIXELS },
-];
-
-const PNG_BOTTOM_OPTIONS: TrainerOption[] = [
-  { id: 'pants',          label: 'PANTS',          pixels: EMPTY_PIXELS },
-  { id: 'shorts',         label: 'SHORTS',         pixels: EMPTY_PIXELS },
-  { id: 'formal',         label: 'FORMAL',         pixels: EMPTY_PIXELS },
-  { id: 'leggings',       label: 'LEGGINGS',       pixels: EMPTY_PIXELS },
-  { id: 'cuffed',         label: 'CUFFED',         pixels: EMPTY_PIXELS },
-  { id: 'pantaloons',     label: 'PANTALOONS',     pixels: EMPTY_PIXELS },
-  { id: 'skirt-plain',    label: 'SKIRT',          pixels: EMPTY_PIXELS },
-  { id: 'skirt-straight', label: 'PENCIL SKIRT',   pixels: EMPTY_PIXELS },
-  // --- New bottoms from the 25-item expansion ---
-  { id: 'skirt-legion',    label: 'LEGION SKIRT',    pixels: EMPTY_PIXELS },
-  { id: 'skirt-slit',      label: 'SLIT SKIRT',      pixels: EMPTY_PIXELS },
-  { id: 'skirt-belle',     label: 'BELLE SKIRT',     pixels: EMPTY_PIXELS },
-  { id: 'skirt-overskirt', label: 'OVERSKIRT',       pixels: EMPTY_PIXELS },
-];
-
-const PNG_ACCESSORY_OPTIONS: TrainerOption[] = [
-  { id: 'hood',        label: 'HOOD',        pixels: EMPTY_PIXELS },
-  { id: 'hood-sack',   label: 'HOOD-SACK',   pixels: EMPTY_PIXELS },
-  { id: 'bandana',     label: 'BANDANA',     pixels: EMPTY_PIXELS },
-  { id: 'bandana2',    label: 'BANDANA 2',   pixels: EMPTY_PIXELS },
-  { id: 'leather-cap', label: 'LEATHER CAP', pixels: EMPTY_PIXELS },
-  { id: 'tophat',      label: 'TOP HAT',     pixels: EMPTY_PIXELS },
-  { id: 'bowler',      label: 'BOWLER',      pixels: EMPTY_PIXELS },
-  { id: 'visor',       label: 'VISOR',       pixels: EMPTY_PIXELS },
-  // --- New hats from the 25-item expansion ---
-  { id: 'headband-thick', label: 'HEADBAND',     pixels: EMPTY_PIXELS },
-  { id: 'headband-tied',  label: 'TIED BAND',    pixels: EMPTY_PIXELS },
-  { id: 'crown',          label: 'CROWN',        pixels: EMPTY_PIXELS },
-  { id: 'none',        label: 'NONE',        pixels: EMPTY_PIXELS },
-];
-
-const PNG_SHOES_OPTIONS: TrainerOption[] = [
-  { id: 'sneakers',  label: 'SNEAKERS',  pixels: EMPTY_PIXELS },
-  { id: 'boots',     label: 'BOOTS',     pixels: EMPTY_PIXELS },
-  { id: 'hi-tops',   label: 'HI-TOPS',   pixels: EMPTY_PIXELS },
-  { id: 'low-tops',  label: 'LOW-TOPS',  pixels: EMPTY_PIXELS },
-  { id: 'fold-boot', label: 'FOLD BOOT', pixels: EMPTY_PIXELS },
-  // --- New shoes from the 25-item expansion ---
-  { id: 'ghillies',  label: 'GHILLIES',  pixels: EMPTY_PIXELS },
-  { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
-];
-
-const PNG_FACE_OPTIONS: TrainerOption[] = [
-  { id: 'sunnies',     label: 'SUNNIES',    pixels: EMPTY_PIXELS },
-  { id: 'nerd',        label: 'NERD',       pixels: EMPTY_PIXELS },
-  { id: 'round-frame', label: 'ROUND',      pixels: EMPTY_PIXELS },
-  { id: 'secretary',   label: 'SECRETARY',  pixels: EMPTY_PIXELS },
-  { id: 'mask',        label: 'MASK',       pixels: EMPTY_PIXELS },
-  { id: 'none',        label: 'NONE',       pixels: EMPTY_PIXELS },
-];
-
-const PNG_NECK_OPTIONS: TrainerOption[] = [
-  { id: 'chain',     label: 'CHAIN',     pixels: EMPTY_PIXELS },
-  { id: 'simple',    label: 'SIMPLE',    pixels: EMPTY_PIXELS },
-  { id: 'beaded-lg', label: 'BEADED LG', pixels: EMPTY_PIXELS },
-  { id: 'beaded-sm', label: 'BEADED SM', pixels: EMPTY_PIXELS },
-  // --- New neck items from the 25-item expansion ---
-  { id: 'scarf',     label: 'SCARF',     pixels: EMPTY_PIXELS },
-  { id: 'tie',       label: 'NECKTIE',   pixels: EMPTY_PIXELS },
-  { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
-];
-
-const PNG_HAIR_COLOR_OPTIONS: TrainerOption[] = [
-  { id: 'black',    label: 'BLACK',    pixels: EMPTY_PIXELS },
-  { id: 'brown',    label: 'BROWN',    pixels: EMPTY_PIXELS },
-  { id: 'blonde',   label: 'BLONDE',   pixels: EMPTY_PIXELS },
-  { id: 'red',      label: 'RED',      pixels: EMPTY_PIXELS },
-  { id: 'auburn',   label: 'AUBURN',   pixels: EMPTY_PIXELS },
-  { id: 'platinum', label: 'PLATINUM', pixels: EMPTY_PIXELS },
-  { id: 'blue',     label: 'BLUE',     pixels: EMPTY_PIXELS },
-  { id: 'pink',     label: 'PINK',     pixels: EMPTY_PIXELS },
-  { id: 'green',    label: 'GREEN',    pixels: EMPTY_PIXELS },
-  { id: 'purple',   label: 'PURPLE',   pixels: EMPTY_PIXELS },
-];
-
-const PNG_FACIAL_HAIR_OPTIONS: TrainerOption[] = [
-  { id: 'none',      label: 'NONE',      pixels: EMPTY_PIXELS },
-  { id: 'shadow',    label: '5-O\'CLOCK',pixels: EMPTY_PIXELS },
-  { id: 'beard',     label: 'BEARD',     pixels: EMPTY_PIXELS },
-  { id: 'trimmed',   label: 'TRIMMED',   pixels: EMPTY_PIXELS },
-  { id: 'goatee',    label: 'GOATEE',    pixels: EMPTY_PIXELS },
-  { id: 'chevron',   label: 'CHEVRON',   pixels: EMPTY_PIXELS },
-  { id: 'handlebar', label: 'HANDLEBAR', pixels: EMPTY_PIXELS },
-];
-
-// ============================================================
-// CATEGORIES & DEFAULT CONFIG — switches based on sprite mode
-// ============================================================
-const genderOpts = PNG_GENDER_OPTIONS;
-const bodyOpts = USE_PNG_SPRITES ? PNG_BODY_OPTIONS : BODY_OPTIONS;
-const hairOpts = USE_PNG_SPRITES ? PNG_HAIR_OPTIONS : HAIR_OPTIONS;
-const topOpts = USE_PNG_SPRITES ? PNG_TOP_OPTIONS : TOP_OPTIONS;
-const bottomOpts = USE_PNG_SPRITES ? PNG_BOTTOM_OPTIONS : BOTTOM_OPTIONS;
-const accOpts = USE_PNG_SPRITES ? PNG_ACCESSORY_OPTIONS : ACCESSORY_OPTIONS;
-const shoesOpts = PNG_SHOES_OPTIONS;
-const faceOpts = PNG_FACE_OPTIONS;
-const neckOpts = PNG_NECK_OPTIONS;
-const facialHairOpts = PNG_FACIAL_HAIR_OPTIONS;
-const hairColorOpts = PNG_HAIR_COLOR_OPTIONS;
-
-// Order matches natural head-to-toe + layering sensibility.
-// `facialHair` is filtered out for female users in the customizer UI.
-export const CATEGORIES = [
-  { key: 'gender' as const,     label: 'GENDER',     options: genderOpts },
-  { key: 'body' as const,       label: 'SKIN',       options: bodyOpts },
-  { key: 'hair' as const,       label: 'HAIR',       options: hairOpts },
-  { key: 'hairColor' as const,  label: 'HAIR COLOR', options: hairColorOpts },
-  { key: 'facialHair' as const, label: 'FACE HAIR',  options: facialHairOpts },
-  { key: 'face' as const,       label: 'FACE',       options: faceOpts },
-  { key: 'accessory' as const,  label: 'HAT',        options: accOpts },
-  { key: 'neck' as const,       label: 'NECK',       options: neckOpts },
-  { key: 'top' as const,        label: 'TOP',        options: topOpts },
-  { key: 'bottom' as const,     label: 'BOTTOM',     options: bottomOpts },
-  { key: 'shoes' as const,      label: 'SHOES',      options: shoesOpts },
-];
-
-export const DEFAULT_CONFIG = {
-  gender: 'male' as const,
-  body: 'medium',
-  facialHair: 'none',
-  hair: hairOpts[0].id,
-  hairColor: 'black',
-  face: 'none',
-  top: topOpts[0].id,
-  bottom: bottomOpts[0].id,
-  shoes: 'sneakers',
-  neck: 'none',
-  accessory: 'none',
-};
-
-// Blank-start state — all render-critical slots empty so the customizer
-// opens on a silhouette placeholder. The 4 optional categories stay at
-// 'none' since they default to "no addition" rather than "not chosen".
-export const INITIAL_CONFIG: import('@/types/trainer').TrainerConfig = {
+export const INITIAL_CONFIG: TrainerConfig = {
+  // Required slots blank — user picks before Generate enables.
   gender: '',
   body: '',
   hair: '',
-  hairColor: '',
+  hairColor: 'black',
   top: '',
   bottom: '',
   shoes: '',
-  facialHair: 'none',
-  face: 'none',
-  neck: 'none',
-  accessory: 'none',
+  // Optional slots default to 'none'.
+  outerwear: 'none',
+  hat: 'none',
+  glasses: 'none',
+  expression: 'none',
 };
 
-// Categories that must be filled before Generate is enabled. Anything
-// not in this list is optional (facialHair / face / neck / accessory).
-export const REQUIRED_FOR_GENERATE = [
-  'gender',
-  'body',
-  'hair',
-  'hairColor',
-  'top',
-  'bottom',
-  'shoes',
-] as const;
-
-export function isReadyToGenerate(config: {
-  gender: string;
-  body: string;
-  hair: string;
-  hairColor: string;
-  top: string;
-  bottom: string;
-  shoes: string;
-}): boolean {
-  return REQUIRED_FOR_GENERATE.every((key) => {
-    const v = config[key];
-    return typeof v === 'string' && v.length > 0 && v !== 'none';
-  });
+export function isReadyToGenerate(config: TrainerConfig): boolean {
+  for (const key of REQUIRED_FOR_GENERATE) {
+    const value = config[key];
+    if (!value || value === 'none') return false;
+  }
+  return true;
 }
+
+// ---- sprite-path helpers (used by TrainerSprite + OG route) ----
+
+const ROOT = '/sprites/limezu';
+
+export function bodyPath(gender: 'm' | 'f', id: string): string {
+  return `${ROOT}/body/${gender}/${id}.png`;
+}
+export function hairPath(colorId: string, styleId: string): string {
+  return `${ROOT}/hair/${colorId}/${styleId}.png`;
+}
+export function topPath(gender: 'm' | 'f', id: string): string {
+  return `${ROOT}/top/${gender}/${id}.png`;
+}
+export function bottomPath(gender: 'm' | 'f', id: string): string {
+  return `${ROOT}/bottom/${gender}/${id}.png`;
+}
+export function shoesPath(id: string): string {
+  return `${ROOT}/shoes/${id}.png`;
+}
+export function outerwearPath(gender: 'm' | 'f', id: string): string {
+  return `${ROOT}/outerwear/${gender}/${id}.png`;
+}
+export function hatPath(id: string): string {
+  return `${ROOT}/hat/${id}.png`;
+}
+export function glassesPath(id: string): string {
+  return `${ROOT}/glasses/${id}.png`;
+}
+export function expressionPath(id: string): string {
+  return `${ROOT}/expression/${id}.png`;
+}
+
+export const SPRITE_DIMS = {
+  width: MANIFEST.spriteWidth,
+  height: MANIFEST.spriteHeight,
+  bustCrop: MANIFEST.bustCrop,
+} as const;
