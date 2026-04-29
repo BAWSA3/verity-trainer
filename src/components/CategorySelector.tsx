@@ -1,15 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { TrainerOption, Gender } from '@/types/trainer';
+import type { TrainerOption } from '@/types/trainer';
 import {
-  bodyPath, hairPath, topPath, bottomPath, shoesPath,
-  outerwearPath, hatPath, glassesPath, expressionPath,
+  bodyPath, hairPath, outfitPath, cloakPath, facePath, hatPath,
 } from '@/lib/trainer-options';
 import { playHover } from '@/lib/sounds';
 
-// Categories with more than this many items collapse behind a "+N MORE" toggle
-// to keep the panel scannable.
 const PREVIEW_LIMIT = 6;
 
 interface CategorySelectorProps {
@@ -18,34 +15,27 @@ interface CategorySelectorProps {
   options: TrainerOption[];
   selected: string;
   onSelect: (id: string) => void;
-  gender: Gender;
-  currentSkin: string;
-  currentHairStyle: string;
-  currentHairColor: string;
+  currentBody: string;        // for hairColor preview — show against current body
+  currentHairStyle: string;   // for hairColor preview
+  currentHairColor: string;   // for hair-style preview
 }
 
-/** Where to source the 64x64 thumbnail for a given trait option. */
 function thumbnailSrc(
   categoryKey: string,
   optionId: string,
-  gender: Gender,
   currentHairStyle: string,
   currentHairColor: string,
-): string {
+): string | null {
+  if (!optionId || optionId === 'none') return null;
   switch (categoryKey) {
-    // Gender thumbnails are rendered specially (silhouette icon) — no sprite path.
-    case 'gender':     return '';
-    case 'body':       return bodyPath(gender, optionId);
-    case 'hair':       return hairPath(currentHairColor || 'black', optionId);
-    case 'hairColor':  return hairPath(optionId, currentHairStyle || 'default');
-    case 'top':        return topPath(gender, optionId);
-    case 'bottom':     return bottomPath(gender, optionId);
-    case 'shoes':      return shoesPath(optionId);
-    case 'outerwear':  return outerwearPath(gender, optionId);
+    case 'body':       return bodyPath(optionId);
+    case 'hair':       return hairPath(optionId, currentHairColor || 'v00');
+    case 'hairColor':  return hairPath(currentHairStyle || 'bob1', optionId);
+    case 'outfit':     return outfitPath(optionId);
+    case 'cloak':      return cloakPath(optionId);
+    case 'face':       return facePath(optionId);
     case 'hat':        return hatPath(optionId);
-    case 'glasses':    return glassesPath(optionId);
-    case 'expression': return expressionPath(optionId);
-    default:           return '';
+    default:           return null;
   }
 }
 
@@ -54,13 +44,12 @@ interface ThumbProps {
   optionLabel: string;
   categoryKey: string;
   selected: boolean;
-  gender: Gender;
   currentHairStyle: string;
   currentHairColor: string;
 }
 
 function Thumb({
-  optionId, optionLabel, categoryKey, selected, gender, currentHairStyle, currentHairColor,
+  optionId, optionLabel, categoryKey, selected, currentHairStyle, currentHairColor,
 }: ThumbProps) {
   const baseCls = `border-2 cursor-pointer transition-all rounded-[8px] ${
     selected
@@ -68,7 +57,6 @@ function Thumb({
       : 'border-[#333]/15 hover:border-[#90b34d]/60 hover:scale-105'
   }`;
 
-  // 'none' for optional categories — show a labeled empty box.
   if (optionId === 'none') {
     return (
       <div
@@ -80,24 +68,7 @@ function Thumb({
     );
   }
 
-  // Gender — show m/f icon labels rather than sprites.
-  if (categoryKey === 'gender') {
-    return (
-      <div
-        className={`w-16 h-16 flex items-center justify-center ${baseCls}`}
-        style={{ background: 'rgba(255, 253, 243, 0.6)' }}
-      >
-        <span
-          className="text-[#367d95] text-[28px] tracking-wider"
-          style={{ fontFamily: 'var(--font-loos), sans-serif', fontWeight: 700 }}
-        >
-          {optionId === 'm' ? '♂' : '♀'}
-        </span>
-      </div>
-    );
-  }
-
-  const src = thumbnailSrc(categoryKey, optionId, gender, currentHairStyle, currentHairColor);
+  const src = thumbnailSrc(categoryKey, optionId, currentHairStyle, currentHairColor);
   if (!src) {
     return (
       <div
@@ -123,19 +94,11 @@ function Thumb({
 }
 
 export default function CategorySelector({
-  label,
-  categoryKey,
-  options,
-  selected,
-  onSelect,
-  gender,
-  currentHairStyle,
-  currentHairColor,
+  label, categoryKey, options, selected, onSelect,
+  currentHairStyle, currentHairColor,
 }: CategorySelectorProps) {
   const [expanded, setExpanded] = useState(false);
 
-  // Auto-expand when the selected option lives past the preview cutoff so the
-  // user always sees their pick without first clicking "MORE".
   const selectedIndex = useMemo(
     () => options.findIndex((o) => o.id === selected),
     [options, selected],
@@ -173,7 +136,6 @@ export default function CategorySelector({
               optionLabel={option.label}
               categoryKey={categoryKey}
               selected={selected === option.id}
-              gender={gender}
               currentHairStyle={currentHairStyle}
               currentHairColor={currentHairColor}
             />

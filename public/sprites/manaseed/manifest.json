@@ -1,0 +1,310 @@
+{
+  "version": 1,
+  "source": "manaseed",
+  "generatedAt": "2026-04-29T09:08:32.612Z",
+  "spriteWidth": 64,
+  "spriteHeight": 64,
+  "bustCrop": {
+    "x": 16,
+    "y": 12,
+    "w": 32,
+    "h": 36
+  },
+  "categories": {
+    "body": {
+      "values": [
+        {
+          "id": "v00",
+          "label": "Skin 00",
+          "file": "body/v00.png"
+        },
+        {
+          "id": "v01",
+          "label": "Skin 01",
+          "file": "body/v01.png"
+        },
+        {
+          "id": "v02",
+          "label": "Skin 02",
+          "file": "body/v02.png"
+        },
+        {
+          "id": "v03",
+          "label": "Skin 03",
+          "file": "body/v03.png"
+        },
+        {
+          "id": "v04",
+          "label": "Skin 04",
+          "file": "body/v04.png"
+        },
+        {
+          "id": "v05",
+          "label": "Skin 05",
+          "file": "body/v05.png"
+        },
+        {
+          "id": "v06",
+          "label": "Skin 06",
+          "file": "body/v06.png"
+        },
+        {
+          "id": "v07",
+          "label": "Skin 07",
+          "file": "body/v07.png"
+        },
+        {
+          "id": "v08",
+          "label": "Skin 08",
+          "file": "body/v08.png"
+        },
+        {
+          "id": "v09",
+          "label": "Skin 09",
+          "file": "body/v09.png"
+        },
+        {
+          "id": "v10",
+          "label": "Skin 10",
+          "file": "body/v10.png"
+        }
+      ]
+    },
+    "hair": {
+      "supportsColor": true,
+      "values": [
+        {
+          "id": "bob1",
+          "label": "Bob"
+        },
+        {
+          "id": "dap1",
+          "label": "Dapper"
+        }
+      ]
+    },
+    "hairColor": {
+      "values": [
+        {
+          "id": "v00",
+          "label": "Hair Color 1"
+        },
+        {
+          "id": "v01",
+          "label": "Hair Color 2"
+        },
+        {
+          "id": "v02",
+          "label": "Hair Color 3"
+        },
+        {
+          "id": "v03",
+          "label": "Hair Color 4"
+        },
+        {
+          "id": "v04",
+          "label": "Hair Color 5"
+        },
+        {
+          "id": "v05",
+          "label": "Hair Color 6"
+        },
+        {
+          "id": "v06",
+          "label": "Hair Color 7"
+        },
+        {
+          "id": "v07",
+          "label": "Hair Color 8"
+        },
+        {
+          "id": "v08",
+          "label": "Hair Color 9"
+        },
+        {
+          "id": "v09",
+          "label": "Hair Color 10"
+        },
+        {
+          "id": "v10",
+          "label": "Hair Color 11"
+        },
+        {
+          "id": "v11",
+          "label": "Hair Color 12"
+        },
+        {
+          "id": "v12",
+          "label": "Hair Color 13"
+        },
+        {
+          "id": "v13",
+          "label": "Hair Color 14"
+        }
+      ]
+    },
+    "outfit": {
+      "values": [
+        {
+          "id": "boxr-v01",
+          "label": "Boxers v01",
+          "baseId": "boxr",
+          "variant": "v01"
+        },
+        {
+          "id": "fstr-v01",
+          "label": "Forester v01",
+          "baseId": "fstr",
+          "variant": "v01"
+        },
+        {
+          "id": "fstr-v02",
+          "label": "Forester v02",
+          "baseId": "fstr",
+          "variant": "v02"
+        },
+        {
+          "id": "fstr-v03",
+          "label": "Forester v03",
+          "baseId": "fstr",
+          "variant": "v03"
+        },
+        {
+          "id": "fstr-v04",
+          "label": "Forester v04",
+          "baseId": "fstr",
+          "variant": "v04"
+        },
+        {
+          "id": "fstr-v05",
+          "label": "Forester v05",
+          "baseId": "fstr",
+          "variant": "v05"
+        },
+        {
+          "id": "pfpn-v01",
+          "label": "Peasant Pants v01",
+          "baseId": "pfpn",
+          "variant": "v01"
+        },
+        {
+          "id": "pfpn-v02",
+          "label": "Peasant Pants v02",
+          "baseId": "pfpn",
+          "variant": "v02"
+        },
+        {
+          "id": "pfpn-v03",
+          "label": "Peasant Pants v03",
+          "baseId": "pfpn",
+          "variant": "v03"
+        },
+        {
+          "id": "pfpn-v04",
+          "label": "Peasant Pants v04",
+          "baseId": "pfpn",
+          "variant": "v04"
+        },
+        {
+          "id": "pfpn-v05",
+          "label": "Peasant Pants v05",
+          "baseId": "pfpn",
+          "variant": "v05"
+        },
+        {
+          "id": "undi-v01",
+          "label": "Undies v01",
+          "baseId": "undi",
+          "variant": "v01"
+        }
+      ]
+    },
+    "cloak": {
+      "optional": true,
+      "values": [
+        {
+          "id": "none",
+          "label": "None"
+        }
+      ]
+    },
+    "face": {
+      "optional": true,
+      "values": [
+        {
+          "id": "none",
+          "label": "None"
+        }
+      ]
+    },
+    "hat": {
+      "optional": true,
+      "values": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "pfht-v01",
+          "label": "Farm Hat v01",
+          "baseId": "pfht",
+          "variant": "v01"
+        },
+        {
+          "id": "pfht-v02",
+          "label": "Farm Hat v02",
+          "baseId": "pfht",
+          "variant": "v02"
+        },
+        {
+          "id": "pfht-v03",
+          "label": "Farm Hat v03",
+          "baseId": "pfht",
+          "variant": "v03"
+        },
+        {
+          "id": "pfht-v04",
+          "label": "Farm Hat v04",
+          "baseId": "pfht",
+          "variant": "v04"
+        },
+        {
+          "id": "pfht-v05",
+          "label": "Farm Hat v05",
+          "baseId": "pfht",
+          "variant": "v05"
+        },
+        {
+          "id": "pnty-v01",
+          "label": "Pony Cap v01",
+          "baseId": "pnty",
+          "variant": "v01"
+        },
+        {
+          "id": "pnty-v02",
+          "label": "Pony Cap v02",
+          "baseId": "pnty",
+          "variant": "v02"
+        },
+        {
+          "id": "pnty-v03",
+          "label": "Pony Cap v03",
+          "baseId": "pnty",
+          "variant": "v03"
+        },
+        {
+          "id": "pnty-v04",
+          "label": "Pony Cap v04",
+          "baseId": "pnty",
+          "variant": "v04"
+        },
+        {
+          "id": "pnty-v05",
+          "label": "Pony Cap v05",
+          "baseId": "pnty",
+          "variant": "v05"
+        }
+      ]
+    }
+  }
+}

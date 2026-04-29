@@ -9,24 +9,25 @@ import type { Zodiac } from '@/types/trainer';
 
 export const runtime = 'nodejs';
 
-// V1 hi-fi pixel sprites are 64x96 source. Composite at 1024 wide for crisp output.
+// Mana Seed source frames are 64x64. Composite at 1024 wide for crisp output;
+// then bust-extract a sub-rect.
 const SPRITE_W = 1024;
-const SPRITE_H = 1536;     // 64x96 ratio at 1024 width
-const BUST_W = 512;        // bust crop width in OG image (left third of card)
-const BUST_H = 640;        // bust crop height (40/64 ratio at 512 → 320; padded for visual breathing room)
+const SPRITE_H = 1024;
+const BUST_W = 512;
+const BUST_H = 576;     // crop region is 32x36 in 64x64 = 1024x1152 in 1024 wide; final card area sized accordingly
 
-// Bust source crop in 64x96 sprite-space — mirrors manifest.bustCrop.
-const BUST_CROP = { left: 16, top: 0, width: 32, height: 40 };
+// Bust source crop in 64x64 sprite-space — mirrors manifest.bustCrop.
+const BUST_CROP = { left: 16, top: 12, width: 32, height: 36 };
 
-// Cache the rendered OG aggressively — URL is keyed by full config so different
-// trainers get different URLs.
 const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=31536000, immutable',
 };
 
-async function loadSprite(relPath: string): Promise<Buffer | null> {
+const SPRITE_ROOT = ['public', 'sprites', 'manaseed'];
+
+async function loadSprite(...segments: string[]): Promise<Buffer | null> {
   try {
-    const filePath = path.join(process.cwd(), 'public', 'sprites', 'limezu', relPath);
+    const filePath = path.join(process.cwd(), ...SPRITE_ROOT, ...segments);
     return await readFile(filePath);
   } catch {
     return null;
@@ -34,46 +35,60 @@ async function loadSprite(relPath: string): Promise<Buffer | null> {
 }
 
 interface CompositeArgs {
-  gender: 'm' | 'f';
   body: string;
   hair: string;
   hairColor: string;
-  top: string;
-  bottom: string;
-  shoes: string;
-  outerwear: string;
+  outfit: string;
+  cloak: string;
+  face: string;
   hat: string;
-  glasses: string;
-  expression: string;
+}
+
+/** Resolve `<baseId>-<variant>` (e.g. "fstr-v02") -> [baseId, variant]. */
+function splitVariant(compoundId: string): [string, string] | null {
+  const idx = compoundId.lastIndexOf('-');
+  if (idx <= 0) return null;
+  return [compoundId.slice(0, idx), compoundId.slice(idx + 1)];
 }
 
 async function compositeBust(args: CompositeArgs): Promise<string | null> {
-  // Layer order mirrors TrainerSprite.buildLayers().
-  const layerPaths = [
-    `body/${args.gender}/${args.body}.png`,
-    args.bottom !== 'none'    ? `bottom/${args.gender}/${args.bottom}.png` : null,
-    args.shoes !== 'none'     ? `shoes/${args.shoes}.png` : null,
-    args.top !== 'none'       ? `top/${args.gender}/${args.top}.png` : null,
-    args.outerwear !== 'none' ? `outerwear/${args.gender}/${args.outerwear}.png` : null,
-    args.expression !== 'none'? `expression/${args.expression}.png` : null,
-    args.glasses !== 'none'   ? `glasses/${args.glasses}.png` : null,
-    `hair/${args.hairColor}/${args.hair}.png`,
-    args.hat !== 'none'       ? `hat/${args.hat}.png` : null,
-  ].filter((p): p is string => p !== null);
+  // Layer order per Seliel's `using this base.txt`:
+  // 0bas (body) -> 1out (outfit) -> 2clo (cloak) -> 3fac (face) -> 4har (hair) -> 5hat (hat)
+  const layerSegments: string[][] = [];
+
+  if (args.body) layerSegments.push(['body', `${args.body}.png`]);
+
+  if (args.outfit && args.outfit !== 'none') {
+    const split = splitVariant(args.outfit);
+    if (split) layerSegments.push(['outfit', split[0], `${split[1]}.png`]);
+  }
+  if (args.cloak && args.cloak !== 'none') {
+    const split = splitVariant(args.cloak);
+    if (split) layerSegments.push(['cloak', split[0], `${split[1]}.png`]);
+  }
+  if (args.face && args.face !== 'none') {
+    const split = splitVariant(args.face);
+    if (split) layerSegments.push(['face', split[0], `${split[1]}.png`]);
+  }
+  if (args.hair && args.hairColor) {
+    layerSegments.push(['hair', args.hair, `${args.hairColor}.png`]);
+  }
+  if (args.hat && args.hat !== 'none') {
+    const split = splitVariant(args.hat);
+    if (split) layerSegments.push(['hat', split[0], `${split[1]}.png`]);
+  }
 
   try {
     const buffers = await Promise.all(
-      layerPaths.map(async (rel) => {
-        const buf = await loadSprite(rel);
+      layerSegments.map(async (segs) => {
+        const buf = await loadSprite(...segs);
         if (!buf) return null;
-        // Resize each layer to the full-body output size with nearest-neighbor.
         return sharp(buf).resize(SPRITE_W, SPRITE_H, { kernel: 'nearest', fit: 'fill' }).toBuffer();
       }),
     );
     const valid = buffers.filter((b): b is Buffer => b !== null);
     if (valid.length === 0) return null;
 
-    // Composite full body, then crop to bust.
     const fullBody = await sharp({
       create: { width: SPRITE_W, height: SPRITE_H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
     })
@@ -81,14 +96,13 @@ async function compositeBust(args: CompositeArgs): Promise<string | null> {
       .png()
       .toBuffer();
 
-    // Bust extract: scale crop region from sprite-space (64x96) to output-space.
-    const scaleX = SPRITE_W / 64;
-    const scaleY = SPRITE_H / 96;
+    // Bust extract: scale crop region from sprite-space (64x64) to output-space.
+    const scale = SPRITE_W / 64;
     const extractRegion = {
-      left: Math.round(BUST_CROP.left * scaleX),
-      top: Math.round(BUST_CROP.top * scaleY),
-      width: Math.round(BUST_CROP.width * scaleX),
-      height: Math.round(BUST_CROP.height * scaleY),
+      left: Math.round(BUST_CROP.left * scale),
+      top: Math.round(BUST_CROP.top * scale),
+      width: Math.round(BUST_CROP.width * scale),
+      height: Math.round(BUST_CROP.height * scale),
     };
 
     const bust = await sharp(fullBody)
@@ -145,26 +159,16 @@ export async function GET(req: NextRequest) {
   const street   = clamp(parseInt(searchParams.get('st')  || '70'));
   const luck     = clamp(parseInt(searchParams.get('lk_v')|| '70'));
 
-  // Trainer config (fall back to safe defaults). Keep parsing tight — these are
-  // already sanitized by /api/signup before being committed to DB, but query
-  // params are URL-controlled so re-validate.
-  const genderParam = searchParams.get('g');
-  const gender: 'm' | 'f' = genderParam === 'f' ? 'f' : 'm';
   const args: CompositeArgs = {
-    gender,
-    body:       safeId(searchParams.get('b'),  ''),
-    hair:       safeId(searchParams.get('h'),  ''),
-    hairColor:  safeId(searchParams.get('hc'), 'black'),
-    top:        safeId(searchParams.get('t'),  ''),
-    bottom:     safeId(searchParams.get('bo'), ''),
-    shoes:      safeId(searchParams.get('sh'), 'none'),
-    outerwear:  safeId(searchParams.get('ow'), 'none'),
-    hat:        safeId(searchParams.get('ht'), 'none'),
-    glasses:    safeId(searchParams.get('gl'), 'none'),
-    expression: safeId(searchParams.get('ex'), 'none'),
+    body:      safeId(searchParams.get('b'),  ''),
+    hair:      safeId(searchParams.get('h'),  ''),
+    hairColor: safeId(searchParams.get('hc'), ''),
+    outfit:    safeId(searchParams.get('o'),  ''),
+    cloak:     safeId(searchParams.get('cl'), 'none'),
+    face:      safeId(searchParams.get('fa'), 'none'),
+    hat:       safeId(searchParams.get('ht'), 'none'),
   };
 
-  // Personality
   const zodiacRaw = searchParams.get('z') || '';
   const zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
   const likes = sanitizeChipsForDisplay(splitPipe(searchParams.get('lk'))).slice(0, 3);
@@ -186,7 +190,6 @@ export async function GET(req: NextRequest) {
           fontFamily: 'sans-serif',
         }}
       >
-        {/* title bar */}
         <div
           style={{
             display: 'flex',
@@ -210,9 +213,7 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
 
-        {/* body */}
         <div style={{ display: 'flex', flex: 1, padding: 32, gap: 32 }}>
-          {/* Bust */}
           <div
             style={{
               width: 360,
@@ -240,7 +241,6 @@ export async function GET(req: NextRequest) {
             )}
           </div>
 
-          {/* Right column */}
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 14 }}>
             <div style={{ color: '#16272c', fontSize: 56, fontWeight: 700, display: 'flex', letterSpacing: '2px' }}>
               {name}
@@ -282,7 +282,6 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
 
-        {/* footer */}
         <div
           style={{
             display: 'flex',
@@ -306,14 +305,12 @@ export async function GET(req: NextRequest) {
   );
 }
 
-// ---- helpers ----
 function clamp(n: number): number {
   if (Number.isNaN(n)) return 70;
   return Math.max(0, Math.min(100, n));
 }
 function safeId(raw: string | null, fallback: string): string {
   if (!raw) return fallback;
-  // Limit to slug-safe chars; reject anything weird.
   if (!/^[a-z0-9_-]+$/i.test(raw)) return fallback;
   return raw;
 }

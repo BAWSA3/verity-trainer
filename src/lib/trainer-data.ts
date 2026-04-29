@@ -2,25 +2,20 @@ import type {
   TrainerConfig,
   TrainerPersonality,
   StoredTrainer,
-  Gender,
 } from '@/types/trainer';
 
 // Two `trainer_signups.trainer_config` JSONB shapes coexist:
 //
 //   v1 (legacy, pre-2026-04-29): bare TrainerConfig with old keys
-//     { gender:'male'|'female', face, neck, accessory, facialHair, ... }
+//     { gender:'male'|'female', body, hair, hairColor, top, bottom, shoes,
+//       face, neck, accessory, facialHair }
 //
-//   v2 (current): { schemaVersion: 2, config: TrainerConfig, personality: TrainerPersonality }
+//   v2 (current, Mana Seed paper-doll model): { schemaVersion: 2,
+//     config: { body, hair, hairColor, outfit, cloak, face, hat },
+//     personality: { zodiac, likes, dislikes } }
 //
-// Read paths MUST go through unpackTrainer() — direct row.trainer_config
-// usage will misrender legacy rows.
-
-const LEGACY_TO_V2_GENDER: Record<string, Gender> = {
-  male: 'm',
-  female: 'f',
-  m: 'm',
-  f: 'f',
-};
+// Reads MUST go through unpackTrainer() — direct row.trainer_config usage
+// will misrender legacy rows.
 
 interface UnpackedTrainer {
   config: TrainerConfig;
@@ -49,7 +44,10 @@ export function unpackTrainer(row: { trainer_config: unknown }): UnpackedTrainer
     };
   }
 
-  // v1 path: bare config, no personality
+  // v1 path: bare config, no personality. Best-effort migration —
+  // v1's top/bottom/face/neck/accessory don't map cleanly onto Mana Seed's
+  // unified outfit + paper-doll layers, so legacy rows render as a blank
+  // body. Trainers from v1 will need to revisit /create to pick a v2 config.
   return {
     config: normalizeConfig(obj),
     personality: EMPTY_PERSONALITY,
@@ -67,27 +65,14 @@ function normalizeConfig(raw: Record<string, unknown>): TrainerConfig {
   const get = (k: string): string =>
     typeof raw[k] === 'string' ? (raw[k] as string) : '';
 
-  // Gender migrates 'male'|'female' -> 'm'|'f'
-  const rawGender = get('gender');
-  const gender = (LEGACY_TO_V2_GENDER[rawGender] ?? '') as Gender | '';
-
   return {
-    gender: gender as TrainerConfig['gender'],
     body: get('body'),
     hair: get('hair'),
-    hairColor: get('hairColor') || 'black',
-    top: get('top'),
-    bottom: get('bottom'),
-    shoes: get('shoes'),
-
-    // Optional layers — default to 'none' if missing.
-    // Legacy rows had `accessory`, `face`, `neck`, `facialHair` — we drop
-    // those entirely. The new optional layers don't exist on legacy rows,
-    // which is fine: they default to 'none' and the renderer skips them.
-    outerwear: get('outerwear') || 'none',
+    hairColor: get('hairColor'),
+    outfit: get('outfit'),
+    cloak: get('cloak') || 'none',
+    face: get('face') || 'none',
     hat: get('hat') || 'none',
-    glasses: get('glasses') || 'none',
-    expression: get('expression') || 'none',
   };
 }
 
@@ -108,16 +93,12 @@ function normalizePersonality(raw: Record<string, unknown>): TrainerPersonality 
 
 function emptyConfig(): TrainerConfig {
   return {
-    gender: '',
     body: '',
     hair: '',
-    hairColor: 'black',
-    top: '',
-    bottom: '',
-    shoes: '',
-    outerwear: 'none',
+    hairColor: '',
+    outfit: '',
+    cloak: 'none',
+    face: 'none',
     hat: 'none',
-    glasses: 'none',
-    expression: 'none',
   };
 }

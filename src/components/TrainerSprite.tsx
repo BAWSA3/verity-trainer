@@ -3,16 +3,15 @@
 import { useMemo } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import {
-  bodyPath, hairPath, topPath, bottomPath, shoesPath,
-  outerwearPath, hatPath, glassesPath, expressionPath,
+  bodyPath, hairPath, outfitPath, cloakPath, facePath, hatPath,
   SPRITE_DIMS,
 } from '@/lib/trainer-options';
 
 interface Props {
   config: TrainerConfig;
-  personality?: TrainerPersonality; // unused for V1 sprite render; accepted for V2 forward-compat
+  personality?: TrainerPersonality; // accepted for V2 forward-compat; unused by sprite
   size: number;                     // CSS px width
-  crop?: 'bust';                    // when 'bust', clips to the manifest bustCrop region
+  crop?: 'bust';                    // when 'bust', clips to manifest.bustCrop
   className?: string;
 }
 
@@ -21,38 +20,41 @@ interface Layer {
   src: string;
 }
 
-function gender(config: TrainerConfig): 'm' | 'f' | null {
-  return config.gender === 'm' || config.gender === 'f' ? config.gender : null;
-}
-
-// Layer order — confirm against pack on Day 1. If pack has split front/back hair,
-// the renderer can interleave; for V1 we treat hair as a single layer above expression.
+// Layer order per Seliel's `using this base.txt`:
+//   0bas (body) -> 1out (outfit) -> 2clo (cloak) -> 3fac (face) ->
+//   4har (hair) -> 5hat (hat) -> 6tla/7tlb (tools, V1 skips)
 function buildLayers(config: TrainerConfig): Layer[] {
-  const g = gender(config);
   const layers: Layer[] = [];
 
-  if (g && config.body)                                 layers.push({ key: 'body',   src: bodyPath(g, config.body) });
-  if (g && config.bottom && config.bottom !== 'none')   layers.push({ key: 'bottom', src: bottomPath(g, config.bottom) });
-  if (config.shoes && config.shoes !== 'none')          layers.push({ key: 'shoes',  src: shoesPath(config.shoes) });
-  if (g && config.top && config.top !== 'none')         layers.push({ key: 'top',    src: topPath(g, config.top) });
-  if (g && config.outerwear && config.outerwear !== 'none')
-                                                        layers.push({ key: 'outer',  src: outerwearPath(g, config.outerwear) });
-  if (config.expression && config.expression !== 'none')
-                                                        layers.push({ key: 'expr',   src: expressionPath(config.expression) });
-  if (config.glasses && config.glasses !== 'none')      layers.push({ key: 'glass',  src: glassesPath(config.glasses) });
-  if (config.hair && config.hairColor)                  layers.push({ key: 'hair',   src: hairPath(config.hairColor, config.hair) });
-  if (config.hat && config.hat !== 'none')              layers.push({ key: 'hat',    src: hatPath(config.hat) });
+  if (config.body) layers.push({ key: 'body', src: bodyPath(config.body) });
+
+  const outfit = outfitPath(config.outfit);
+  if (outfit) layers.push({ key: 'outfit', src: outfit });
+
+  const cloak = cloakPath(config.cloak);
+  if (cloak) layers.push({ key: 'cloak', src: cloak });
+
+  const face = facePath(config.face);
+  if (face) layers.push({ key: 'face', src: face });
+
+  if (config.hair && config.hairColor) {
+    layers.push({ key: 'hair', src: hairPath(config.hair, config.hairColor) });
+  }
+
+  const hat = hatPath(config.hat);
+  if (hat) layers.push({ key: 'hat', src: hat });
 
   return layers;
 }
 
 export default function TrainerSprite({ config, size, crop, className }: Props) {
   const layers = useMemo(() => buildLayers(config), [config]);
-  const aspect = SPRITE_DIMS.height / SPRITE_DIMS.width;          // typically 1.5
-  const fullHeight = size * aspect;
-  const bustHeight = size * (SPRITE_DIMS.bustCrop.h / SPRITE_DIMS.bustCrop.w);
 
-  // Empty silhouette state — gender or body not picked yet.
+  // Sprite cell is square (64x64). Bust crop clips a sub-rect.
+  const fullHeight = size; // 1:1 cell
+  const bustHeight = (size * SPRITE_DIMS.bustCrop.h) / SPRITE_DIMS.bustCrop.w;
+
+  // Empty silhouette state — body not picked yet.
   if (layers.length === 0) {
     return (
       <div
@@ -72,10 +74,26 @@ export default function TrainerSprite({ config, size, crop, className }: Props) 
           textTransform: 'uppercase',
         }}
       >
-        pick gender + body
+        pick body to begin
       </div>
     );
   }
+
+  // For bust crop: render the full 64x64 cell scaled to `size` square,
+  // but clip the visible window to bustCrop's aspect ratio. The bust region
+  // sits in the upper-middle of the cell (typically y=12, h=36 of 64).
+  const cropTopOffset = crop === 'bust'
+    ? -(SPRITE_DIMS.bustCrop.y / SPRITE_DIMS.bustCrop.w) * size
+    : 0;
+  const cropLeftOffset = crop === 'bust'
+    ? -(SPRITE_DIMS.bustCrop.x / SPRITE_DIMS.bustCrop.w) * size
+    : 0;
+  const innerWidth = crop === 'bust'
+    ? (SPRITE_DIMS.width / SPRITE_DIMS.bustCrop.w) * size
+    : size;
+  const innerHeight = crop === 'bust'
+    ? (SPRITE_DIMS.height / SPRITE_DIMS.bustCrop.w) * size
+    : fullHeight;
 
   return (
     <div
@@ -89,9 +107,11 @@ export default function TrainerSprite({ config, size, crop, className }: Props) 
     >
       <div
         style={{
-          width: size,
-          height: fullHeight,
-          position: 'relative',
+          width: innerWidth,
+          height: innerHeight,
+          position: 'absolute',
+          top: cropTopOffset,
+          left: cropLeftOffset,
         }}
       >
         {layers.map(({ key, src }) => (

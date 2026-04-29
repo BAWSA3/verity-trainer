@@ -46,17 +46,13 @@ const VALID_IDS = buildValidIdMap();
 
 // Which keys must be present on the config object. Mirrors TrainerConfig shape.
 const ALL_KEYS = [
-  'gender',
   'body',
   'hair',
   'hairColor',
-  'top',
-  'bottom',
-  'shoes',
-  'outerwear',
+  'outfit',
+  'cloak',
+  'face',
   'hat',
-  'glasses',
-  'expression',
 ] as const;
 
 const REQUIRED = new Set<string>(REQUIRED_FOR_GENERATE);

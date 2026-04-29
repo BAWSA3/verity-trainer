@@ -29,29 +29,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const trainer = await getTrainer(id);
   if (!trainer) return { title: 'VERITY Trainer Card' };
 
-  // Backstop: mask names that somehow slipped through to the DB.
   const name = sanitizeNameForDisplay(trainer.trainer_name);
   const { config, personality } = unpackTrainer(trainer);
   const stats = generateStats(config, personality);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg';
 
+  // OG URL params — keys mirror /api/og's expected query.
   const ogParams = new URLSearchParams({
     n: name,
     s: String(stats.style),
     c: String(stats.charisma),
     st: String(stats.street),
     lk_v: String(stats.luck),
-    g: config.gender || 'm',
     b: config.body,
     h: config.hair,
-    hc: config.hairColor || 'black',
-    t: config.top,
-    bo: config.bottom,
-    sh: config.shoes,
-    ow: config.outerwear,
+    hc: config.hairColor,
+    o: config.outfit,
+    cl: config.cloak,
+    fa: config.face,
     ht: config.hat,
-    gl: config.glasses,
-    ex: config.expression,
     z: personality.zodiac,
     lk: personality.likes.join('|'),
     dl: personality.dislikes.join('|'),

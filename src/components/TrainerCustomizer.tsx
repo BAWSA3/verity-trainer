@@ -21,12 +21,11 @@ const INITIAL_PERSONALITY: TrainerPersonality = {
   dislikes: [],
 };
 
-// Which trait keys live under which tab. VIBE renders PersonalityPanel
-// (no trait categories) and is handled inline below.
+// Mana Seed has 7 trait slots; we group them into 4 tabs + VIBE for personality.
 const TAB_CATEGORIES: Record<Exclude<TabKey, 'vibe'>, Array<keyof TrainerConfig>> = {
-  body:  ['gender', 'body', 'hair', 'hairColor'],
-  wear:  ['top', 'bottom', 'shoes', 'outerwear'],
-  face:  ['expression', 'glasses'],
+  body:  ['body', 'hair', 'hairColor'],
+  wear:  ['outfit', 'cloak'],
+  face:  ['face'],
   extra: ['hat'],
 };
 
@@ -63,21 +62,17 @@ export default function TrainerCustomizer() {
 
   // Helper text — list missing required slots in friendly labels.
   const missingLabels: string[] = [];
-  if (!config.gender) missingLabels.push('gender');
-  if (!config.body) missingLabels.push('skin');
-  if (!config.hair) missingLabels.push('hair');
+  if (!config.body)      missingLabels.push('skin');
+  if (!config.hair)      missingLabels.push('hair');
   if (!config.hairColor) missingLabels.push('hair color');
-  if (!config.top) missingLabels.push('top');
-  if (!config.bottom) missingLabels.push('bottom');
-  if (!config.shoes || config.shoes === 'none') missingLabels.push('shoes');
+  if (!config.outfit)    missingLabels.push('outfit');
 
   // Show a red dot on tabs that still have unfilled required slots.
   const unfilledByTab: Partial<Record<TabKey, boolean>> = {
-    body: ['gender', 'body', 'hair', 'hairColor'].some((k) => !config[k as keyof TrainerConfig]),
-    wear: ['top', 'bottom', 'shoes'].some((k) => !config[k as keyof TrainerConfig] || config[k as keyof TrainerConfig] === 'none'),
+    body: ['body', 'hair', 'hairColor'].some((k) => !config[k as keyof TrainerConfig]),
+    wear: !config.outfit,
   };
 
-  // Build category list for the active tab.
   const activeKeys = activeTab === 'vibe' ? [] : TAB_CATEGORIES[activeTab];
   const visibleCategories = CATEGORIES.filter((c) => activeKeys.includes(c.key));
 
@@ -98,12 +93,10 @@ export default function TrainerCustomizer() {
           onClose={() => router.push('/')}
         >
           <div className="lg:grid lg:grid-cols-[320px_1fr]">
-            {/* Left rail — sticky preview + stats */}
             <div className="border-b lg:border-b-0 lg:border-r border-[#16272c]/15 p-4 sm:p-5 bg-[#fffdf3]">
               <div className="lg:sticky lg:top-4 flex flex-col items-center gap-4">
                 <div className="relative">
                   <TrainerSprite config={config} size={256} />
-                  {/* corner brackets */}
                   <div className="absolute -top-2 -left-2 w-3 h-3 border-t-2 border-l-2 border-[#90b34d]" />
                   <div className="absolute -top-2 -right-2 w-3 h-3 border-t-2 border-r-2 border-[#90b34d]" />
                   <div className="absolute -bottom-2 -left-2 w-3 h-3 border-b-2 border-l-2 border-[#90b34d]" />
@@ -115,7 +108,6 @@ export default function TrainerCustomizer() {
               </div>
             </div>
 
-            {/* Right column — tabs + categories + generate */}
             <div className="p-4 sm:p-6 min-w-0">
               <CategoryTabs active={activeTab} onChange={setActiveTab} unfilled={unfilledByTab} />
 
@@ -132,15 +124,14 @@ export default function TrainerCustomizer() {
                         options={cat.options}
                         selected={config[cat.key] ?? ''}
                         onSelect={(id) => handleSelect(cat.key, id)}
-                        gender={config.gender || 'm'}
-                        currentSkin={config.body || ''}
-                        currentHairStyle={config.hair || ''}
-                        currentHairColor={config.hairColor || 'black'}
+                        currentBody={config.body || ''}
+                        currentHairStyle={config.hair || 'bob1'}
+                        currentHairColor={config.hairColor || 'v00'}
                       />
                     ))}
                     {visibleCategories.length === 0 && (
                       <p className="text-[#8a7d4d] text-[12px] tracking-wider">
-                        No options yet — Limezu pack import is pending.
+                        No options for this tab yet.
                       </p>
                     )}
                   </>
