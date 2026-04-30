@@ -20,10 +20,10 @@ import PixelWindow from './PixelWindow';
 
 export function FullBodyWindow({ config }: { config: TrainerConfig }) {
   return (
-    <PixelWindow title="TRAINER" accent="teal" bg="cream-warm" bodyPad="lg">
-      <div className="flex flex-col items-center justify-center min-h-[480px] relative">
+    <PixelWindow title="TRAINER" accent="teal" bg="cream-warm" bodyPad="md" fill>
+      <div className="flex flex-col items-center justify-center h-full min-h-[420px] relative">
         <div className="relative">
-          <TrainerSprite config={config} size={272} />
+          <TrainerSprite config={config} size={232} />
           {/* Olive corner caps for visual flourish */}
           <div className="absolute -top-2 -left-2 w-3 h-3 border-t-2 border-l-2 border-[#90b34d]" />
           <div className="absolute -top-2 -right-2 w-3 h-3 border-t-2 border-r-2 border-[#90b34d]" />
@@ -39,10 +39,10 @@ export function FullBodyWindow({ config }: { config: TrainerConfig }) {
 
 export function HeadshotWindow({ config }: { config: TrainerConfig }) {
   return (
-    <PixelWindow title="PORTRAIT" accent="olive" bg="cream" bodyPad="lg">
-      <div className="flex items-center justify-center min-h-[200px]">
+    <PixelWindow title="PORTRAIT" accent="olive" bg="cream" bodyPad="md">
+      <div className="flex items-center justify-center min-h-[140px]">
         <div className="border-2 border-[#90b34d] p-1 bg-[#fffdf3]">
-          <TrainerSprite config={config} size={196} crop="bust" />
+          <TrainerSprite config={config} size={156} crop="bust" />
         </div>
       </div>
     </PixelWindow>

@@ -51,10 +51,12 @@ export default function CustomizerWindow({
   }
 
   return (
-    <PixelWindow title="CUSTOMIZE" accent="dark" bg="cream" bodyPad="md">
+    <PixelWindow title="CUSTOMIZE" accent="dark" bg="cream" bodyPad="md" fill>
+      {/* CategoryTabs sticks to the top of the customizer column. The body
+          scrolls vertically when the active tab's content overflows. */}
       <CategoryTabs active={activeTab} onChange={onTabChange} unfilled={unfilledByTab} />
 
-      <div className="pt-4 min-h-[220px]">
+      <div className="pt-3 flex-1 min-h-0 overflow-y-auto pr-1">
         {activeTab === 'vibe' ? (
           <PersonalityPanel value={personality} onChange={onPersonalityChange} />
         ) : (

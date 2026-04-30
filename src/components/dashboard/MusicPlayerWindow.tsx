@@ -35,7 +35,7 @@ export default function MusicPlayerWindow({ config }: Props) {
 
   return (
     <PixelWindow title="NOW PLAYING" accent="teal" bg="cream-warm" bodyPad="md">
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-2">
         {/* Eye-loop window */}
         <div
           className="border-2 border-[#16272c] bg-[#fffdf3] p-1.5 relative overflow-hidden"

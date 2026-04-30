@@ -12,6 +12,10 @@ interface PixelWindowProps {
   controls?: boolean | 'static';     // false hides; 'static' renders disabled glyphs (decorative)
   onClose?: () => void;              // when set, ✕ becomes interactive
   bodyPad?: 'none' | 'sm' | 'md' | 'lg';
+  /** When true, the window stretches to fill its parent grid cell + lets
+   *  body content flex (used by FullBody/Customizer/Scene which need to
+   *  absorb vertical slack in the fixed-view dashboard). */
+  fill?: boolean;
   children: ReactNode;
   className?: string;
 }
@@ -47,15 +51,17 @@ export default function PixelWindow({
   controls = 'static',
   onClose,
   bodyPad = 'md',
+  fill = false,
   children,
   className,
 }: PixelWindowProps) {
   const showControls = controls !== false;
   const interactive = controls === true || controls === undefined;
+  const fillCls = fill ? 'h-full flex flex-col min-h-0' : '';
 
   return (
     <div
-      className={`relative border-2 border-[#16272c] rounded-[3px] shadow-[0_8px_24px_-12px_rgba(22,39,44,0.45)] overflow-hidden ${className ?? ''}`}
+      className={`relative border-2 border-[#16272c] rounded-[3px] shadow-[0_8px_24px_-12px_rgba(22,39,44,0.45)] overflow-hidden ${fillCls} ${className ?? ''}`}
       style={{ background: BG_FILL[bg] }}
     >
       {(title || showControls) && (
@@ -84,7 +90,9 @@ export default function PixelWindow({
           )}
         </div>
       )}
-      <div className={PAD[bodyPad]}>{children}</div>
+      <div className={`${PAD[bodyPad]} ${fill ? 'flex-1 min-h-0 overflow-hidden' : ''}`}>
+        {children}
+      </div>
     </div>
   );
 }

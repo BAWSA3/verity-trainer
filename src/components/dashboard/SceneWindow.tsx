@@ -54,11 +54,11 @@ export default function SceneWindow({ config }: Props) {
   const cycle = () => setIdx((i) => (i + 1) % scenes.length);
 
   return (
-    <PixelWindow title={`LOCATION · ${scene.label}`} accent="olive" bg="cream" bodyPad="none">
+    <PixelWindow title={`LOCATION · ${scene.label}`} accent="olive" bg="cream" bodyPad="none" fill>
       <div
-        className="relative w-full overflow-hidden"
+        className="relative w-full h-full overflow-hidden"
         style={{
-          aspectRatio: '4 / 3',
+          minHeight: 220,
           background: scene.file
             ? '#16272c'
             : 'linear-gradient(180deg, #fffdf3 0%, #f5f1d6 45%, #b9d27d 90%, #90b34d 100%)',
@@ -83,7 +83,7 @@ export default function SceneWindow({ config }: Props) {
             transform: 'translate(-50%, -100%)',
           }}
         >
-          <TrainerSprite config={config} size={64} />
+          <TrainerSprite config={config} size={72} />
         </div>
 
         {/* Cycle button */}

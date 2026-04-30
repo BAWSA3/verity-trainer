@@ -9,21 +9,32 @@
  * skipped gracefully if OPENAI_API_KEY is missing.
  */
 
-import { PROFANITY, SLURS, findBlocklistMatch } from './blocklist';
+import { SLURS, findBlocklistMatch } from './blocklist';
 import { VALID_ZODIACS } from '../personality';
 import type { TrainerPersonality } from '@/types/trainer';
 
-// Note: BRANDS blocklist intentionally NOT applied to personality chips.
+// Note: BRANDS and PROFANITY blocklists intentionally NOT applied to personality
+// chips.
+//
 // Likes/dislikes are SUPPOSED to mention brands and platforms ("instagram
 // aesthetic", "google docs", "openai drama") — that's signal, not impersonation.
-// Brand-blocklist only applies to trainer names (where impersonation matters).
+//
+// PROFANITY blocklist uses substring matching after collapsing repeated chars,
+// which means common AI-generated chips like "podcasting" → "podcasting" or
+// "pissed off" → "pisedof" can trip blocked entries (`piss`). Real X content
+// frequently contains profanity context — false positives are too high. The
+// AI is constrained by its system prompt to avoid profanity, and OpenAI omni-
+// moderation (when configured) catches actual abuse with proper context.
+//
+// SLURS still blocks (highest legal/PR risk; tiny curated list). Trainer name
+// still gets the full tri-layer (slurs + profanity + brands + OpenAI) — see
+// check-name.ts. Personality is the lower-risk surface.
 
 export type PersonalityReason =
   | 'count'
   | 'length'
   | 'invalid_chars'
   | 'slur'
-  | 'profanity'
   | 'openai'
   | 'openai_error'
   | 'invalid_zodiac';
@@ -74,13 +85,11 @@ export async function checkPersonality(
     }
   }
 
-  // 3. blocklists — slurs + profanity only (brands intentionally skipped — see top)
+  // 3. blocklists — slurs only. Profanity + brands intentionally skipped (see top).
   for (const field of ['likes', 'dislikes'] as const) {
     for (const chip of p[field]) {
       const slurHit = findBlocklistMatch(chip, SLURS);
       if (slurHit) return { ok: false, reason: 'slur', field, match: slurHit };
-      const profHit = findBlocklistMatch(chip, PROFANITY);
-      if (profHit) return { ok: false, reason: 'profanity', field, match: profHit };
     }
   }
 

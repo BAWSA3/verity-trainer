@@ -203,6 +203,11 @@ export async function POST(req: NextRequest) {
     //    blocklist + OpenAI moderation as the trainer name.
     const personalityCheck = await checkPersonality(personality);
     if (!personalityCheck.ok) {
+      console.error('[signup] personality flagged:', {
+        reason: personalityCheck.reason,
+        field: personalityCheck.field,
+        match: personalityCheck.match,
+      });
       await logAudit({
         email,
         trainerName,
