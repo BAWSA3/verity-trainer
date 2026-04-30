@@ -90,6 +90,7 @@ export default function CreatePageClient() {
         initialPersonality={ai.personality}
         aiContext={{ reasoning: ai.reasoning }}
         onRegenerate={handleRegenerate}
+        initialHandle={ai.profile.handle}
       />
     );
   }

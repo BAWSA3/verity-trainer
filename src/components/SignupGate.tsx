@@ -8,11 +8,13 @@ interface SignupGateProps {
   personality: TrainerPersonality;
   onSuccess: (id: string) => void;
   onClose: () => void;
+  /** Pre-fill the X handle field (e.g. from the AI flow's input). */
+  initialHandle?: string;
 }
 
-export default function SignupGate({ config, personality, onSuccess, onClose }: SignupGateProps) {
+export default function SignupGate({ config, personality, onSuccess, onClose, initialHandle }: SignupGateProps) {
   const [email, setEmail] = useState('');
-  const [xHandle, setXHandle] = useState('');
+  const [xHandle, setXHandle] = useState(initialHandle ?? '');
   const [trainerName, setTrainerName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

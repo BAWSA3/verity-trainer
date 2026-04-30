@@ -34,6 +34,8 @@ interface TrainerCustomizerProps {
   initialPersonality?: TrainerPersonality;
   aiContext?: { reasoning: string };
   onRegenerate?: () => void;
+  /** When the AI flow already collected a handle, pre-fill the signup form. */
+  initialHandle?: string;
 }
 
 export default function TrainerCustomizer({
@@ -41,6 +43,7 @@ export default function TrainerCustomizer({
   initialPersonality,
   aiContext,
   onRegenerate,
+  initialHandle,
 }: TrainerCustomizerProps = {}) {
   const router = useRouter();
   const [config, setConfig] = useState<TrainerConfig>(initialConfig ?? INITIAL_CONFIG);
@@ -221,6 +224,7 @@ export default function TrainerCustomizer({
           personality={personality}
           onSuccess={handleSignupSuccess}
           onClose={() => setShowSignup(false)}
+          initialHandle={initialHandle}
         />
       )}
     </div>
