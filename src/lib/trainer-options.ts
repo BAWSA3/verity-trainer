@@ -92,6 +92,40 @@ export function isReadyToGenerate(config: TrainerConfig): boolean {
   return true;
 }
 
+/**
+ * Local random trainer-config picker. Used by the customizer's 🎲 Re-roll
+ * button so users can shuffle the visual design WITHOUT re-running the AI
+ * (which costs tokens + re-fetches X data). The AI flow only runs on the
+ * initial /create generation; subsequent re-rolls are pure-client randoms
+ * over the manifest's available IDs. Personality is unchanged.
+ *
+ * Required slots (body/hair/hairColor/outfit) always pick a non-'none' value.
+ * Optional slots (eyes/accessory) include 'none' as one valid option, so
+ * roughly 1/(N+1) re-rolls leave them empty — adds variety without forcing
+ * accessories on every shuffle.
+ */
+export function randomConfig(): TrainerConfig {
+  const pick = (key: keyof TrainerConfig, allowNone: boolean): string => {
+    const cat = CATEGORIES.find((c) => c.key === key);
+    if (!cat || cat.options.length === 0) return allowNone ? 'none' : '';
+    // For required slots, filter out 'none' so we always render that layer.
+    const pool = allowNone
+      ? cat.options
+      : cat.options.filter((o) => o.id !== 'none');
+    if (pool.length === 0) return allowNone ? 'none' : '';
+    const idx = Math.floor(Math.random() * pool.length);
+    return pool[idx].id;
+  };
+  return {
+    body:      pick('body',      false),
+    hair:      pick('hair',      false),
+    hairColor: pick('hairColor', false),
+    outfit:    pick('outfit',    false),
+    eyes:      pick('eyes',      true),
+    accessory: pick('accessory', true),
+  };
+}
+
 // ---- sprite-path helpers ----
 //
 // LimeZu paper-doll paths (rendered lowest-first):

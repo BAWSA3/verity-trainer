@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
-import { INITIAL_CONFIG } from '@/lib/trainer-options';
+import { randomConfig } from '@/lib/trainer-options';
 import TrainerDashboard from '@/components/dashboard/TrainerDashboard';
 import PokeBackground from '@/components/PokeBackground';
 
@@ -78,9 +78,16 @@ export default function CreatePageClient() {
     generate(trimmed);
   }
 
+  // Re-roll: local random shuffle of the visual layers. NOT a re-scan of the
+  // X profile (that's only the initial generation). Keeps personality + AI
+  // reasoning intact; only the visual config changes. Instant + free.
   function handleRegenerate() {
     if (!ai) return;
-    generate(ai.profile.handle, true);
+    setAi({
+      ...ai,
+      config: randomConfig(),
+      reasoning: '🎲 Random remix. Tweak any layer below or claim as-is.',
+    });
   }
 
   if (phase === 'reviewing' && ai) {
