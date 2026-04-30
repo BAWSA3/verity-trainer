@@ -46,6 +46,36 @@ LimeZu does not provide a `gender` axis — the body is a single skeleton, all o
 - Read-time, public-facing pages (`/card/[id]`, `/api/og`) re-sanitize via `sanitize.ts` as a backstop — runs only static layers (no OpenAI per pageview).
 - Audit-log every flagged attempt with a specific `flag_reason` for blocklist tuning.
 
+## Dashboard layout (Iteration 2)
+The `/create` page's reviewing phase renders `<TrainerDashboard>` (`src/components/dashboard/TrainerDashboard.tsx`), a multi-window pixel-OS layout. Source-of-truth state (config, personality, trainerName, activeTab, showSignup) lives in TrainerDashboard; child windows are dumb and receive prop slices.
+
+Windows live under `src/components/dashboard/`:
+- `PixelWindow.tsx` — shared chrome with `accent` ('olive' | 'teal' | 'dark'), `bg` ('cream' | 'cream-warm'), and `controls` (▢ ▣ ✕ glyphs). Use this for any new dashboard surface.
+- `DashboardWindows.tsx` — bundled FullBody, Headshot, Identity, Likes, Dislikes leaf windows.
+- `CustomizerWindow.tsx` — wraps existing CategoryTabs + CategorySelector + PersonalityPanel.
+- `SceneWindow.tsx` — renders a chosen interior scene with the trainer composited on top. Reads `public/sprites/limezu/scenes/manifest.json`.
+- `MusicPlayerWindow.tsx` — animated eye-loop + transport controls. Connects to `useAudioPlayer`.
+
+Layout uses CSS Grid with named areas — see the `.dashboard-grid` styled block in `TrainerDashboard.tsx`. Single-column stack at <1024px viewport.
+
+## Scene system
+- `scripts/import-limezu-scenes.mjs --src "<path-to-6_Home_Designs>" --dest ./public/sprites/limezu/scenes` — imports curated Modern Interiors home design previews. Idempotent, cap-resizes to 800px wide.
+- Output: `public/sprites/limezu/scenes/<id>.png` + `manifest.json`.
+- Trainer is composited on top of the scene at `trainerX/Y` percentage anchors (feet-anchored). Adjust per-scene in the importer's PICKS array.
+- LimeZu license: derivatives within license, credit limezu.itch.io required, no asset redistribution. The output PNGs are committed because they're derivatives we ship in our product.
+
+## Audio system (Iteration 2)
+- Background music infrastructure is HTMLAudioElement-based, separate from the Web Audio API SFX in `src/lib/sounds.ts`.
+- `src/hooks/useAudioPlayer.ts` exposes `{ tracks, currentTrack, isPlaying, position, duration, volume, play/pause/toggle/next/prev/seek/setVolume }`. Reads `public/audio/manifest.json` at mount.
+- `public/audio/manifest.json` shape: `{ tracks: [{ id, title, src }] }`. Add tracks by dropping .mp3/.ogg into `public/audio/` and adding a manifest entry. The MusicPlayerWindow auto-discovers them.
+- Initial tracks ship from OpenGameArt.org (CC0): Lasso Lady (congusbongus), Tunnel Music (Écrivain), ChipScape (Chasersgaming).
+- localStorage key `verity:audio:v1` persists `{ enabled, volume, currentTrackId, position }` across sessions.
+- First play requires user gesture (autoplay policy compliance). The MusicPlayerWindow's ⏯ button is that gesture.
+
+## Supabase migrations
+- The signup pipeline expects three tables: `trainer_signups`, `signup_attempts`, `signup_audit_log`. Schema in `supabase-migration.sql` + `supabase-migration-moderation.sql`.
+- `node scripts/apply-supabase-migrations.mjs` runs both files via the `pg` client using `DATABASE_URL` from `.env.local`. If the password is stale (BrandOS rotates it occasionally), the script writes `tmp-migrations.sql` for manual paste into the Supabase SQL editor at https://supabase.com/dashboard/project/gdxvijmezkwlqdnxfxpe/sql.
+
 ## Things you'll be tempted to do but shouldn't
 - **Don't add new sprite categories without updating `manifest.json` AND `check-config.ts`'s `ALL_KEYS` const.** Server-side validation will reject the unknown category as `unknown_id` and signups will start failing silently.
 - **Don't refactor the signup pipeline to "DRY it up".** The flat ordered pipeline is intentional — every step has its own audit-log path with a distinct `flag_reason`. Keep the literal step ordering.

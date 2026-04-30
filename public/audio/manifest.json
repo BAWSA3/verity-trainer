@@ -1,4 +1,21 @@
 {
-  "_comment": "Background music tracks. Drop .mp3 files into this folder and add an entry below. Until tracks are added, the music player window shows 'No tracks loaded' and the controls are disabled.",
-  "tracks": []
+  "_comment": "Background music tracks for the dashboard MusicPlayerWindow. All CC0 (public domain) chiptune from OpenGameArt.org. Add more tracks by dropping .mp3/.ogg files into this folder and adding a `tracks[]` entry below.",
+  "_credits": "Lasso Lady — congusbongus (CC0). Tunnel Music — Écrivain (CC0). ChipScape — Chasersgaming (CC0). All from opengameart.org.",
+  "tracks": [
+    {
+      "id": "lasso-lady",
+      "title": "Lasso Lady",
+      "src": "/audio/lasso-lady.ogg"
+    },
+    {
+      "id": "tunnel",
+      "title": "Tunnel Music",
+      "src": "/audio/tunnel.ogg"
+    },
+    {
+      "id": "chipscape",
+      "title": "ChipScape",
+      "src": "/audio/chipscape.ogg"
+    }
+  ]
 }
