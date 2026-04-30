@@ -21,7 +21,7 @@ const BUST_W = 512;
 const BUST_H = 576;
 
 // Bust source crop in LimeZu 48x96 sprite-space — mirrors manifest.bustCrop.
-const BUST_CROP = { left: 8, top: 18, width: 32, height: 36 };
+const BUST_CROP = { left: 8, top: 26, width: 32, height: 40 };
 
 // Always render in south direction for shared cards.
 const SHARE_DIR = 's';
@@ -201,15 +201,15 @@ export async function GET(req: NextRequest) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ color: '#90b34d', fontSize: 22 }}>▣</span>
+            <div style={{ width: 22, height: 22, backgroundColor: '#90b34d', borderRadius: 3, display: 'flex' }} />
             <span style={{ color: '#16272c', fontSize: 16, letterSpacing: '4px', fontWeight: 700 }}>
               TRAINER CARD — VERITY
             </span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <span style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, color: '#16272c', textAlign: 'center', fontSize: 14, lineHeight: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>_</span>
-            <span style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, color: '#16272c', textAlign: 'center', fontSize: 14, lineHeight: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>▢</span>
-            <span style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, color: '#16272c', textAlign: 'center', fontSize: 14, lineHeight: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>✕</span>
+            <div style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, display: 'flex' }} />
+            <span style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, color: '#16272c', textAlign: 'center', fontSize: 14, lineHeight: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>x</span>
           </div>
         </div>
 
@@ -247,10 +247,7 @@ export async function GET(req: NextRequest) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#367d95', fontSize: 16, letterSpacing: '4px', textTransform: 'uppercase' }}>
               {zodiac ? (
-                <>
-                  <span style={{ fontSize: 22 }}>{ZODIAC_GLYPHS[zodiac]}</span>
-                  <span>{zodiac} · streetwear class</span>
-                </>
+                <span>{zodiac} · streetwear class</span>
               ) : (
                 <span>streetwear class</span>
               )}
@@ -292,7 +289,7 @@ export async function GET(req: NextRequest) {
           }}
         >
           <span style={{ color: '#8a7d4d', fontSize: 13, letterSpacing: '5px', fontWeight: 700 }}>
-            ─── VERITY EARLY ACCESS · MAY 2026 ───
+            VERITY EARLY ACCESS  ·  MAY 2026
           </span>
         </div>
       </div>

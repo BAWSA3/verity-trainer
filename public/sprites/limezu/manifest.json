@@ -12,11 +12,11 @@
   ],
   "defaultDirection": "s",
   "bustCrop": {
-    "_comment": "Bust portrait region inside the 48x96 idle frame. Head is in the upper portion. Tuned so the share card crops cleanly to head + shoulders.",
+    "_comment": "Bust portrait region inside the 48x96 idle frame. Measured against actual sprites: hair top at y=27, body bbox y=30..95. Crop y=26..66 captures head + ~10px shoulders.",
     "x": 8,
-    "y": 18,
+    "y": 26,
     "w": 32,
-    "h": 36
+    "h": 40
   },
   "categories": {
     "body": {
