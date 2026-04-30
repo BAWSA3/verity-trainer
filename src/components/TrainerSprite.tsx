@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
+import type { Direction, TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import {
-  bodyPath, hairPath, outfitPath, cloakPath, facePath, hatPath,
+  bodyPath, eyesPath, hairPath, outfitPath, accessoryPath,
   SPRITE_DIMS,
 } from '@/lib/trainer-options';
 
@@ -12,6 +12,7 @@ interface Props {
   personality?: TrainerPersonality; // accepted for V2 forward-compat; unused by sprite
   size: number;                     // CSS px width
   crop?: 'bust';                    // when 'bust', clips to manifest.bustCrop
+  direction?: Direction;            // 's' (south) by default — share + customizer use south
   className?: string;
 }
 
@@ -20,39 +21,48 @@ interface Layer {
   src: string;
 }
 
-// Layer order per Seliel's `using this base.txt`:
-//   0bas (body) -> 1out (outfit) -> 2clo (cloak) -> 3fac (face) ->
-//   4har (hair) -> 5hat (hat) -> 6tla/7tlb (tools, V1 skips)
-function buildLayers(config: TrainerConfig): Layer[] {
+// LimeZu layer order (per CHARACTER_GENERATOR.txt), bottom to top:
+//   body -> outfit -> eyes -> hair -> accessory
+function buildLayers(config: TrainerConfig, dir: Direction): Layer[] {
   const layers: Layer[] = [];
 
-  if (config.body) layers.push({ key: 'body', src: bodyPath(config.body) });
+  if (config.body) layers.push({ key: 'body', src: bodyPath(config.body, dir) });
 
-  const outfit = outfitPath(config.outfit);
+  const outfit = outfitPath(config.outfit, dir);
   if (outfit) layers.push({ key: 'outfit', src: outfit });
 
-  const cloak = cloakPath(config.cloak);
-  if (cloak) layers.push({ key: 'cloak', src: cloak });
-
-  const face = facePath(config.face);
-  if (face) layers.push({ key: 'face', src: face });
+  const eyes = eyesPath(config.eyes, dir);
+  if (eyes) layers.push({ key: 'eyes', src: eyes });
 
   if (config.hair && config.hairColor) {
-    layers.push({ key: 'hair', src: hairPath(config.hair, config.hairColor) });
+    layers.push({ key: 'hair', src: hairPath(config.hair, config.hairColor, dir) });
   }
 
-  const hat = hatPath(config.hat);
-  if (hat) layers.push({ key: 'hat', src: hat });
+  const accessory = accessoryPath(config.accessory, dir);
+  if (accessory) layers.push({ key: 'accessory', src: accessory });
 
   return layers;
 }
 
-export default function TrainerSprite({ config, size, crop, className }: Props) {
-  const layers = useMemo(() => buildLayers(config), [config]);
+export default function TrainerSprite({ config, size, crop, direction = 's', className }: Props) {
+  const layers = useMemo(() => buildLayers(config, direction), [config, direction]);
 
-  // Sprite cell is square (64x64). Bust crop clips a sub-rect.
-  const fullHeight = size; // 1:1 cell
-  const bustHeight = (size * SPRITE_DIMS.bustCrop.h) / SPRITE_DIMS.bustCrop.w;
+  // LimeZu sprite cell is portrait: width × height = 48 × 96 (1:2 aspect).
+  // `size` is the displayed width; full-body height is size * (h/w).
+  const cellW = SPRITE_DIMS.width;        // 48
+  const cellH = SPRITE_DIMS.height;       // 96
+  const fullHeight = (size * cellH) / cellW;
+
+  // Bust crop region (in source pixels) — typically head + shoulders.
+  // Display strategy: scale the inner cell so the bust window's width = `size`,
+  // then clip to the bust rect.
+  const bust = SPRITE_DIMS.bustCrop;      // { x, y, w, h }
+  const bustScale = size / bust.w;
+  const bustDisplayH = bust.h * bustScale;
+  const innerW = cellW * bustScale;
+  const innerH = cellH * bustScale;
+  const innerLeft = -bust.x * bustScale;
+  const innerTop = -bust.y * bustScale;
 
   // Empty silhouette state — body not picked yet.
   if (layers.length === 0) {
@@ -61,7 +71,7 @@ export default function TrainerSprite({ config, size, crop, className }: Props) 
         className={className}
         style={{
           width: size,
-          height: crop === 'bust' ? bustHeight : fullHeight,
+          height: crop === 'bust' ? bustDisplayH : fullHeight,
           background: 'rgba(54, 125, 149, 0.08)',
           borderRadius: 8,
           display: 'flex',
@@ -79,60 +89,78 @@ export default function TrainerSprite({ config, size, crop, className }: Props) 
     );
   }
 
-  // For bust crop: render the full 64x64 cell scaled to `size` square,
-  // but clip the visible window to bustCrop's aspect ratio. The bust region
-  // sits in the upper-middle of the cell (typically y=12, h=36 of 64).
-  const cropTopOffset = crop === 'bust'
-    ? -(SPRITE_DIMS.bustCrop.y / SPRITE_DIMS.bustCrop.w) * size
-    : 0;
-  const cropLeftOffset = crop === 'bust'
-    ? -(SPRITE_DIMS.bustCrop.x / SPRITE_DIMS.bustCrop.w) * size
-    : 0;
-  const innerWidth = crop === 'bust'
-    ? (SPRITE_DIMS.width / SPRITE_DIMS.bustCrop.w) * size
-    : size;
-  const innerHeight = crop === 'bust'
-    ? (SPRITE_DIMS.height / SPRITE_DIMS.bustCrop.w) * size
-    : fullHeight;
+  if (crop === 'bust') {
+    return (
+      <div
+        className={className}
+        style={{
+          width: size,
+          height: bustDisplayH,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            width: innerW,
+            height: innerH,
+            position: 'absolute',
+            top: innerTop,
+            left: innerLeft,
+          }}
+        >
+          {layers.map(({ key, src }) => (
+            <img
+              key={key}
+              src={src}
+              alt=""
+              aria-hidden
+              draggable={false}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                imageRendering: 'pixelated',
+                pointerEvents: 'none',
+                userSelect: 'none',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
+  // Full-body — render the whole 48x96 cell at width=size, height=size*2.
   return (
     <div
       className={className}
       style={{
         width: size,
-        height: crop === 'bust' ? bustHeight : fullHeight,
+        height: fullHeight,
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      <div
-        style={{
-          width: innerWidth,
-          height: innerHeight,
-          position: 'absolute',
-          top: cropTopOffset,
-          left: cropLeftOffset,
-        }}
-      >
-        {layers.map(({ key, src }) => (
-          <img
-            key={key}
-            src={src}
-            alt=""
-            aria-hidden
-            draggable={false}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              imageRendering: 'pixelated',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-          />
-        ))}
-      </div>
+      {layers.map(({ key, src }) => (
+        <img
+          key={key}
+          src={src}
+          alt=""
+          aria-hidden
+          draggable={false}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            imageRendering: 'pixelated',
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        />
+      ))}
     </div>
   );
 }

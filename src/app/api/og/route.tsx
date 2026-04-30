@@ -9,21 +9,28 @@ import type { Zodiac } from '@/types/trainer';
 
 export const runtime = 'nodejs';
 
-// Mana Seed source frames are 64x64. Composite at 1024 wide for crisp output;
-// then bust-extract a sub-rect.
-const SPRITE_W = 1024;
-const SPRITE_H = 1024;
+// LimeZu source frames are 48 wide × 96 tall (portrait). Composite at 768 wide
+// for crisp output (16x upscale of 48px); height is 1536 (16x of 96px).
+// Then bust-extract a sub-rect.
+const CELL_W = 48;
+const CELL_H = 96;
+const SCALE = 16;
+const SPRITE_W = CELL_W * SCALE;     // 768
+const SPRITE_H = CELL_H * SCALE;     // 1536
 const BUST_W = 512;
-const BUST_H = 576;     // crop region is 32x36 in 64x64 = 1024x1152 in 1024 wide; final card area sized accordingly
+const BUST_H = 576;
 
-// Bust source crop in 64x64 sprite-space — mirrors manifest.bustCrop.
-const BUST_CROP = { left: 16, top: 12, width: 32, height: 36 };
+// Bust source crop in LimeZu 48x96 sprite-space — mirrors manifest.bustCrop.
+const BUST_CROP = { left: 8, top: 18, width: 32, height: 36 };
+
+// Always render in south direction for shared cards.
+const SHARE_DIR = 's';
 
 const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=31536000, immutable',
 };
 
-const SPRITE_ROOT = ['public', 'sprites', 'manaseed'];
+const SPRITE_ROOT = ['public', 'sprites', 'limezu'];
 
 async function loadSprite(...segments: string[]): Promise<Buffer | null> {
   try {
@@ -39,12 +46,11 @@ interface CompositeArgs {
   hair: string;
   hairColor: string;
   outfit: string;
-  cloak: string;
-  face: string;
-  hat: string;
+  eyes: string;
+  accessory: string;
 }
 
-/** Resolve `<baseId>-<variant>` (e.g. "fstr-v02") -> [baseId, variant]. */
+/** Resolve `<baseId>-<variant>` (e.g. "01-02") -> [baseId, variant]. */
 function splitVariant(compoundId: string): [string, string] | null {
   const idx = compoundId.lastIndexOf('-');
   if (idx <= 0) return null;
@@ -52,30 +58,25 @@ function splitVariant(compoundId: string): [string, string] | null {
 }
 
 async function compositeBust(args: CompositeArgs): Promise<string | null> {
-  // Layer order per Seliel's `using this base.txt`:
-  // 0bas (body) -> 1out (outfit) -> 2clo (cloak) -> 3fac (face) -> 4har (hair) -> 5hat (hat)
+  // LimeZu layer order, bottom to top:
+  //   body -> outfit -> eyes -> hair -> accessory
   const layerSegments: string[][] = [];
 
-  if (args.body) layerSegments.push(['body', `${args.body}.png`]);
+  if (args.body) layerSegments.push(['body', `${args.body}-${SHARE_DIR}.png`]);
 
   if (args.outfit && args.outfit !== 'none') {
     const split = splitVariant(args.outfit);
-    if (split) layerSegments.push(['outfit', split[0], `${split[1]}.png`]);
+    if (split) layerSegments.push(['outfit', split[0], `${split[1]}-${SHARE_DIR}.png`]);
   }
-  if (args.cloak && args.cloak !== 'none') {
-    const split = splitVariant(args.cloak);
-    if (split) layerSegments.push(['cloak', split[0], `${split[1]}.png`]);
-  }
-  if (args.face && args.face !== 'none') {
-    const split = splitVariant(args.face);
-    if (split) layerSegments.push(['face', split[0], `${split[1]}.png`]);
+  if (args.eyes && args.eyes !== 'none') {
+    layerSegments.push(['eyes', `${args.eyes}-${SHARE_DIR}.png`]);
   }
   if (args.hair && args.hairColor) {
-    layerSegments.push(['hair', args.hair, `${args.hairColor}.png`]);
+    layerSegments.push(['hair', args.hair, `${args.hairColor}-${SHARE_DIR}.png`]);
   }
-  if (args.hat && args.hat !== 'none') {
-    const split = splitVariant(args.hat);
-    if (split) layerSegments.push(['hat', split[0], `${split[1]}.png`]);
+  if (args.accessory && args.accessory !== 'none') {
+    const split = splitVariant(args.accessory);
+    if (split) layerSegments.push(['accessory', split[0], `${split[1]}-${SHARE_DIR}.png`]);
   }
 
   try {
@@ -96,13 +97,13 @@ async function compositeBust(args: CompositeArgs): Promise<string | null> {
       .png()
       .toBuffer();
 
-    // Bust extract: scale crop region from sprite-space (64x64) to output-space.
-    const scale = SPRITE_W / 64;
+    // Bust extract: scale crop region from sprite-space (48x96) to output-space.
+    // Horizontal scale: SPRITE_W / CELL_W = 16. Same scale on Y (no aspect change).
     const extractRegion = {
-      left: Math.round(BUST_CROP.left * scale),
-      top: Math.round(BUST_CROP.top * scale),
-      width: Math.round(BUST_CROP.width * scale),
-      height: Math.round(BUST_CROP.height * scale),
+      left: Math.round(BUST_CROP.left * SCALE),
+      top: Math.round(BUST_CROP.top * SCALE),
+      width: Math.round(BUST_CROP.width * SCALE),
+      height: Math.round(BUST_CROP.height * SCALE),
     };
 
     const bust = await sharp(fullBody)
@@ -164,9 +165,8 @@ export async function GET(req: NextRequest) {
     hair:      safeId(searchParams.get('h'),  ''),
     hairColor: safeId(searchParams.get('hc'), ''),
     outfit:    safeId(searchParams.get('o'),  ''),
-    cloak:     safeId(searchParams.get('cl'), 'none'),
-    face:      safeId(searchParams.get('fa'), 'none'),
-    hat:       safeId(searchParams.get('ht'), 'none'),
+    eyes:      safeId(searchParams.get('e'),  'none'),
+    accessory: safeId(searchParams.get('ac'), 'none'),
   };
 
   const zodiacRaw = searchParams.get('z') || '';

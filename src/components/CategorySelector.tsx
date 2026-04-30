@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import type { TrainerOption } from '@/types/trainer';
 import {
-  bodyPath, hairPath, outfitPath, cloakPath, facePath, hatPath,
+  bodyPath, eyesPath, hairPath, outfitPath, accessoryPath,
 } from '@/lib/trainer-options';
 import { playHover } from '@/lib/sounds';
 
@@ -29,12 +29,11 @@ function thumbnailSrc(
   if (!optionId || optionId === 'none') return null;
   switch (categoryKey) {
     case 'body':       return bodyPath(optionId);
-    case 'hair':       return hairPath(optionId, currentHairColor || 'v00');
-    case 'hairColor':  return hairPath(currentHairStyle || 'bob1', optionId);
+    case 'eyes':       return eyesPath(optionId);
+    case 'hair':       return hairPath(optionId, currentHairColor || '01');
+    case 'hairColor':  return hairPath(currentHairStyle || '01', optionId);
     case 'outfit':     return outfitPath(optionId);
-    case 'cloak':      return cloakPath(optionId);
-    case 'face':       return facePath(optionId);
-    case 'hat':        return hatPath(optionId);
+    case 'accessory':  return accessoryPath(optionId);
     default:           return null;
   }
 }
@@ -60,7 +59,7 @@ function Thumb({
   if (optionId === 'none') {
     return (
       <div
-        className={`w-16 h-16 flex items-center justify-center ${baseCls}`}
+        className={`w-12 h-24 flex items-center justify-center ${baseCls}`}
         style={{ background: 'rgba(255, 253, 243, 0.6)' }}
       >
         <span className="text-[#8a7d4d] text-[8px] tracking-wider">NONE</span>
@@ -72,7 +71,7 @@ function Thumb({
   if (!src) {
     return (
       <div
-        className={`w-16 h-16 flex items-center justify-center ${baseCls}`}
+        className={`w-12 h-24 flex items-center justify-center ${baseCls}`}
         style={{ background: 'rgba(255, 253, 243, 0.6)' }}
       >
         <span className="text-[#8a7d4d] text-[7px] tracking-wider">{optionLabel.slice(0, 4).toUpperCase()}</span>
@@ -84,10 +83,10 @@ function Thumb({
     <img
       src={src}
       alt={optionLabel}
-      width={64}
-      height={64}
+      width={48}
+      height={96}
       loading="lazy"
-      className={baseCls}
+      className={`w-12 h-24 ${baseCls}`}
       style={{ imageRendering: 'pixelated', background: 'rgba(255, 253, 243, 0.6)' }}
     />
   );
@@ -160,7 +159,7 @@ export default function CategorySelector({
             aria-label={isExpanded ? 'Show fewer options' : `Show ${hiddenCount} more options`}
           >
             <div
-              className="w-16 h-16 flex items-center justify-center border-2 cursor-pointer transition-all rounded-[8px] border-[#367d95]/30 hover:border-[#367d95] hover:scale-105 text-[#367d95] text-[10px] tracking-wider"
+              className="w-12 h-24 flex items-center justify-center border-2 cursor-pointer transition-all rounded-[8px] border-[#367d95]/30 hover:border-[#367d95] hover:scale-105 text-[#367d95] text-[10px] tracking-wider"
               style={{ background: 'rgba(255, 253, 243, 0.6)' }}
             >
               {isExpanded ? (

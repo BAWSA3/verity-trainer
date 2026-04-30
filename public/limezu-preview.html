@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Verity Trainer — LimeZu sprite preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --cream: #fffdf3;
+      --ink: #16272c;
+      --teal: #367d95;
+      --olive: #90b34d;
+      --muted: #8a7d4d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--cream);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 32px 24px;
+    }
+    h1 {
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin: 0 0 4px;
+      color: var(--ink);
+    }
+    .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 32px; letter-spacing: 0.05em; }
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+
+    .stage {
+      background: var(--cream);
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 24px;
+      align-self: start;
+    }
+    .stage-title {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0;
+    }
+    .composer {
+      width: 192px;
+      height: 384px;
+      position: relative;
+      background: repeating-conic-gradient(#f5f0e1 0% 25%, #fff 0% 50%) 50% / 16px 16px;
+      border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent);
+      image-rendering: pixelated;
+    }
+    .dir-row { display: flex; gap: 4px; }
+    .dir-row button {
+      padding: 8px 12px;
+      font-size: 12px;
+      min-width: 44px;
+    }
+    .dir-row button.active { background: var(--teal); color: white; border-color: var(--teal); }
+    .composer img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      pointer-events: none;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 600;
+      padding: 10px 16px;
+      border: 1.5px solid var(--ink);
+      background: var(--cream);
+      color: var(--ink);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 100ms, background 100ms;
+    }
+    button:hover { background: var(--ink); color: var(--cream); }
+    button.primary { background: var(--teal); color: white; border-color: var(--teal); }
+    button.primary:hover { background: var(--ink); border-color: var(--ink); }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .group {
+      background: var(--cream);
+      border: 1.5px solid color-mix(in srgb, var(--ink) 20%, transparent);
+      border-radius: 8px;
+      padding: 16px 18px;
+    }
+    .group-title {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+    .field {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .field:last-child { margin-bottom: 0; }
+    .field label {
+      flex: 0 0 90px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    select {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1.5px solid color-mix(in srgb, var(--ink) 30%, transparent);
+      background: white;
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 13px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    select:focus { outline: 2px solid var(--teal); border-color: var(--teal); }
+    .meta {
+      margin-top: 24px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      line-height: 1.5;
+    }
+    .meta strong { color: var(--ink); }
+    .scale-row { display: flex; gap: 4px; }
+    .scale-row button { padding: 6px 10px; font-size: 10px; }
+    .scale-row button.active { background: var(--olive); color: white; border-color: var(--olive); }
+  </style>
+</head>
+<body>
+  <h1>Verity Trainer · LimeZu Sprite Preview</h1>
+  <p class="subtitle">Vanilla preview of the imported character pipeline. Pick layers, click random, see what we have to work with.</p>
+
+  <div class="layout">
+    <div class="stage">
+      <p class="stage-title">Composed Character</p>
+      <div class="composer" id="composer"></div>
+      <div class="dir-row">
+        <button data-dir="n">↑ North</button>
+        <button data-dir="w">← West</button>
+        <button data-dir="s" class="active">↓ South</button>
+        <button data-dir="e">East →</button>
+      </div>
+      <div class="scale-row">
+        <button data-scale="2">2×</button>
+        <button data-scale="3">3×</button>
+        <button data-scale="4" class="active">4×</button>
+        <button data-scale="6">6×</button>
+        <button data-scale="8">8×</button>
+      </div>
+      <div class="actions">
+        <button class="primary" id="random">🎲 Random</button>
+        <button id="reset">Reset</button>
+        <button id="save">Save PNG</button>
+      </div>
+      <div class="meta" id="meta"></div>
+    </div>
+
+    <div class="controls" id="controls">
+      <p style="color:var(--muted);font-size:12px">Loading manifest…</p>
+    </div>
+  </div>
+
+  <script type="module">
+    const SPRITE_BASE = '/sprites/limezu';
+    const LAYER_ORDER = ['body', 'eyes', 'outfit', 'hair', 'accessory'];
+
+    /** @type {{ categories: Record<string, { values: Array<{ id: string, label: string, file?: string, baseId?: string, variant?: string }>, supportsColor?: boolean, optional?: boolean }>, directions?: string[], defaultDirection?: string, spriteWidth: number, spriteHeight: number }} */
+    let manifest;
+    /** @type {Record<string, string>} */
+    let sel = {};
+    let direction = 's';
+    let scale = 4;
+
+    async function loadManifest() {
+      const r = await fetch(SPRITE_BASE + '/manifest.json');
+      manifest = await r.json();
+      direction = manifest.defaultDirection || 's';
+    }
+
+    function dirSuffix() {
+      return manifest.directions ? `-${direction}` : '';
+    }
+
+    function spriteSrcFor(category, id) {
+      if (id === 'none' || !id) return null;
+      const cat = manifest.categories[category];
+      if (!cat) return null;
+      const sfx = dirSuffix();
+      // body / eyes: simple <category>/<id><suffix>.png
+      if (category === 'body' || category === 'eyes') return `${SPRITE_BASE}/${category}/${id}${sfx}.png`;
+      // hair: needs hairColor variant: hair/<style>/<color><suffix>.png
+      if (category === 'hair') return `${SPRITE_BASE}/hair/${id}/${sel.hairColor}${sfx}.png`;
+      // hairColor itself isn't a render slot
+      if (category === 'hairColor') return null;
+      // outfit / accessory: flattened slug "id-variant" -> baseId + variant entries on values
+      const entry = cat.values.find((v) => v.id === id);
+      if (!entry) return null;
+      const base = entry.baseId ?? id;
+      const variant = entry.variant ?? 'default';
+      return `${SPRITE_BASE}/${category}/${base}/${variant}${sfx}.png`;
+    }
+
+    function render() {
+      const composer = document.getElementById('composer');
+      composer.innerHTML = '';
+      const meta = [];
+      for (const cat of LAYER_ORDER) {
+        const id = sel[cat];
+        if (!id) continue;
+        const src = spriteSrcFor(cat, id);
+        if (!src) continue;
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = `${cat} ${id}`;
+        composer.appendChild(img);
+        meta.push(`<strong>${cat}</strong>: ${id}`);
+      }
+      if (sel.hairColor) meta.push(`<strong>hairColor</strong>: ${sel.hairColor}`);
+      document.getElementById('meta').innerHTML = meta.join(' · ');
+    }
+
+    function buildSelect(category, opts) {
+      const wrap = document.createElement('div');
+      wrap.className = 'field';
+      const labelEl = document.createElement('label');
+      labelEl.textContent = category;
+      const select = document.createElement('select');
+      select.dataset.category = category;
+      if (opts.optional) {
+        const o = document.createElement('option');
+        o.value = 'none';
+        o.textContent = '— none —';
+        select.appendChild(o);
+      }
+      for (const v of opts.values) {
+        const o = document.createElement('option');
+        o.value = v.id;
+        o.textContent = v.label || v.id;
+        select.appendChild(o);
+      }
+      select.addEventListener('change', (e) => {
+        sel[category] = e.target.value;
+        render();
+      });
+      wrap.appendChild(labelEl);
+      wrap.appendChild(select);
+      return { wrap, select };
+    }
+
+    function buildControls() {
+      const root = document.getElementById('controls');
+      root.innerHTML = '';
+
+      const groups = [
+        { title: 'Look', cats: ['body', 'eyes', 'hair', 'hairColor'] },
+        { title: 'Wear', cats: ['outfit'] },
+        { title: 'Extra', cats: ['accessory'] },
+      ];
+
+      for (const g of groups) {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'group';
+        const t = document.createElement('p');
+        t.className = 'group-title';
+        t.textContent = g.title;
+        groupEl.appendChild(t);
+        for (const cat of g.cats) {
+          if (!manifest.categories[cat]) continue;
+          const opts = manifest.categories[cat];
+          const { wrap, select } = buildSelect(cat, opts);
+          // initial value
+          const first = opts.values[0]?.id;
+          if (first && !sel[cat]) sel[cat] = first;
+          select.value = sel[cat] ?? '';
+          groupEl.appendChild(wrap);
+        }
+        root.appendChild(groupEl);
+      }
+    }
+
+    function pickRandom() {
+      const cats = ['body', 'eyes', 'hair', 'hairColor', 'outfit', 'accessory'];
+      for (const c of cats) {
+        const opts = manifest.categories[c];
+        if (!opts) continue;
+        const values = opts.values;
+        const choice = values[Math.floor(Math.random() * values.length)];
+        sel[c] = choice.id;
+      }
+      // sync UI
+      document.querySelectorAll('select').forEach((s) => {
+        const c = s.dataset.category;
+        if (sel[c] !== undefined) s.value = sel[c];
+      });
+      render();
+    }
+
+    function reset() {
+      sel = {};
+      for (const c of Object.keys(manifest.categories)) {
+        sel[c] = manifest.categories[c].values[0]?.id;
+      }
+      document.querySelectorAll('select').forEach((s) => {
+        const c = s.dataset.category;
+        if (sel[c] !== undefined) s.value = sel[c];
+      });
+      render();
+    }
+
+    function applyComposerSize() {
+      const composer = document.getElementById('composer');
+      const w = manifest.spriteWidth * scale;
+      const h = manifest.spriteHeight * scale;
+      composer.style.width = w + 'px';
+      composer.style.height = h + 'px';
+    }
+
+    function setScale(s) {
+      scale = s;
+      applyComposerSize();
+      document.querySelectorAll('.scale-row button').forEach((b) => {
+        b.classList.toggle('active', Number(b.dataset.scale) === s);
+      });
+    }
+
+    function setDirection(d) {
+      direction = d;
+      document.querySelectorAll('.dir-row button').forEach((b) => {
+        b.classList.toggle('active', b.dataset.dir === d);
+      });
+      render();
+    }
+
+    async function savePng() {
+      const composer = document.getElementById('composer');
+      const imgs = [...composer.querySelectorAll('img')];
+      const w = composer.clientWidth;
+      const h = composer.clientHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      for (const img of imgs) {
+        await new Promise((res) => {
+          if (img.complete) res();
+          else img.addEventListener('load', res, { once: true });
+        });
+        ctx.drawImage(img, 0, 0, w, h);
+      }
+      const a = document.createElement('a');
+      a.download = `verity-trainer-${direction}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    }
+
+    (async function init() {
+      await loadManifest();
+      applyComposerSize();
+      buildControls();
+      reset();
+      document.getElementById('random').addEventListener('click', pickRandom);
+      document.getElementById('reset').addEventListener('click', reset);
+      document.getElementById('save').addEventListener('click', savePng);
+      document.querySelectorAll('.scale-row button').forEach((b) => {
+        b.addEventListener('click', () => setScale(Number(b.dataset.scale)));
+      });
+      document.querySelectorAll('.dir-row button').forEach((b) => {
+        b.addEventListener('click', () => setDirection(b.dataset.dir));
+      });
+    })();
+  </script>
+</body>
+</html>

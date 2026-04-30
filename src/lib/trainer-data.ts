@@ -6,20 +6,24 @@ import type {
 
 // Two `trainer_signups.trainer_config` JSONB shapes coexist:
 //
-//   v1 (legacy, pre-2026-04-29): bare TrainerConfig with old keys
-//     { gender:'male'|'female', body, hair, hairColor, top, bottom, shoes,
-//       face, neck, accessory, facialHair }
+//   v1 (pre-2026-04-29 / pre-LimeZu, includes both the very early gender-split
+//       Mana Seed schema and the gender-neutral Mana Seed v2):
+//     either bare TrainerConfig or { schemaVersion: 2, config: <Mana Seed> }
+//     Mana Seed shape: { body, hair, hairColor, outfit, cloak, face, hat }
 //
-//   v2 (current, Mana Seed paper-doll model): { schemaVersion: 2,
-//     config: { body, hair, hairColor, outfit, cloak, face, hat },
-//     personality: { zodiac, likes, dislikes } }
+//   v2 (current, LimeZu): { schemaVersion: 2,
+//     config: { body, hair, hairColor, outfit, eyes, accessory },
+//     personality: { zodiac, likes, dislikes },
+//     source?: 'ai' | 'manual' }
 //
-// Reads MUST go through unpackTrainer() — direct row.trainer_config usage
-// will misrender legacy rows.
+// Mana Seed-era rows survive the parse but render as blank silhouettes since
+// their cloak/face/hat fields don't map onto LimeZu's slots — those users
+// will need to revisit /create.
 
 interface UnpackedTrainer {
   config: TrainerConfig;
   personality: TrainerPersonality;
+  source?: 'ai' | 'manual';
 }
 
 const EMPTY_PERSONALITY: TrainerPersonality = {
@@ -36,18 +40,18 @@ export function unpackTrainer(row: { trainer_config: unknown }): UnpackedTrainer
 
   const obj = raw as Record<string, unknown>;
 
-  // v2 path
+  // schemaVersion 2 path — covers BOTH Mana Seed v2 and LimeZu v2 shapes.
+  // Mana Seed-era configs lack eyes/accessory; normalizeConfig fills with 'none'.
   if ((obj.schemaVersion as number) === 2 && obj.config && obj.personality) {
     return {
       config: normalizeConfig(obj.config as Record<string, unknown>),
       personality: normalizePersonality(obj.personality as Record<string, unknown>),
+      source: obj.source === 'ai' || obj.source === 'manual' ? obj.source : undefined,
     };
   }
 
-  // v1 path: bare config, no personality. Best-effort migration —
-  // v1's top/bottom/face/neck/accessory don't map cleanly onto Mana Seed's
-  // unified outfit + paper-doll layers, so legacy rows render as a blank
-  // body. Trainers from v1 will need to revisit /create to pick a v2 config.
+  // Pre-schemaVersion path: bare config object, no personality. Best-effort —
+  // returns a blank config where legacy fields don't map.
   return {
     config: normalizeConfig(obj),
     personality: EMPTY_PERSONALITY,
@@ -57,8 +61,11 @@ export function unpackTrainer(row: { trainer_config: unknown }): UnpackedTrainer
 export function packTrainer(
   config: TrainerConfig,
   personality: TrainerPersonality,
+  source?: 'ai' | 'manual',
 ): StoredTrainer {
-  return { schemaVersion: 2, config, personality };
+  const stored: StoredTrainer = { schemaVersion: 2, config, personality };
+  if (source) stored.source = source;
+  return stored;
 }
 
 function normalizeConfig(raw: Record<string, unknown>): TrainerConfig {
@@ -70,9 +77,8 @@ function normalizeConfig(raw: Record<string, unknown>): TrainerConfig {
     hair: get('hair'),
     hairColor: get('hairColor'),
     outfit: get('outfit'),
-    cloak: get('cloak') || 'none',
-    face: get('face') || 'none',
-    hat: get('hat') || 'none',
+    eyes: get('eyes') || 'none',
+    accessory: get('accessory') || 'none',
   };
 }
 
@@ -97,8 +103,7 @@ function emptyConfig(): TrainerConfig {
     hair: '',
     hairColor: '',
     outfit: '',
-    cloak: 'none',
-    face: 'none',
-    hat: 'none',
+    eyes: 'none',
+    accessory: 'none',
   };
 }

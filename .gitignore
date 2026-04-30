@@ -44,3 +44,4 @@ next-env.d.ts
 # Generated PNGs in public/sprites/ are committed (derivatives within license).
 /vendor/limezu-pack/
 /vendor/manaseed-pack/
+tmp-debug/

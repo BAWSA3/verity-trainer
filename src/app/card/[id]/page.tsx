@@ -1,27 +1,26 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 import { generateStats } from '@/lib/card-utils';
 import { sanitizeNameForDisplay } from '@/lib/moderation/sanitize';
 import { unpackTrainer } from '@/lib/trainer-data';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import CardPageClient from './CardPageClient';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 async function getTrainer(id: string) {
-  const { data } = await supabase
-    .from('trainer_signups')
-    .select('*')
-    .eq('id', id)
-    .single();
-  return data;
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from('trainer_signups')
+      .select('*')
+      .eq('id', id)
+      .single();
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -35,6 +34,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg';
 
   // OG URL params — keys mirror /api/og's expected query.
+  // LimeZu schema: b/h/hc/o required, e (eyes) and ac (accessory) optional.
   const ogParams = new URLSearchParams({
     n: name,
     s: String(stats.style),
@@ -45,9 +45,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     h: config.hair,
     hc: config.hairColor,
     o: config.outfit,
-    cl: config.cloak,
-    fa: config.face,
-    ht: config.hat,
+    e: config.eyes,
+    ac: config.accessory,
     z: personality.zodiac,
     lk: personality.likes.join('|'),
     dl: personality.dislikes.join('|'),

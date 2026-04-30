@@ -1,0 +1,1600 @@
+{
+  "version": 1,
+  "source": "limezu",
+  "generatedAt": "2026-04-30T00:13:17.776Z",
+  "spriteWidth": 48,
+  "spriteHeight": 96,
+  "directions": [
+    "s",
+    "e",
+    "w",
+    "n"
+  ],
+  "defaultDirection": "s",
+  "bustCrop": {
+    "_comment": "Bust portrait region inside the 48x96 idle frame. Head is in the upper portion. Tuned so the share card crops cleanly to head + shoulders.",
+    "x": 8,
+    "y": 18,
+    "w": 32,
+    "h": 36
+  },
+  "categories": {
+    "body": {
+      "values": [
+        {
+          "id": "01",
+          "label": "01",
+          "file": "body/01.png"
+        },
+        {
+          "id": "02",
+          "label": "02",
+          "file": "body/02.png"
+        },
+        {
+          "id": "03",
+          "label": "03",
+          "file": "body/03.png"
+        },
+        {
+          "id": "04",
+          "label": "04",
+          "file": "body/04.png"
+        },
+        {
+          "id": "05",
+          "label": "05",
+          "file": "body/05.png"
+        },
+        {
+          "id": "06",
+          "label": "06",
+          "file": "body/06.png"
+        },
+        {
+          "id": "07",
+          "label": "07",
+          "file": "body/07.png"
+        },
+        {
+          "id": "08",
+          "label": "08",
+          "file": "body/08.png"
+        },
+        {
+          "id": "09",
+          "label": "09",
+          "file": "body/09.png"
+        }
+      ]
+    },
+    "eyes": {
+      "values": [
+        {
+          "id": "01",
+          "label": "01",
+          "file": "eyes/01.png"
+        },
+        {
+          "id": "02",
+          "label": "02",
+          "file": "eyes/02.png"
+        },
+        {
+          "id": "03",
+          "label": "03",
+          "file": "eyes/03.png"
+        },
+        {
+          "id": "04",
+          "label": "04",
+          "file": "eyes/04.png"
+        },
+        {
+          "id": "05",
+          "label": "05",
+          "file": "eyes/05.png"
+        },
+        {
+          "id": "06",
+          "label": "06",
+          "file": "eyes/06.png"
+        },
+        {
+          "id": "07",
+          "label": "07",
+          "file": "eyes/07.png"
+        }
+      ]
+    },
+    "hair": {
+      "supportsColor": true,
+      "values": [
+        {
+          "id": "01",
+          "label": "01"
+        },
+        {
+          "id": "02",
+          "label": "02"
+        },
+        {
+          "id": "03",
+          "label": "03"
+        },
+        {
+          "id": "04",
+          "label": "04"
+        },
+        {
+          "id": "05",
+          "label": "05"
+        },
+        {
+          "id": "06",
+          "label": "06"
+        },
+        {
+          "id": "07",
+          "label": "07"
+        },
+        {
+          "id": "08",
+          "label": "08"
+        },
+        {
+          "id": "09",
+          "label": "09"
+        },
+        {
+          "id": "10",
+          "label": "10"
+        },
+        {
+          "id": "11",
+          "label": "11"
+        },
+        {
+          "id": "12",
+          "label": "12"
+        },
+        {
+          "id": "13",
+          "label": "13"
+        },
+        {
+          "id": "14",
+          "label": "14"
+        },
+        {
+          "id": "15",
+          "label": "15"
+        },
+        {
+          "id": "16",
+          "label": "16"
+        },
+        {
+          "id": "17",
+          "label": "17"
+        },
+        {
+          "id": "18",
+          "label": "18"
+        },
+        {
+          "id": "19",
+          "label": "19"
+        },
+        {
+          "id": "20",
+          "label": "20"
+        },
+        {
+          "id": "21",
+          "label": "21"
+        },
+        {
+          "id": "22",
+          "label": "22"
+        },
+        {
+          "id": "23",
+          "label": "23"
+        },
+        {
+          "id": "24",
+          "label": "24"
+        },
+        {
+          "id": "25",
+          "label": "25"
+        },
+        {
+          "id": "26",
+          "label": "26"
+        },
+        {
+          "id": "27",
+          "label": "27"
+        },
+        {
+          "id": "28",
+          "label": "28"
+        },
+        {
+          "id": "29",
+          "label": "29"
+        }
+      ]
+    },
+    "hairColor": {
+      "values": [
+        {
+          "id": "01",
+          "label": "01"
+        },
+        {
+          "id": "02",
+          "label": "02"
+        },
+        {
+          "id": "03",
+          "label": "03"
+        },
+        {
+          "id": "04",
+          "label": "04"
+        },
+        {
+          "id": "05",
+          "label": "05"
+        },
+        {
+          "id": "06",
+          "label": "06"
+        },
+        {
+          "id": "07",
+          "label": "07"
+        }
+      ]
+    },
+    "outfit": {
+      "values": [
+        {
+          "id": "01-01",
+          "label": "01 01",
+          "baseId": "01",
+          "variant": "01"
+        },
+        {
+          "id": "01-02",
+          "label": "01 02",
+          "baseId": "01",
+          "variant": "02"
+        },
+        {
+          "id": "01-03",
+          "label": "01 03",
+          "baseId": "01",
+          "variant": "03"
+        },
+        {
+          "id": "01-04",
+          "label": "01 04",
+          "baseId": "01",
+          "variant": "04"
+        },
+        {
+          "id": "01-05",
+          "label": "01 05",
+          "baseId": "01",
+          "variant": "05"
+        },
+        {
+          "id": "01-06",
+          "label": "01 06",
+          "baseId": "01",
+          "variant": "06"
+        },
+        {
+          "id": "01-07",
+          "label": "01 07",
+          "baseId": "01",
+          "variant": "07"
+        },
+        {
+          "id": "01-08",
+          "label": "01 08",
+          "baseId": "01",
+          "variant": "08"
+        },
+        {
+          "id": "01-09",
+          "label": "01 09",
+          "baseId": "01",
+          "variant": "09"
+        },
+        {
+          "id": "01-10",
+          "label": "01 10",
+          "baseId": "01",
+          "variant": "10"
+        },
+        {
+          "id": "02-01",
+          "label": "02 01",
+          "baseId": "02",
+          "variant": "01"
+        },
+        {
+          "id": "02-02",
+          "label": "02 02",
+          "baseId": "02",
+          "variant": "02"
+        },
+        {
+          "id": "02-03",
+          "label": "02 03",
+          "baseId": "02",
+          "variant": "03"
+        },
+        {
+          "id": "02-04",
+          "label": "02 04",
+          "baseId": "02",
+          "variant": "04"
+        },
+        {
+          "id": "03-01",
+          "label": "03 01",
+          "baseId": "03",
+          "variant": "01"
+        },
+        {
+          "id": "03-02",
+          "label": "03 02",
+          "baseId": "03",
+          "variant": "02"
+        },
+        {
+          "id": "03-03",
+          "label": "03 03",
+          "baseId": "03",
+          "variant": "03"
+        },
+        {
+          "id": "03-04",
+          "label": "03 04",
+          "baseId": "03",
+          "variant": "04"
+        },
+        {
+          "id": "04-01",
+          "label": "04 01",
+          "baseId": "04",
+          "variant": "01"
+        },
+        {
+          "id": "04-02",
+          "label": "04 02",
+          "baseId": "04",
+          "variant": "02"
+        },
+        {
+          "id": "04-03",
+          "label": "04 03",
+          "baseId": "04",
+          "variant": "03"
+        },
+        {
+          "id": "05-01",
+          "label": "05 01",
+          "baseId": "05",
+          "variant": "01"
+        },
+        {
+          "id": "05-02",
+          "label": "05 02",
+          "baseId": "05",
+          "variant": "02"
+        },
+        {
+          "id": "05-03",
+          "label": "05 03",
+          "baseId": "05",
+          "variant": "03"
+        },
+        {
+          "id": "05-04",
+          "label": "05 04",
+          "baseId": "05",
+          "variant": "04"
+        },
+        {
+          "id": "05-05",
+          "label": "05 05",
+          "baseId": "05",
+          "variant": "05"
+        },
+        {
+          "id": "06-01",
+          "label": "06 01",
+          "baseId": "06",
+          "variant": "01"
+        },
+        {
+          "id": "06-02",
+          "label": "06 02",
+          "baseId": "06",
+          "variant": "02"
+        },
+        {
+          "id": "06-03",
+          "label": "06 03",
+          "baseId": "06",
+          "variant": "03"
+        },
+        {
+          "id": "06-04",
+          "label": "06 04",
+          "baseId": "06",
+          "variant": "04"
+        },
+        {
+          "id": "07-01",
+          "label": "07 01",
+          "baseId": "07",
+          "variant": "01"
+        },
+        {
+          "id": "07-02",
+          "label": "07 02",
+          "baseId": "07",
+          "variant": "02"
+        },
+        {
+          "id": "07-03",
+          "label": "07 03",
+          "baseId": "07",
+          "variant": "03"
+        },
+        {
+          "id": "07-04",
+          "label": "07 04",
+          "baseId": "07",
+          "variant": "04"
+        },
+        {
+          "id": "08-01",
+          "label": "08 01",
+          "baseId": "08",
+          "variant": "01"
+        },
+        {
+          "id": "08-02",
+          "label": "08 02",
+          "baseId": "08",
+          "variant": "02"
+        },
+        {
+          "id": "08-03",
+          "label": "08 03",
+          "baseId": "08",
+          "variant": "03"
+        },
+        {
+          "id": "09-01",
+          "label": "09 01",
+          "baseId": "09",
+          "variant": "01"
+        },
+        {
+          "id": "09-02",
+          "label": "09 02",
+          "baseId": "09",
+          "variant": "02"
+        },
+        {
+          "id": "09-03",
+          "label": "09 03",
+          "baseId": "09",
+          "variant": "03"
+        },
+        {
+          "id": "10-01",
+          "label": "10 01",
+          "baseId": "10",
+          "variant": "01"
+        },
+        {
+          "id": "10-02",
+          "label": "10 02",
+          "baseId": "10",
+          "variant": "02"
+        },
+        {
+          "id": "10-03",
+          "label": "10 03",
+          "baseId": "10",
+          "variant": "03"
+        },
+        {
+          "id": "10-04",
+          "label": "10 04",
+          "baseId": "10",
+          "variant": "04"
+        },
+        {
+          "id": "10-05",
+          "label": "10 05",
+          "baseId": "10",
+          "variant": "05"
+        },
+        {
+          "id": "11-01",
+          "label": "11 01",
+          "baseId": "11",
+          "variant": "01"
+        },
+        {
+          "id": "11-02",
+          "label": "11 02",
+          "baseId": "11",
+          "variant": "02"
+        },
+        {
+          "id": "11-03",
+          "label": "11 03",
+          "baseId": "11",
+          "variant": "03"
+        },
+        {
+          "id": "11-04",
+          "label": "11 04",
+          "baseId": "11",
+          "variant": "04"
+        },
+        {
+          "id": "12-01",
+          "label": "12 01",
+          "baseId": "12",
+          "variant": "01"
+        },
+        {
+          "id": "12-02",
+          "label": "12 02",
+          "baseId": "12",
+          "variant": "02"
+        },
+        {
+          "id": "12-03",
+          "label": "12 03",
+          "baseId": "12",
+          "variant": "03"
+        },
+        {
+          "id": "13-01",
+          "label": "13 01",
+          "baseId": "13",
+          "variant": "01"
+        },
+        {
+          "id": "13-02",
+          "label": "13 02",
+          "baseId": "13",
+          "variant": "02"
+        },
+        {
+          "id": "13-03",
+          "label": "13 03",
+          "baseId": "13",
+          "variant": "03"
+        },
+        {
+          "id": "13-04",
+          "label": "13 04",
+          "baseId": "13",
+          "variant": "04"
+        },
+        {
+          "id": "14-01",
+          "label": "14 01",
+          "baseId": "14",
+          "variant": "01"
+        },
+        {
+          "id": "14-02",
+          "label": "14 02",
+          "baseId": "14",
+          "variant": "02"
+        },
+        {
+          "id": "14-03",
+          "label": "14 03",
+          "baseId": "14",
+          "variant": "03"
+        },
+        {
+          "id": "14-04",
+          "label": "14 04",
+          "baseId": "14",
+          "variant": "04"
+        },
+        {
+          "id": "14-05",
+          "label": "14 05",
+          "baseId": "14",
+          "variant": "05"
+        },
+        {
+          "id": "15-01",
+          "label": "15 01",
+          "baseId": "15",
+          "variant": "01"
+        },
+        {
+          "id": "15-02",
+          "label": "15 02",
+          "baseId": "15",
+          "variant": "02"
+        },
+        {
+          "id": "15-03",
+          "label": "15 03",
+          "baseId": "15",
+          "variant": "03"
+        },
+        {
+          "id": "16-01",
+          "label": "16 01",
+          "baseId": "16",
+          "variant": "01"
+        },
+        {
+          "id": "16-02",
+          "label": "16 02",
+          "baseId": "16",
+          "variant": "02"
+        },
+        {
+          "id": "16-03",
+          "label": "16 03",
+          "baseId": "16",
+          "variant": "03"
+        },
+        {
+          "id": "17-01",
+          "label": "17 01",
+          "baseId": "17",
+          "variant": "01"
+        },
+        {
+          "id": "17-02",
+          "label": "17 02",
+          "baseId": "17",
+          "variant": "02"
+        },
+        {
+          "id": "17-03",
+          "label": "17 03",
+          "baseId": "17",
+          "variant": "03"
+        },
+        {
+          "id": "18-01",
+          "label": "18 01",
+          "baseId": "18",
+          "variant": "01"
+        },
+        {
+          "id": "18-02",
+          "label": "18 02",
+          "baseId": "18",
+          "variant": "02"
+        },
+        {
+          "id": "18-03",
+          "label": "18 03",
+          "baseId": "18",
+          "variant": "03"
+        },
+        {
+          "id": "18-04",
+          "label": "18 04",
+          "baseId": "18",
+          "variant": "04"
+        },
+        {
+          "id": "19-01",
+          "label": "19 01",
+          "baseId": "19",
+          "variant": "01"
+        },
+        {
+          "id": "19-02",
+          "label": "19 02",
+          "baseId": "19",
+          "variant": "02"
+        },
+        {
+          "id": "19-03",
+          "label": "19 03",
+          "baseId": "19",
+          "variant": "03"
+        },
+        {
+          "id": "19-04",
+          "label": "19 04",
+          "baseId": "19",
+          "variant": "04"
+        },
+        {
+          "id": "20-01",
+          "label": "20 01",
+          "baseId": "20",
+          "variant": "01"
+        },
+        {
+          "id": "20-02",
+          "label": "20 02",
+          "baseId": "20",
+          "variant": "02"
+        },
+        {
+          "id": "20-03",
+          "label": "20 03",
+          "baseId": "20",
+          "variant": "03"
+        },
+        {
+          "id": "21-01",
+          "label": "21 01",
+          "baseId": "21",
+          "variant": "01"
+        },
+        {
+          "id": "21-02",
+          "label": "21 02",
+          "baseId": "21",
+          "variant": "02"
+        },
+        {
+          "id": "21-03",
+          "label": "21 03",
+          "baseId": "21",
+          "variant": "03"
+        },
+        {
+          "id": "21-04",
+          "label": "21 04",
+          "baseId": "21",
+          "variant": "04"
+        },
+        {
+          "id": "22-01",
+          "label": "22 01",
+          "baseId": "22",
+          "variant": "01"
+        },
+        {
+          "id": "22-02",
+          "label": "22 02",
+          "baseId": "22",
+          "variant": "02"
+        },
+        {
+          "id": "22-03",
+          "label": "22 03",
+          "baseId": "22",
+          "variant": "03"
+        },
+        {
+          "id": "22-04",
+          "label": "22 04",
+          "baseId": "22",
+          "variant": "04"
+        },
+        {
+          "id": "23-01",
+          "label": "23 01",
+          "baseId": "23",
+          "variant": "01"
+        },
+        {
+          "id": "23-02",
+          "label": "23 02",
+          "baseId": "23",
+          "variant": "02"
+        },
+        {
+          "id": "23-03",
+          "label": "23 03",
+          "baseId": "23",
+          "variant": "03"
+        },
+        {
+          "id": "23-04",
+          "label": "23 04",
+          "baseId": "23",
+          "variant": "04"
+        },
+        {
+          "id": "24-01",
+          "label": "24 01",
+          "baseId": "24",
+          "variant": "01"
+        },
+        {
+          "id": "24-02",
+          "label": "24 02",
+          "baseId": "24",
+          "variant": "02"
+        },
+        {
+          "id": "24-03",
+          "label": "24 03",
+          "baseId": "24",
+          "variant": "03"
+        },
+        {
+          "id": "24-04",
+          "label": "24 04",
+          "baseId": "24",
+          "variant": "04"
+        },
+        {
+          "id": "25-01",
+          "label": "25 01",
+          "baseId": "25",
+          "variant": "01"
+        },
+        {
+          "id": "25-02",
+          "label": "25 02",
+          "baseId": "25",
+          "variant": "02"
+        },
+        {
+          "id": "25-03",
+          "label": "25 03",
+          "baseId": "25",
+          "variant": "03"
+        },
+        {
+          "id": "25-04",
+          "label": "25 04",
+          "baseId": "25",
+          "variant": "04"
+        },
+        {
+          "id": "25-05",
+          "label": "25 05",
+          "baseId": "25",
+          "variant": "05"
+        },
+        {
+          "id": "26-01",
+          "label": "26 01",
+          "baseId": "26",
+          "variant": "01"
+        },
+        {
+          "id": "26-02",
+          "label": "26 02",
+          "baseId": "26",
+          "variant": "02"
+        },
+        {
+          "id": "26-03",
+          "label": "26 03",
+          "baseId": "26",
+          "variant": "03"
+        },
+        {
+          "id": "27-01",
+          "label": "27 01",
+          "baseId": "27",
+          "variant": "01"
+        },
+        {
+          "id": "27-02",
+          "label": "27 02",
+          "baseId": "27",
+          "variant": "02"
+        },
+        {
+          "id": "27-03",
+          "label": "27 03",
+          "baseId": "27",
+          "variant": "03"
+        },
+        {
+          "id": "28-01",
+          "label": "28 01",
+          "baseId": "28",
+          "variant": "01"
+        },
+        {
+          "id": "28-02",
+          "label": "28 02",
+          "baseId": "28",
+          "variant": "02"
+        },
+        {
+          "id": "28-03",
+          "label": "28 03",
+          "baseId": "28",
+          "variant": "03"
+        },
+        {
+          "id": "28-04",
+          "label": "28 04",
+          "baseId": "28",
+          "variant": "04"
+        },
+        {
+          "id": "29-01",
+          "label": "29 01",
+          "baseId": "29",
+          "variant": "01"
+        },
+        {
+          "id": "29-02",
+          "label": "29 02",
+          "baseId": "29",
+          "variant": "02"
+        },
+        {
+          "id": "29-03",
+          "label": "29 03",
+          "baseId": "29",
+          "variant": "03"
+        },
+        {
+          "id": "29-04",
+          "label": "29 04",
+          "baseId": "29",
+          "variant": "04"
+        },
+        {
+          "id": "30-01",
+          "label": "30 01",
+          "baseId": "30",
+          "variant": "01"
+        },
+        {
+          "id": "30-02",
+          "label": "30 02",
+          "baseId": "30",
+          "variant": "02"
+        },
+        {
+          "id": "30-03",
+          "label": "30 03",
+          "baseId": "30",
+          "variant": "03"
+        },
+        {
+          "id": "31-01",
+          "label": "31 01",
+          "baseId": "31",
+          "variant": "01"
+        },
+        {
+          "id": "31-02",
+          "label": "31 02",
+          "baseId": "31",
+          "variant": "02"
+        },
+        {
+          "id": "31-03",
+          "label": "31 03",
+          "baseId": "31",
+          "variant": "03"
+        },
+        {
+          "id": "31-04",
+          "label": "31 04",
+          "baseId": "31",
+          "variant": "04"
+        },
+        {
+          "id": "31-05",
+          "label": "31 05",
+          "baseId": "31",
+          "variant": "05"
+        },
+        {
+          "id": "32-01",
+          "label": "32 01",
+          "baseId": "32",
+          "variant": "01"
+        },
+        {
+          "id": "32-02",
+          "label": "32 02",
+          "baseId": "32",
+          "variant": "02"
+        },
+        {
+          "id": "32-03",
+          "label": "32 03",
+          "baseId": "32",
+          "variant": "03"
+        },
+        {
+          "id": "32-04",
+          "label": "32 04",
+          "baseId": "32",
+          "variant": "04"
+        },
+        {
+          "id": "32-05",
+          "label": "32 05",
+          "baseId": "32",
+          "variant": "05"
+        },
+        {
+          "id": "33-01",
+          "label": "33 01",
+          "baseId": "33",
+          "variant": "01"
+        },
+        {
+          "id": "33-02",
+          "label": "33 02",
+          "baseId": "33",
+          "variant": "02"
+        },
+        {
+          "id": "33-03",
+          "label": "33 03",
+          "baseId": "33",
+          "variant": "03"
+        }
+      ]
+    },
+    "cloak": {
+      "optional": true,
+      "values": [
+        {
+          "id": "none",
+          "label": "None"
+        }
+      ]
+    },
+    "face": {
+      "optional": true,
+      "values": [
+        {
+          "id": "none",
+          "label": "None"
+        }
+      ]
+    },
+    "hat": {
+      "optional": true,
+      "values": [
+        {
+          "id": "none",
+          "label": "None"
+        }
+      ]
+    },
+    "accessory": {
+      "optional": true,
+      "values": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "Backpack-01",
+          "label": "Backpack 01",
+          "baseId": "Backpack",
+          "variant": "01"
+        },
+        {
+          "id": "Backpack-02",
+          "label": "Backpack 02",
+          "baseId": "Backpack",
+          "variant": "02"
+        },
+        {
+          "id": "Backpack-03",
+          "label": "Backpack 03",
+          "baseId": "Backpack",
+          "variant": "03"
+        },
+        {
+          "id": "Backpack-04",
+          "label": "Backpack 04",
+          "baseId": "Backpack",
+          "variant": "04"
+        },
+        {
+          "id": "Backpack-05",
+          "label": "Backpack 05",
+          "baseId": "Backpack",
+          "variant": "05"
+        },
+        {
+          "id": "Backpack-06",
+          "label": "Backpack 06",
+          "baseId": "Backpack",
+          "variant": "06"
+        },
+        {
+          "id": "Backpack-07",
+          "label": "Backpack 07",
+          "baseId": "Backpack",
+          "variant": "07"
+        },
+        {
+          "id": "Backpack-08",
+          "label": "Backpack 08",
+          "baseId": "Backpack",
+          "variant": "08"
+        },
+        {
+          "id": "Backpack-09",
+          "label": "Backpack 09",
+          "baseId": "Backpack",
+          "variant": "09"
+        },
+        {
+          "id": "Backpack-10",
+          "label": "Backpack 10",
+          "baseId": "Backpack",
+          "variant": "10"
+        },
+        {
+          "id": "Bataclava-01",
+          "label": "Bataclava 01",
+          "baseId": "Bataclava",
+          "variant": "01"
+        },
+        {
+          "id": "Bataclava-02",
+          "label": "Bataclava 02",
+          "baseId": "Bataclava",
+          "variant": "02"
+        },
+        {
+          "id": "Bataclava-03",
+          "label": "Bataclava 03",
+          "baseId": "Bataclava",
+          "variant": "03"
+        },
+        {
+          "id": "Beanie-01",
+          "label": "Beanie 01",
+          "baseId": "Beanie",
+          "variant": "01"
+        },
+        {
+          "id": "Beanie-02",
+          "label": "Beanie 02",
+          "baseId": "Beanie",
+          "variant": "02"
+        },
+        {
+          "id": "Beanie-03",
+          "label": "Beanie 03",
+          "baseId": "Beanie",
+          "variant": "03"
+        },
+        {
+          "id": "Beanie-04",
+          "label": "Beanie 04",
+          "baseId": "Beanie",
+          "variant": "04"
+        },
+        {
+          "id": "Beanie-05",
+          "label": "Beanie 05",
+          "baseId": "Beanie",
+          "variant": "05"
+        },
+        {
+          "id": "Beard-01",
+          "label": "Beard 01",
+          "baseId": "Beard",
+          "variant": "01"
+        },
+        {
+          "id": "Beard-02",
+          "label": "Beard 02",
+          "baseId": "Beard",
+          "variant": "02"
+        },
+        {
+          "id": "Beard-03",
+          "label": "Beard 03",
+          "baseId": "Beard",
+          "variant": "03"
+        },
+        {
+          "id": "Beard-04",
+          "label": "Beard 04",
+          "baseId": "Beard",
+          "variant": "04"
+        },
+        {
+          "id": "Beard-05",
+          "label": "Beard 05",
+          "baseId": "Beard",
+          "variant": "05"
+        },
+        {
+          "id": "Bee-01",
+          "label": "Bee 01",
+          "baseId": "Bee",
+          "variant": "01"
+        },
+        {
+          "id": "Bee-02",
+          "label": "Bee 02",
+          "baseId": "Bee",
+          "variant": "02"
+        },
+        {
+          "id": "Bee-03",
+          "label": "Bee 03",
+          "baseId": "Bee",
+          "variant": "03"
+        },
+        {
+          "id": "Bolt-01",
+          "label": "Bolt 01",
+          "baseId": "Bolt",
+          "variant": "01"
+        },
+        {
+          "id": "Bolt-02",
+          "label": "Bolt 02",
+          "baseId": "Bolt",
+          "variant": "02"
+        },
+        {
+          "id": "Bolt-03",
+          "label": "Bolt 03",
+          "baseId": "Bolt",
+          "variant": "03"
+        },
+        {
+          "id": "Chef-01",
+          "label": "Chef 01",
+          "baseId": "Chef",
+          "variant": "01"
+        },
+        {
+          "id": "Chef-02",
+          "label": "Chef 02",
+          "baseId": "Chef",
+          "variant": "02"
+        },
+        {
+          "id": "Chef-03",
+          "label": "Chef 03",
+          "baseId": "Chef",
+          "variant": "03"
+        },
+        {
+          "id": "Detective_Hat-01",
+          "label": "Detective Hat 01",
+          "baseId": "Detective_Hat",
+          "variant": "01"
+        },
+        {
+          "id": "Detective_Hat-02",
+          "label": "Detective Hat 02",
+          "baseId": "Detective_Hat",
+          "variant": "02"
+        },
+        {
+          "id": "Detective_Hat-03",
+          "label": "Detective Hat 03",
+          "baseId": "Detective_Hat",
+          "variant": "03"
+        },
+        {
+          "id": "Dino_Snapback-01",
+          "label": "Dino Snapback 01",
+          "baseId": "Dino_Snapback",
+          "variant": "01"
+        },
+        {
+          "id": "Dino_Snapback-02",
+          "label": "Dino Snapback 02",
+          "baseId": "Dino_Snapback",
+          "variant": "02"
+        },
+        {
+          "id": "Dino_Snapback-03",
+          "label": "Dino Snapback 03",
+          "baseId": "Dino_Snapback",
+          "variant": "03"
+        },
+        {
+          "id": "Glasses-01",
+          "label": "Glasses 01",
+          "baseId": "Glasses",
+          "variant": "01"
+        },
+        {
+          "id": "Glasses-02",
+          "label": "Glasses 02",
+          "baseId": "Glasses",
+          "variant": "02"
+        },
+        {
+          "id": "Glasses-03",
+          "label": "Glasses 03",
+          "baseId": "Glasses",
+          "variant": "03"
+        },
+        {
+          "id": "Glasses-04",
+          "label": "Glasses 04",
+          "baseId": "Glasses",
+          "variant": "04"
+        },
+        {
+          "id": "Glasses-05",
+          "label": "Glasses 05",
+          "baseId": "Glasses",
+          "variant": "05"
+        },
+        {
+          "id": "Glasses-06",
+          "label": "Glasses 06",
+          "baseId": "Glasses",
+          "variant": "06"
+        },
+        {
+          "id": "Gloves-01",
+          "label": "Gloves 01",
+          "baseId": "Gloves",
+          "variant": "01"
+        },
+        {
+          "id": "Gloves-02",
+          "label": "Gloves 02",
+          "baseId": "Gloves",
+          "variant": "02"
+        },
+        {
+          "id": "Gloves-03",
+          "label": "Gloves 03",
+          "baseId": "Gloves",
+          "variant": "03"
+        },
+        {
+          "id": "Gloves-04",
+          "label": "Gloves 04",
+          "baseId": "Gloves",
+          "variant": "04"
+        },
+        {
+          "id": "Ladybug-01",
+          "label": "Ladybug 01",
+          "baseId": "Ladybug",
+          "variant": "01"
+        },
+        {
+          "id": "Ladybug-02",
+          "label": "Ladybug 02",
+          "baseId": "Ladybug",
+          "variant": "02"
+        },
+        {
+          "id": "Ladybug-03",
+          "label": "Ladybug 03",
+          "baseId": "Ladybug",
+          "variant": "03"
+        },
+        {
+          "id": "Ladybug-04",
+          "label": "Ladybug 04",
+          "baseId": "Ladybug",
+          "variant": "04"
+        },
+        {
+          "id": "Medical_Mask-01",
+          "label": "Medical Mask 01",
+          "baseId": "Medical_Mask",
+          "variant": "01"
+        },
+        {
+          "id": "Medical_Mask-02",
+          "label": "Medical Mask 02",
+          "baseId": "Medical_Mask",
+          "variant": "02"
+        },
+        {
+          "id": "Medical_Mask-03",
+          "label": "Medical Mask 03",
+          "baseId": "Medical_Mask",
+          "variant": "03"
+        },
+        {
+          "id": "Medical_Mask-04",
+          "label": "Medical Mask 04",
+          "baseId": "Medical_Mask",
+          "variant": "04"
+        },
+        {
+          "id": "Medical_Mask-05",
+          "label": "Medical Mask 05",
+          "baseId": "Medical_Mask",
+          "variant": "05"
+        },
+        {
+          "id": "Monocle-01",
+          "label": "Monocle 01",
+          "baseId": "Monocle",
+          "variant": "01"
+        },
+        {
+          "id": "Monocle-02",
+          "label": "Monocle 02",
+          "baseId": "Monocle",
+          "variant": "02"
+        },
+        {
+          "id": "Monocle-03",
+          "label": "Monocle 03",
+          "baseId": "Monocle",
+          "variant": "03"
+        },
+        {
+          "id": "Mustache-01",
+          "label": "Mustache 01",
+          "baseId": "Mustache",
+          "variant": "01"
+        },
+        {
+          "id": "Mustache-02",
+          "label": "Mustache 02",
+          "baseId": "Mustache",
+          "variant": "02"
+        },
+        {
+          "id": "Mustache-03",
+          "label": "Mustache 03",
+          "baseId": "Mustache",
+          "variant": "03"
+        },
+        {
+          "id": "Mustache-04",
+          "label": "Mustache 04",
+          "baseId": "Mustache",
+          "variant": "04"
+        },
+        {
+          "id": "Mustache-05",
+          "label": "Mustache 05",
+          "baseId": "Mustache",
+          "variant": "05"
+        },
+        {
+          "id": "Party_Cone-01",
+          "label": "Party Cone 01",
+          "baseId": "Party_Cone",
+          "variant": "01"
+        },
+        {
+          "id": "Party_Cone-02",
+          "label": "Party Cone 02",
+          "baseId": "Party_Cone",
+          "variant": "02"
+        },
+        {
+          "id": "Party_Cone-03",
+          "label": "Party Cone 03",
+          "baseId": "Party_Cone",
+          "variant": "03"
+        },
+        {
+          "id": "Party_Cone-04",
+          "label": "Party Cone 04",
+          "baseId": "Party_Cone",
+          "variant": "04"
+        },
+        {
+          "id": "Policeman_Hat-01",
+          "label": "Policeman Hat 01",
+          "baseId": "Policeman_Hat",
+          "variant": "01"
+        },
+        {
+          "id": "Policeman_Hat-02",
+          "label": "Policeman Hat 02",
+          "baseId": "Policeman_Hat",
+          "variant": "02"
+        },
+        {
+          "id": "Policeman_Hat-03",
+          "label": "Policeman Hat 03",
+          "baseId": "Policeman_Hat",
+          "variant": "03"
+        },
+        {
+          "id": "Policeman_Hat-04",
+          "label": "Policeman Hat 04",
+          "baseId": "Policeman_Hat",
+          "variant": "04"
+        },
+        {
+          "id": "Policeman_Hat-05",
+          "label": "Policeman Hat 05",
+          "baseId": "Policeman_Hat",
+          "variant": "05"
+        },
+        {
+          "id": "Policeman_Hat-06",
+          "label": "Policeman Hat 06",
+          "baseId": "Policeman_Hat",
+          "variant": "06"
+        },
+        {
+          "id": "Snapback-01",
+          "label": "Snapback 01",
+          "baseId": "Snapback",
+          "variant": "01"
+        },
+        {
+          "id": "Snapback-02",
+          "label": "Snapback 02",
+          "baseId": "Snapback",
+          "variant": "02"
+        },
+        {
+          "id": "Snapback-03",
+          "label": "Snapback 03",
+          "baseId": "Snapback",
+          "variant": "03"
+        },
+        {
+          "id": "Snapback-04",
+          "label": "Snapback 04",
+          "baseId": "Snapback",
+          "variant": "04"
+        },
+        {
+          "id": "Snapback-05",
+          "label": "Snapback 05",
+          "baseId": "Snapback",
+          "variant": "05"
+        },
+        {
+          "id": "Snapback-06",
+          "label": "Snapback 06",
+          "baseId": "Snapback",
+          "variant": "06"
+        },
+        {
+          "id": "Zombie_Brain-01",
+          "label": "Zombie Brain 01",
+          "baseId": "Zombie_Brain",
+          "variant": "01"
+        },
+        {
+          "id": "Zombie_Brain-02",
+          "label": "Zombie Brain 02",
+          "baseId": "Zombie_Brain",
+          "variant": "02"
+        },
+        {
+          "id": "Zombie_Brain-03",
+          "label": "Zombie Brain 03",
+          "baseId": "Zombie_Brain",
+          "variant": "03"
+        }
+      ]
+    }
+  }
+}

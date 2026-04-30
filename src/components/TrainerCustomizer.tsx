@@ -21,21 +21,41 @@ const INITIAL_PERSONALITY: TrainerPersonality = {
   dislikes: [],
 };
 
-// Mana Seed has 7 trait slots; we group them into 4 tabs + VIBE for personality.
+// LimeZu has 6 trait slots; we group them into 3 tabs + VIBE for personality.
 const TAB_CATEGORIES: Record<Exclude<TabKey, 'vibe'>, Array<keyof TrainerConfig>> = {
-  body:  ['body', 'hair', 'hairColor'],
-  wear:  ['outfit', 'cloak'],
-  face:  ['face'],
-  extra: ['hat'],
+  body:  ['body', 'hair', 'hairColor', 'eyes'],
+  wear:  ['outfit', 'accessory'],
+  face:  [],
+  extra: [],
 };
 
-export default function TrainerCustomizer() {
+interface TrainerCustomizerProps {
+  initialConfig?: TrainerConfig;
+  initialPersonality?: TrainerPersonality;
+  aiContext?: { reasoning: string };
+  onRegenerate?: () => void;
+}
+
+export default function TrainerCustomizer({
+  initialConfig,
+  initialPersonality,
+  aiContext,
+  onRegenerate,
+}: TrainerCustomizerProps = {}) {
   const router = useRouter();
-  const [config, setConfig] = useState<TrainerConfig>(INITIAL_CONFIG);
-  const [personality, setPersonality] = useState<TrainerPersonality>(INITIAL_PERSONALITY);
+  const [config, setConfig] = useState<TrainerConfig>(initialConfig ?? INITIAL_CONFIG);
+  const [personality, setPersonality] = useState<TrainerPersonality>(initialPersonality ?? INITIAL_PERSONALITY);
   const [activeTab, setActiveTab] = useState<TabKey>('body');
   const [showSignup, setShowSignup] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // When AI props change (e.g. after a re-roll), sync state.
+  useEffect(() => {
+    if (initialConfig) setConfig(initialConfig);
+  }, [initialConfig]);
+  useEffect(() => {
+    if (initialPersonality) setPersonality(initialPersonality);
+  }, [initialPersonality]);
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 50);
@@ -68,6 +88,7 @@ export default function TrainerCustomizer() {
   if (!config.outfit)    missingLabels.push('outfit');
 
   // Show a red dot on tabs that still have unfilled required slots.
+  // Only body/hair/hairColor/outfit are required; eyes/accessory default to 'none'.
   const unfilledByTab: Partial<Record<TabKey, boolean>> = {
     body: ['body', 'hair', 'hairColor'].some((k) => !config[k as keyof TrainerConfig]),
     wear: !config.outfit,

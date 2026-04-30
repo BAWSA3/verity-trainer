@@ -1,32 +1,37 @@
-// Trainer schema — V2 (Mana Seed paper-doll model, 2026-04-29)
+// Trainer schema — V2 LimeZu (2026-04-29 redesign)
 //
-// Mana Seed's Character Base is gender-neutral with a unified outfit layer.
-// Layer order (per Seliel's `using this base.txt` guide), lowest to highest:
-//   0bas (body)
-//   1out (outfit — single piece, top + bottom combined)
-//   2clo (cloaks / capes / mantles)
-//   3fac (face items — glasses, masks)
-//   4har (hair)
-//   5hat (hats / hoods)
-//   6tla / 7tlb (tools — weapons / shields, skipped for V1)
+// LimeZu's Modern Interiors Character Generator is a paper-doll layered system.
+// Layer order (bottom to top), per LimeZu's CHARACTER_GENERATOR.txt:
+//   body      — skin tone variant
+//   outfit    — single-piece clothing (top + bottom combined)
+//   eyes      — eye style + color
+//   hair      — hair style + color variant
+//   accessory — hat / glasses / backpack / mustache (single optional slot)
 //
-// Legacy v1 rows in trainer_signups.trainer_config use the pre-redesign
-// shape with {face, neck, accessory, facialHair, gender}. The unpackTrainer()
-// adapter in src/lib/trainer-data.ts normalizes those into this shape on
-// read — no SQL migration runs.
+// Sprites are 48 wide × 96 tall PNG, in 4 cardinal directions:
+//   south (-s) - default front view, used for share cards + customizer
+//   east  (-e), west (-w), north (-n) — available for V2 4-direction features
+//
+// Legacy v1 rows in trainer_signups.trainer_config use the pre-LimeZu Mana Seed
+// shape ({ body, hair, hairColor, outfit, cloak, face, hat }). The unpackTrainer()
+// adapter in src/lib/trainer-data.ts normalizes those into this shape on read —
+// legacy rows render as blank silhouettes since their old top/bottom/face fields
+// don't map onto LimeZu's slot model. Pre-launch app — accepted.
+
+export const DIRECTIONS = ['s', 'e', 'w', 'n'] as const;
+export type Direction = (typeof DIRECTIONS)[number];
 
 export type Zodiac =
   | 'aries' | 'taurus' | 'gemini' | 'cancer' | 'leo' | 'virgo'
   | 'libra' | 'scorpio' | 'sagittarius' | 'capricorn' | 'aquarius' | 'pisces';
 
 export type Category =
-  | 'body'      // 0bas — skin tone variant
-  | 'hair'      // 4har — hair style
-  | 'hairColor' // variant suffix on the hair PNG (v00..v13)
-  | 'outfit'    // 1out — unified top + bottom outfit
-  | 'cloak'     // 2clo — optional cloak / cape / mantle
-  | 'face'      // 3fac — optional glasses / mask
-  | 'hat';      // 5hat — optional hat / hood
+  | 'body'      // skin tone variant
+  | 'eyes'      // eye style (optional, defaults 'none')
+  | 'hair'      // hair style
+  | 'hairColor' // hair color variant suffix on the hair PNG
+  | 'outfit'    // single-piece outfit
+  | 'accessory'; // optional hat / glasses / backpack / etc.
 
 export interface TrainerOption {
   id: string;
@@ -35,15 +40,14 @@ export interface TrainerOption {
 
 export interface TrainerConfig {
   // Required-for-generate (must be non-empty before Generate enables).
-  body: string;       // skin-tone variant id (e.g. 'v01'..'v10')
-  hair: string;       // hair style id (e.g. 'bob1', 'dap1')
-  hairColor: string;  // hair variant id (e.g. 'v00'..'v13')
-  outfit: string;     // outfit id (e.g. 'fstr', 'pfpn')
+  body: string;       // e.g. '01'..'09' (skin tone)
+  hair: string;       // hair style id (e.g. '01'..'29')
+  hairColor: string;  // hair color variant id (e.g. '01'..'07')
+  outfit: string;     // outfit id (e.g. '01'..'33')
 
   // Optional layers — default to 'none', never empty string.
-  cloak: string;
-  face: string;
-  hat: string;
+  eyes: string;
+  accessory: string;
 }
 
 export interface TrainerPersonality {
@@ -61,9 +65,10 @@ export interface SignupData {
 }
 
 // Stored shape for trainer_signups.trainer_config JSONB (v2).
-// v1 rows omit schemaVersion + nest config differently — see trainer-data.ts.
+// v1 rows omit schemaVersion + use the pre-LimeZu shape — see trainer-data.ts.
 export interface StoredTrainer {
   schemaVersion: 2;
   config: TrainerConfig;
   personality: TrainerPersonality;
+  source?: 'ai' | 'manual';
 }

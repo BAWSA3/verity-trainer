@@ -7,7 +7,7 @@ import { ZODIAC_MODIFIERS } from './personality';
 export function hashConfig(c: TrainerConfig, p: TrainerPersonality): number {
   const str = [
     c.body, c.hair, c.hairColor, c.outfit,
-    c.cloak, c.face, c.hat,
+    c.eyes, c.accessory,
     p.zodiac, ...p.likes, ...p.dislikes,
   ].join('-');
   let hash = 0;
@@ -34,12 +34,12 @@ const clamp = (n: number) => Math.max(MIN_STAT, Math.min(MAX_STAT, n));
 export function generateStats(c: TrainerConfig, p: TrainerPersonality): TrainerStats {
   const h = hashConfig(c, p);
   const zodiacMod = p.zodiac ? (ZODIAC_MODIFIERS[p.zodiac as Zodiac] ?? 0) : 0;
-  // Cloaks/cloak-likes lend "street cred" in the new layer model.
-  const cloakBonus = c.cloak && c.cloak !== 'none' ? 8 : 0;
+  // Accessories lend "street cred" in the new LimeZu layer model.
+  const accessoryBonus = c.accessory && c.accessory !== 'none' ? 8 : 0;
   return {
     style:    clamp(MIN_STAT + (h % RANGE)),
     charisma: clamp(MIN_STAT + ((h >> 8)  % RANGE) + zodiacMod),
-    street:   clamp(MIN_STAT + ((h >> 16) % RANGE) + cloakBonus),
+    street:   clamp(MIN_STAT + ((h >> 16) % RANGE) + accessoryBonus),
     luck:     clamp(MIN_STAT + ((h >> 24) % RANGE) + p.likes.length * 2),
   };
 }

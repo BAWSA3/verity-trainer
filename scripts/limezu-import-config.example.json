@@ -1,0 +1,60 @@
+{
+  "_comment": "Copy this file to vendor/limezu-pack/import-config.json and edit to match the actual layout of LimeZu's Modern Interiors Character Generator pack. The vendor dir is gitignored so the real config lives there. Run with --discover first to inspect the unzipped pack and fill these in.",
+
+  "_step1_pickSize": "LimeZu ships 16x16, 32x32, 48x48 — pick which size folder you want to import from. Recommend 48 for hi-fi pixel feel.",
+  "spriteSize": 48,
+
+  "_step2_spritesheetOrSingles": "If LimeZu's character generator ships SPRITESHEETS (animation frames in a grid), set spritesheet block. If it ships individual already-cropped per-pose PNGs, omit the block entirely and the importer will copy the file as-is.",
+  "spritesheet": {
+    "cellWidth": 48,
+    "cellHeight": 96,
+    "idleCol": 0,
+    "idleRow": 0
+  },
+
+  "_step3_bustCrop": "Bust-region rect inside the full-body sprite — used by /api/og to extract the share-card portrait. Eyeball this against the actual sprite once you can see one. Origin is top-left.",
+  "bustCrop": { "x": 12, "y": 4, "w": 24, "h": 28 },
+
+  "_step4_rules": "Each rule maps a regex against pack-relative file paths to a category + ID resolution strategy. Run --discover first; the discover output prints the actual folder structure so you can write accurate match patterns.",
+  "rules": [
+    {
+      "_": "Bodies — one PNG per skin tone. ID becomes the slugified filename.",
+      "match": "Character_Generator/Bodies/.*\\.png",
+      "category": "body",
+      "idFrom": "filename"
+    },
+    {
+      "_": "Hair — folder per style, file per color variant. Capture both via regex named groups.",
+      "match": "Character_Generator/Hairstyles/(?<style>[^/]+)/(?<color>[^/]+)\\.png",
+      "category": "hair",
+      "styleFrom": "match.groups.style",
+      "variantFrom": "match.groups.color"
+    },
+    {
+      "_": "Outfits — modern/streetwear single-piece body covers. ID = slugified filename.",
+      "match": "Character_Generator/Outfits/.*\\.png",
+      "category": "outfit",
+      "idFrom": "filename"
+    },
+    {
+      "_": "Accessories — glasses, scarves, jewelry. Slot is optional in schema (defaults to 'none').",
+      "match": "Character_Generator/Accessories/.*\\.png",
+      "category": "accessory",
+      "idFrom": "filename"
+    },
+    {
+      "_": "Hats — caps, beanies, hoods.",
+      "match": "Character_Generator/Hats/.*\\.png",
+      "category": "hat",
+      "idFrom": "filename"
+    }
+  ],
+
+  "_step5_labels": "Optional friendly labels keyed by id. Anything missing falls back to title-cased id.",
+  "labels": {
+    "tee_white": "White Tee",
+    "denim_blue": "Blue Denim",
+    "bomber_black": "Black Bomber",
+    "beanie_red": "Red Beanie"
+  }
+}

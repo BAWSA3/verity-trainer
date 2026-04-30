@@ -45,14 +45,14 @@ function buildValidIdMap(): Record<string, Set<string>> {
 const VALID_IDS = buildValidIdMap();
 
 // Which keys must be present on the config object. Mirrors TrainerConfig shape.
+// LimeZu schema (V2): body/hair/hairColor/outfit required; eyes/accessory optional ('none').
 const ALL_KEYS = [
   'body',
   'hair',
   'hairColor',
   'outfit',
-  'cloak',
-  'face',
-  'hat',
+  'eyes',
+  'accessory',
 ] as const;
 
 const REQUIRED = new Set<string>(REQUIRED_FOR_GENERATE);
