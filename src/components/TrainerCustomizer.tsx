@@ -159,28 +159,54 @@ export default function TrainerCustomizer({
                 )}
               </div>
 
+              {aiContext?.reasoning && (
+                <div className="mt-5 p-3 rounded border border-[#367d95]/30 bg-[#367d95]/5">
+                  <p className="text-[10px] tracking-[0.15em] uppercase text-[#367d95] font-bold mb-1.5">
+                    Why this trainer
+                  </p>
+                  <p className="text-[12px] leading-relaxed text-[#16272c]">
+                    {aiContext.reasoning}
+                  </p>
+                </div>
+              )}
+
               <div className="mt-6 pt-5 border-t border-[#16272c]/15">
-                <button
-                  onClick={handleGenerate}
-                  disabled={!canGenerate}
-                  aria-disabled={!canGenerate}
-                  className="w-full py-3.5 rounded-[40px] text-white text-[14px] tracking-[0.15em] uppercase transition-all
-                             enabled:hover:scale-[1.01]
-                             enabled:shadow-[0_10px_30px_-10px_rgba(54,125,149,0.5)]
-                             enabled:hover:shadow-[0_15px_40px_-10px_rgba(54,125,149,0.7)]
-                             disabled:opacity-40 disabled:cursor-not-allowed disabled:grayscale"
-                  style={{
-                    fontFamily: 'var(--font-loos), sans-serif',
-                    fontWeight: 700,
-                    background:
-                      'linear-gradient(134.68deg, rgb(144,179,77) 28%, rgb(54,125,149) 77%, rgb(22,39,44) 100%)',
-                  }}
-                >
-                  ▶ Generate My Trainer
-                </button>
+                <div className="flex gap-2">
+                  {onRegenerate && (
+                    <button
+                      onClick={onRegenerate}
+                      type="button"
+                      className="px-4 py-3.5 rounded-[40px] border-2 border-[#16272c] text-[#16272c] text-[12px] tracking-[0.15em] uppercase transition-all hover:bg-[#16272c] hover:text-white"
+                      style={{ fontFamily: 'var(--font-loos), sans-serif', fontWeight: 700 }}
+                      title="Re-roll the AI's choices"
+                    >
+                      🎲 Re-roll
+                    </button>
+                  )}
+                  <button
+                    onClick={handleGenerate}
+                    disabled={!canGenerate}
+                    aria-disabled={!canGenerate}
+                    className="flex-1 py-3.5 rounded-[40px] text-white text-[14px] tracking-[0.15em] uppercase transition-all
+                               enabled:hover:scale-[1.01]
+                               enabled:shadow-[0_10px_30px_-10px_rgba(54,125,149,0.5)]
+                               enabled:hover:shadow-[0_15px_40px_-10px_rgba(54,125,149,0.7)]
+                               disabled:opacity-40 disabled:cursor-not-allowed disabled:grayscale"
+                    style={{
+                      fontFamily: 'var(--font-loos), sans-serif',
+                      fontWeight: 700,
+                      background:
+                        'linear-gradient(134.68deg, rgb(144,179,77) 28%, rgb(54,125,149) 77%, rgb(22,39,44) 100%)',
+                    }}
+                  >
+                    {aiContext ? '▶ Looks good — claim it' : '▶ Generate My Trainer'}
+                  </button>
+                </div>
                 <p className="text-center text-[#8a7d4d] text-[10px] sm:text-[11px] mt-3 tracking-[0.15em] uppercase">
                   {canGenerate
-                    ? 'Claim your spot before the drop'
+                    ? aiContext
+                      ? 'Tweak any layer above, or claim as-is'
+                      : 'Claim your spot before the drop'
                     : `Pick ${missingLabels.join(', ')} to generate`}
                 </p>
               </div>
