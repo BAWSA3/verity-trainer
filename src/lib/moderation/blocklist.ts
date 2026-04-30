@@ -67,6 +67,19 @@ export const PROFANITY: readonly string[] = [
   'camgirl', 'camboy',
 ];
 
+// Crude / sexual slang the PROFANITY list misses. AI-output-only — gets
+// added on top of PROFANITY when scrubbing model output. Keep this tight:
+// every entry should have ZERO legitimate use as a chip. If a term has
+// any common non-sexual meaning, leave it out and rely on OpenAI moderation
+// instead. Tune by adding what AI generation repeatedly emits in dev logs.
+export const CRUDE: readonly string[] = [
+  'coochie', 'kooch', 'cooch',
+  'thicc', 'thique',
+  'bussy',
+  'freaky', 'freakshow',
+  'kinky',
+];
+
 // Slurs — universal block, no exceptions. Intentionally not exhaustive;
 // the OpenAI layer catches gaps. Kept in a separate const so reviewers
 // can tune the two lists independently.

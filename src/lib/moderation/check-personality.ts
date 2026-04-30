@@ -9,7 +9,7 @@
  * skipped gracefully if OPENAI_API_KEY is missing.
  */
 
-import { SLURS, findBlocklistMatch } from './blocklist';
+import { SLURS, PROFANITY, CRUDE, findBlocklistMatch } from './blocklist';
 import { VALID_ZODIACS } from '../personality';
 import type { TrainerPersonality } from '@/types/trainer';
 
@@ -133,4 +133,36 @@ export async function checkPersonality(
   }
 
   return { ok: true };
+}
+
+/**
+ * Scrubs AI-generated chips against the strict layer (SLURS + PROFANITY +
+ * CRUDE). Returns chips with offending entries dropped. Runs only static
+ * lists — fast, deterministic, no network. Used inside /api/generate-trainer
+ * so model output never reaches the UI with crude content. User-typed input
+ * keeps using checkPersonality() above (lenient — chips can mention brands
+ * + benign profanity adjacent terms without false-positive trips).
+ *
+ * Each dropped chip is reported via the `dropped` array so the route handler
+ * can decide to backfill defaults + console.log for blocklist tuning.
+ */
+export interface ChipScrubResult {
+  cleaned: string[];
+  dropped: Array<{ chip: string; match: string; layer: 'slur' | 'profanity' | 'crude' }>;
+}
+
+export function scrubAIChips(chips: readonly string[]): ChipScrubResult {
+  const cleaned: string[] = [];
+  const dropped: ChipScrubResult['dropped'] = [];
+  for (const chip of chips) {
+    if (typeof chip !== 'string') continue;
+    const slur = findBlocklistMatch(chip, SLURS);
+    if (slur) { dropped.push({ chip, match: slur, layer: 'slur' }); continue; }
+    const profanity = findBlocklistMatch(chip, PROFANITY);
+    if (profanity) { dropped.push({ chip, match: profanity, layer: 'profanity' }); continue; }
+    const crude = findBlocklistMatch(chip, CRUDE);
+    if (crude) { dropped.push({ chip, match: crude, layer: 'crude' }); continue; }
+    cleaned.push(chip);
+  }
+  return { cleaned, dropped };
 }
