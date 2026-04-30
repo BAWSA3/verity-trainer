@@ -10,9 +10,13 @@
  */
 
 import { PROFANITY, SLURS, findBlocklistMatch } from './blocklist';
-import { BRANDS } from './brand-blocklist';
 import { VALID_ZODIACS } from '../personality';
 import type { TrainerPersonality } from '@/types/trainer';
+
+// Note: BRANDS blocklist intentionally NOT applied to personality chips.
+// Likes/dislikes are SUPPOSED to mention brands and platforms ("instagram
+// aesthetic", "google docs", "openai drama") — that's signal, not impersonation.
+// Brand-blocklist only applies to trainer names (where impersonation matters).
 
 export type PersonalityReason =
   | 'count'
@@ -20,7 +24,6 @@ export type PersonalityReason =
   | 'invalid_chars'
   | 'slur'
   | 'profanity'
-  | 'brand'
   | 'openai'
   | 'openai_error'
   | 'invalid_zodiac';
@@ -71,15 +74,13 @@ export async function checkPersonality(
     }
   }
 
-  // 3. blocklists — slurs first (hardest), then profanity, then brands
+  // 3. blocklists — slurs + profanity only (brands intentionally skipped — see top)
   for (const field of ['likes', 'dislikes'] as const) {
     for (const chip of p[field]) {
       const slurHit = findBlocklistMatch(chip, SLURS);
       if (slurHit) return { ok: false, reason: 'slur', field, match: slurHit };
       const profHit = findBlocklistMatch(chip, PROFANITY);
       if (profHit) return { ok: false, reason: 'profanity', field, match: profHit };
-      const brandHit = findBlocklistMatch(chip, BRANDS);
-      if (brandHit) return { ok: false, reason: 'brand', field, match: brandHit };
     }
   }
 

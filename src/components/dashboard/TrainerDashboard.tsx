@@ -103,36 +103,41 @@ export default function TrainerDashboard({
     >
       <PokeBackground />
 
-      <div className="relative z-10 max-w-[1200px] mx-auto px-3 sm:px-5 py-4 sm:py-6">
-        <div className="dashboard-grid">
-          <div className="grid-fullbody">
-            <FullBodyWindow config={config} />
-          </div>
-          <div className="grid-music">
-            <MusicPlayerWindow config={config} />
-          </div>
-          <div className="grid-headshot">
-            <HeadshotWindow config={config} />
-          </div>
-          <div className="grid-scene">
-            <SceneWindow config={config} />
-          </div>
-          <div className="grid-identity">
-            <IdentityWindow
-              config={config}
-              personality={personality}
-              trainerName={trainerName}
-              onNameChange={setTrainerName}
-              onZodiacChange={handleZodiacChange}
-            />
-          </div>
-          <div className="grid-likes-dislikes">
-            <div className="flex flex-col sm:flex-row gap-3 h-full">
-              <div className="flex-1"><LikesWindow items={personality.likes} /></div>
-              <div className="flex-1"><DislikesWindow items={personality.dislikes} /></div>
+      <div className="relative z-10 max-w-[1320px] mx-auto px-3 sm:px-5 py-4 sm:py-6">
+        <div className="dashboard-shell">
+          {/* LEFT — trainer detail windows */}
+          <div className="dashboard-grid">
+            <div className="grid-fullbody">
+              <FullBodyWindow config={config} />
+            </div>
+            <div className="grid-music">
+              <MusicPlayerWindow config={config} />
+            </div>
+            <div className="grid-headshot">
+              <HeadshotWindow config={config} />
+            </div>
+            <div className="grid-scene">
+              <SceneWindow config={config} />
+            </div>
+            <div className="grid-identity">
+              <IdentityWindow
+                config={config}
+                personality={personality}
+                trainerName={trainerName}
+                onNameChange={setTrainerName}
+                onZodiacChange={handleZodiacChange}
+              />
+            </div>
+            <div className="grid-likes-dislikes">
+              <div className="flex flex-col sm:flex-row gap-3 h-full">
+                <div className="flex-1"><LikesWindow items={personality.likes} /></div>
+                <div className="flex-1"><DislikesWindow items={personality.dislikes} /></div>
+              </div>
             </div>
           </div>
-          <div className="grid-customizer">
+
+          {/* RIGHT — customizer (desktop side panel; bottom on mobile) */}
+          <div className="dashboard-customizer">
             <CustomizerWindow
               config={config}
               personality={personality}
@@ -161,6 +166,31 @@ export default function TrainerDashboard({
       )}
 
       <style jsx>{`
+        /* Mobile: vertical stack — trainer windows on top, customizer at bottom. */
+        .dashboard-shell {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        /* Desktop ≥1024px: two columns side-by-side. Trainer windows on the
+           left in a sub-grid, customizer fixed on the right (sticky so it
+           stays in view as the user scrolls through the windows). */
+        @media (min-width: 1024px) {
+          .dashboard-shell {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 380px;
+            gap: 16px;
+            align-items: start;
+          }
+          .dashboard-customizer {
+            position: sticky;
+            top: 16px;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+          }
+        }
+
         .dashboard-grid {
           display: grid;
           gap: 12px;
@@ -171,26 +201,26 @@ export default function TrainerDashboard({
             "music"
             "identity"
             "likes-dislikes"
-            "scene"
-            "customizer";
+            "scene";
         }
         @media (min-width: 1024px) {
           .dashboard-grid {
-            grid-template-columns: 320px 1fr 320px;
+            grid-template-columns: 280px 1fr;
             grid-template-areas:
-              "fullbody music    headshot"
-              "fullbody scene    identity"
-              "fullbody scene    likes-dislikes"
-              "customizer customizer customizer";
+              "fullbody music"
+              "fullbody scene"
+              "fullbody headshot"
+              "fullbody identity"
+              "fullbody likes-dislikes";
           }
         }
+
         .grid-fullbody       { grid-area: fullbody; }
         .grid-music          { grid-area: music; }
         .grid-headshot       { grid-area: headshot; }
         .grid-scene          { grid-area: scene; }
         .grid-identity       { grid-area: identity; }
         .grid-likes-dislikes { grid-area: likes-dislikes; }
-        .grid-customizer     { grid-area: customizer; }
       `}</style>
     </div>
   );
