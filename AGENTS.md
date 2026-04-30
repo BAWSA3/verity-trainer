@@ -76,6 +76,29 @@ Layout uses CSS Grid with named areas — see the `.dashboard-grid` styled block
 - The signup pipeline expects three tables: `trainer_signups`, `signup_attempts`, `signup_audit_log`. Schema in `supabase-migration.sql` + `supabase-migration-moderation.sql`.
 - `node scripts/apply-supabase-migrations.mjs` runs both files via the `pg` client using `DATABASE_URL` from `.env.local`. If the password is stale (BrandOS rotates it occasionally), the script writes `tmp-migrations.sql` for manual paste into the Supabase SQL editor at https://supabase.com/dashboard/project/gdxvijmezkwlqdnxfxpe/sql.
 
+## Fixed-view dashboard (Iteration 3)
+- `/create` review phase renders a 4-column fixed dashboard at desktop ≥1440px wide. Columns: FullBody | Music+Scene | Headshot+Identity+Likes+Dislikes | Customizer. The dashboard takes `height: calc(100vh - 28px)` with no page scroll. Customizer column has `overflow-y: auto` so its tab content (which can be tall in BODY tab) scrolls internally.
+- Below 1440px viewport → existing single-column flex stack. Mobile-first path is `display: flex; flex-direction: column;` and applies until the @media query kicks in. Tablets (768–1439px) currently stack; could add an intermediate breakpoint later.
+- `<PixelWindow fill>` makes a window stretch to fill its grid cell + lets its body content flex (uses `h-full flex flex-col min-h-0`). Use for any window that needs to absorb vertical slack.
+
+## Personality moderation (post-Iteration 3)
+- `checkPersonality` in `src/lib/moderation/check-personality.ts` runs SLURS only (plus OpenAI omni-moderation if `OPENAI_API_KEY` is set). PROFANITY and BRANDS blocklists were dropped because their substring matchers produced too many false positives on AI-generated chips ("pissed", "dickheads", "google docs"). Slurs are tiny + curated + a hard floor.
+- Trainer name (`checkTrainerName` in `check-name.ts`) still gets the full tri-layer: slurs + profanity + brands + OpenAI. Impersonation matters there.
+- `/api/signup` console.errors `[signup] personality flagged: { reason, field, match }` when checks fail, so future moderation issues are diagnosable from dev logs.
+
+## Vercel deploy
+- Live demo URL: see `verity-trainer/vercel.json` for project config.
+- First-time setup: either (a) `cd verity-trainer && npx vercel login && npx vercel link && npx vercel env add ANTHROPIC_API_KEY production` (repeat for each env var) `&& npx vercel --prod`, or (b) import the GitHub repo at https://vercel.com/new (see env var list below).
+- Auto-deploys on push to `feat/hifi-pixel-redesign-v1` (or whatever branch is configured as Production in Vercel).
+- Required production env vars:
+  - `ANTHROPIC_API_KEY` (Claude)
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `SOCIALDATA_API_KEY` (X profile fetch)
+  - `NEXT_PUBLIC_APP_URL` (set to the live URL once deployed)
+  - Optional: `OPENAI_API_KEY` (deeper moderation pass)
+
 ## Things you'll be tempted to do but shouldn't
 - **Don't add new sprite categories without updating `manifest.json` AND `check-config.ts`'s `ALL_KEYS` const.** Server-side validation will reject the unknown category as `unknown_id` and signups will start failing silently.
 - **Don't refactor the signup pipeline to "DRY it up".** The flat ordered pipeline is intentional — every step has its own audit-log path with a distinct `flag_reason`. Keep the literal step ordering.
