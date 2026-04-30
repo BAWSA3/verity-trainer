@@ -195,6 +195,17 @@ export default function TrainerDashboard({
             overflow: hidden;
           }
         }
+
+        /* All viewports: customizer column has its own bounded height so the
+           internal overflow-y-auto on its body kicks in regardless of layout.
+           Below 1440px (stacked), the customizer is bounded to roughly viewport
+           height so users can flip through tabs/selectors without page-scrolling
+           past the entire dashboard. */
+        @media (max-width: 1439px) {
+          .col-customizer {
+            max-height: calc(100vh - 32px);
+          }
+        }
       `}</style>
     </div>
   );
