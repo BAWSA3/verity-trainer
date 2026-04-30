@@ -46,3 +46,4 @@ next-env.d.ts
 /vendor/limezu-pack/
 /vendor/manaseed-pack/
 tmp-debug/
+tmp-migrations.sql

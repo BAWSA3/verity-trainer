@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import { INITIAL_CONFIG } from '@/lib/trainer-options';
-import TrainerCustomizer from '@/components/TrainerCustomizer';
+import TrainerDashboard from '@/components/dashboard/TrainerDashboard';
 import PokeBackground from '@/components/PokeBackground';
 
 const INITIAL_PERSONALITY: TrainerPersonality = { zodiac: '', likes: [], dislikes: [] };
@@ -85,7 +85,7 @@ export default function CreatePageClient() {
 
   if (phase === 'reviewing' && ai) {
     return (
-      <TrainerCustomizer
+      <TrainerDashboard
         initialConfig={ai.config}
         initialPersonality={ai.personality}
         aiContext={{ reasoning: ai.reasoning }}

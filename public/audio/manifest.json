@@ -1,0 +1,4 @@
+{
+  "_comment": "Background music tracks. Drop .mp3 files into this folder and add an entry below. Until tracks are added, the music player window shows 'No tracks loaded' and the controls are disabled.",
+  "tracks": []
+}

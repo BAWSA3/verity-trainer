@@ -1,0 +1,39 @@
+{
+  "scenes": [
+    {
+      "id": "generic-home",
+      "label": "Home",
+      "file": "/sprites/limezu/scenes/generic-home.png",
+      "trainerX": 50,
+      "trainerY": 60
+    },
+    {
+      "id": "japanese-home",
+      "label": "Tea Room",
+      "file": "/sprites/limezu/scenes/japanese-home.png",
+      "trainerX": 50,
+      "trainerY": 65
+    },
+    {
+      "id": "gym",
+      "label": "Gym",
+      "file": "/sprites/limezu/scenes/gym.png",
+      "trainerX": 50,
+      "trainerY": 65
+    },
+    {
+      "id": "museum",
+      "label": "Museum",
+      "file": "/sprites/limezu/scenes/museum.png",
+      "trainerX": 50,
+      "trainerY": 70
+    },
+    {
+      "id": "tv-studio",
+      "label": "Studio",
+      "file": "/sprites/limezu/scenes/tv-studio.png",
+      "trainerX": 50,
+      "trainerY": 70
+    }
+  ]
+}
