@@ -52,9 +52,16 @@ export default function CustomizerWindow({
 
   return (
     <PixelWindow title="CUSTOMIZE" accent="dark" bg="cream" bodyPad="md" fill>
-      {/* CategoryTabs sticks to the top of the customizer column. The body
-          scrolls vertically when the active tab's content overflows. */}
-      <CategoryTabs active={activeTab} onChange={onTabChange} unfilled={unfilledByTab} />
+      {/* Layout via PixelWindow's flex column body:
+          - CategoryTabs   flex-shrink-0   (sticky top)
+          - scroll div     flex-1 min-h-0  (selectors / personality panel scroll)
+          - AI reasoning   flex-shrink-0   (sticky just-above-buttons)
+          - buttons        flex-shrink-0   (sticky bottom)
+          - footer hint    flex-shrink-0
+      */}
+      <div className="flex-shrink-0">
+        <CategoryTabs active={activeTab} onChange={onTabChange} unfilled={unfilledByTab} />
+      </div>
 
       <div className="pt-3 flex-1 min-h-0 overflow-y-auto pr-1">
         {activeTab === 'vibe' ? (
@@ -84,7 +91,7 @@ export default function CustomizerWindow({
       </div>
 
       {aiContext?.reasoning && (
-        <div className="mt-4 p-3 rounded border border-[#367d95]/30 bg-[#367d95]/5">
+        <div className="flex-shrink-0 mt-3 p-3 rounded border border-[#367d95]/30 bg-[#367d95]/5">
           <p
             className="text-[9px] tracking-[0.15em] uppercase text-[#367d95] font-bold mb-1.5"
             style={{ fontFamily: 'var(--font-loos), sans-serif' }}
@@ -97,7 +104,7 @@ export default function CustomizerWindow({
         </div>
       )}
 
-      <div className="mt-5 pt-4 border-t border-[#16272c]/15 flex gap-2">
+      <div className="flex-shrink-0 mt-3 pt-3 border-t border-[#16272c]/15 flex gap-2">
         {onRegenerate && (
           <button
             type="button"
@@ -125,7 +132,7 @@ export default function CustomizerWindow({
         </button>
       </div>
       <p
-        className="text-center text-[#8a7d4d] text-[9px] sm:text-[10px] mt-2 tracking-[0.18em] uppercase"
+        className="flex-shrink-0 text-center text-[#8a7d4d] text-[9px] sm:text-[10px] mt-2 tracking-[0.18em] uppercase"
         style={{ fontFamily: 'var(--font-loos), sans-serif' }}
       >
         {canGenerate

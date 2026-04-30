@@ -196,14 +196,16 @@ export default function TrainerDashboard({
           }
         }
 
-        /* All viewports: customizer column has its own bounded height so the
-           internal overflow-y-auto on its body kicks in regardless of layout.
-           Below 1440px (stacked), the customizer is bounded to roughly viewport
-           height so users can flip through tabs/selectors without page-scrolling
-           past the entire dashboard. */
+        /* Below 1440px (stacked layout): give col-customizer a DEFINITE height
+           so the internal flex chain resolves (PixelWindow h-full → body
+           flex-1 → scroll div flex-1 actually grows). Without this, h-full at
+           mobile collapses to content-height and the scroll div has no space
+           to flex into. 80vh leaves room above for the trainer-detail windows
+           when scrolled to the customizer. */
         @media (max-width: 1439px) {
           .col-customizer {
-            max-height: calc(100vh - 32px);
+            height: 80vh;
+            max-height: 720px;
           }
         }
       `}</style>

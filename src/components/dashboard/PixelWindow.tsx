@@ -90,7 +90,13 @@ export default function PixelWindow({
           )}
         </div>
       )}
-      <div className={`${PAD[bodyPad]} ${fill ? 'flex-1 min-h-0 overflow-hidden' : ''}`}>
+      {/* Body. When fill=true, body becomes a flex column so the customizer's
+          internal layout (sticky tabs / scrollable middle / sticky footer) can
+          actually flex. Without flex flex-col here, child `flex-1` is a no-op
+          and the scroll div collapses to its content height. */}
+      <div
+        className={`${PAD[bodyPad]} ${fill ? 'flex-1 min-h-0 overflow-hidden flex flex-col' : ''}`}
+      >
         {children}
       </div>
     </div>
