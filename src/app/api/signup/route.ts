@@ -253,7 +253,21 @@ export async function POST(req: NextRequest) {
         flagged: true,
         flagReason: 'db_error',
       });
-      return NextResponse.json({ error: 'Signup failed.' }, { status: 500 });
+      // Temporary: expose dbErr details so we can diagnose prod issues from the
+      // browser network tab. Strip back to a generic message after persistence
+      // is confirmed to work end-to-end.
+      return NextResponse.json(
+        {
+          error: 'Signup failed.',
+          debug: {
+            message: (dbErr as { message?: string }).message,
+            details: (dbErr as { details?: string }).details,
+            hint: (dbErr as { hint?: string }).hint,
+            code: (dbErr as { code?: string }).code,
+          },
+        },
+        { status: 500 },
+      );
     }
 
     // 6. Audit success
