@@ -11,8 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TrainerConfig, TrainerPersonality, Zodiac } from '@/types/trainer';
 import { INITIAL_CONFIG, isReadyToGenerate } from '@/lib/trainer-options';
-import { playGenerate, playSelect } from '@/lib/sounds';
-import type { TabKey } from '@/components/CategoryTabs';
+import { playGenerate } from '@/lib/sounds';
 import SignupGate from '@/components/SignupGate';
 import Console from '@/components/device/Console';
 import ConsoleScreen from './ConsoleScreen';
@@ -38,7 +37,6 @@ export default function TrainerDashboard({
   const [config, setConfig] = useState<TrainerConfig>(initialConfig ?? INITIAL_CONFIG);
   const [personality, setPersonality] = useState<TrainerPersonality>(initialPersonality ?? INITIAL_PERSONALITY);
   const [trainerName, setTrainerName] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<TabKey>('body');
   const [showSignup, setShowSignup] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -56,10 +54,6 @@ export default function TrainerDashboard({
 
   const canGenerate = isReadyToGenerate(config);
 
-  function handleConfigChange(next: TrainerConfig) {
-    playSelect();
-    setConfig(next);
-  }
   function handleZodiacChange(z: Zodiac | '') {
     setPersonality((prev) => ({ ...prev, zodiac: z }));
   }
@@ -71,22 +65,6 @@ export default function TrainerDashboard({
   function handleSignupSuccess(id: string) {
     router.push('/card/' + id);
   }
-  function toggleShownLike(i: number) {
-    setPersonality((prev) => {
-      const current = prev.shownLikes ?? prev.likes.map(() => true);
-      const next = current.slice();
-      next[i] = !next[i];
-      return { ...prev, shownLikes: next };
-    });
-  }
-  function toggleShownDislike(i: number) {
-    setPersonality((prev) => {
-      const current = prev.shownDislikes ?? prev.dislikes.map(() => true);
-      const next = current.slice();
-      next[i] = !next[i];
-      return { ...prev, shownDislikes: next };
-    });
-  }
 
   const missingLabels = useMemo(() => {
     const out: string[] = [];
@@ -96,15 +74,6 @@ export default function TrainerDashboard({
     if (!config.outfit)    out.push('outfit');
     return out;
   }, [config]);
-
-  const shownLikes =
-    personality.shownLikes && personality.shownLikes.length === personality.likes.length
-      ? personality.shownLikes
-      : personality.likes.map(() => true);
-  const shownDislikes =
-    personality.shownDislikes && personality.shownDislikes.length === personality.dislikes.length
-      ? personality.shownDislikes
-      : personality.dislikes.map(() => true);
 
   return (
     <div
@@ -120,19 +89,11 @@ export default function TrainerDashboard({
             config={config}
             personality={personality}
             trainerName={trainerName}
-            activeTab={activeTab}
-            shownLikes={shownLikes}
-            shownDislikes={shownDislikes}
             canGenerate={canGenerate}
             missingLabels={missingLabels}
             hasAi={!!aiContext}
-            onConfigChange={handleConfigChange}
-            onPersonalityChange={setPersonality}
-            onTabChange={setActiveTab}
             onNameChange={setTrainerName}
             onZodiacChange={handleZodiacChange}
-            onToggleShownLike={toggleShownLike}
-            onToggleShownDislike={toggleShownDislike}
             onGenerate={handleGenerate}
             onRegenerate={onRegenerate}
           />
