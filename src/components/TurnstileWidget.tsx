@@ -33,7 +33,7 @@ declare global {
           'error-callback'?: () => void;
           theme?: string;
           appearance?: 'always' | 'execute' | 'interaction-only';
-          size?: 'normal' | 'compact' | 'invisible';
+          size?: 'normal' | 'compact' | 'flexible';
         },
       ) => string;
       remove: (widgetId: string) => void;
@@ -88,11 +88,12 @@ export default function TurnstileWidget({
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey,
           theme,
-          // size:'invisible' auto-runs the challenge on render and fires the
-          // callback when a token is ready. No execute() call needed; widget
-          // is fully hidden + the user never sees a checkbox unless CF flags
-          // them as suspicious (in which case it shows a brief interstitial).
-          size: 'invisible',
+          // CF deprecated size:'invisible' in 2026 — invisibility is now
+          // controlled by the widget MODE chosen in the Cloudflare dashboard
+          // ('Managed' challenges only when CF flags the user, 'Invisible'
+          // never shows a checkbox). 'compact' just shrinks the visual cell
+          // when the widget does need to render. Auto-runs on mount.
+          size: 'compact',
           callback: (token: string) => onVerify(token),
           'expired-callback': () => {
             if (onExpire) onExpire();
