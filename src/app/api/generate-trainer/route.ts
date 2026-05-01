@@ -109,25 +109,31 @@ export async function POST(req: NextRequest) {
   }
 
   // AI cost guard — 10 generations per IP per hour. Independent budget
-  // from /api/signup so a few real claims don't lock out re-rolls.
-  const ipHash = hashIp(ip);
-  const rate = await checkRateLimit(ipHash, {
-    action: 'generate-trainer',
-    max: 10,
-    windowMs: 60 * 60 * 1000,
-  });
-  if (!rate.ok) {
-    return NextResponse.json(
-      {
-        error: 'rate_limited',
-        message: 'Too many generations from your network. Try again later.',
-        retryAfter: rate.retryAfter,
-      },
-      {
-        status: 429,
-        headers: rate.retryAfter ? { 'Retry-After': String(rate.retryAfter) } : undefined,
-      },
-    );
+  // from /api/signup so a few real claims don't lock out re-rolls. Wrapped
+  // in try/catch so a Supabase outage / missing-env never escapes to a
+  // 500 with empty body — degrade to no-rate-limit instead.
+  try {
+    const ipHash = hashIp(ip);
+    const rate = await checkRateLimit(ipHash, {
+      action: 'generate-trainer',
+      max: 10,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!rate.ok) {
+      return NextResponse.json(
+        {
+          error: 'rate_limited',
+          message: 'Too many generations from your network. Try again later.',
+          retryAfter: rate.retryAfter,
+        },
+        {
+          status: 429,
+          headers: rate.retryAfter ? { 'Retry-After': String(rate.retryAfter) } : undefined,
+        },
+      );
+    }
+  } catch (rateErr) {
+    console.warn('[generate-trainer] rate-limit subsystem unavailable, proceeding:', rateErr);
   }
 
   try {
