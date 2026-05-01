@@ -24,6 +24,7 @@ interface UnpackedTrainer {
   config: TrainerConfig;
   personality: TrainerPersonality;
   source?: 'ai' | 'manual';
+  reasoning?: string;
 }
 
 const EMPTY_PERSONALITY: TrainerPersonality = {
@@ -43,10 +44,12 @@ export function unpackTrainer(row: { trainer_config: unknown }): UnpackedTrainer
   // schemaVersion 2 path — covers BOTH Mana Seed v2 and LimeZu v2 shapes.
   // Mana Seed-era configs lack eyes/accessory; normalizeConfig fills with 'none'.
   if ((obj.schemaVersion as number) === 2 && obj.config && obj.personality) {
+    const reasoning = typeof obj.reasoning === 'string' ? obj.reasoning : undefined;
     return {
       config: normalizeConfig(obj.config as Record<string, unknown>),
       personality: normalizePersonality(obj.personality as Record<string, unknown>),
       source: obj.source === 'ai' || obj.source === 'manual' ? obj.source : undefined,
+      reasoning,
     };
   }
 
@@ -62,9 +65,11 @@ export function packTrainer(
   config: TrainerConfig,
   personality: TrainerPersonality,
   source?: 'ai' | 'manual',
+  reasoning?: string,
 ): StoredTrainer {
   const stored: StoredTrainer = { schemaVersion: 2, config, personality };
   if (source) stored.source = source;
+  if (reasoning) stored.reasoning = reasoning.slice(0, 400);
   return stored;
 }
 
@@ -90,11 +95,28 @@ function normalizePersonality(raw: Record<string, unknown>): TrainerPersonality 
   const dislikes = Array.isArray(raw.dislikes)
     ? raw.dislikes.filter((s): s is string => typeof s === 'string').slice(0, 5)
     : [];
-  return {
+
+  // Optional show-on-card masks. Only retained when the array length matches
+  // its source (likes / dislikes) — otherwise drop and treat as all-shown.
+  const rawShownLikes = Array.isArray(raw.shownLikes)
+    ? raw.shownLikes.map((v) => v === true)
+    : undefined;
+  const rawShownDislikes = Array.isArray(raw.shownDislikes)
+    ? raw.shownDislikes.map((v) => v === true)
+    : undefined;
+
+  const out: TrainerPersonality = {
     zodiac: zodiac as TrainerPersonality['zodiac'],
     likes,
     dislikes,
   };
+  if (rawShownLikes && rawShownLikes.length === likes.length) {
+    out.shownLikes = rawShownLikes;
+  }
+  if (rawShownDislikes && rawShownDislikes.length === dislikes.length) {
+    out.shownDislikes = rawShownDislikes;
+  }
+  return out;
 }
 
 function emptyConfig(): TrainerConfig {

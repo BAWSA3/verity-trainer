@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
+import { Button, GlassPanel } from './ui';
 
 interface SignupGateProps {
   config: TrainerConfig;
@@ -10,9 +11,11 @@ interface SignupGateProps {
   onClose: () => void;
   /** Pre-fill the X handle field (e.g. from the AI flow's input). */
   initialHandle?: string;
+  /** AI-generated one-liner persisted to the share card. Absent for manual flow. */
+  reasoning?: string;
 }
 
-export default function SignupGate({ config, personality, onSuccess, onClose, initialHandle }: SignupGateProps) {
+export default function SignupGate({ config, personality, onSuccess, onClose, initialHandle, reasoning }: SignupGateProps) {
   const [email, setEmail] = useState('');
   const [xHandle, setXHandle] = useState(initialHandle ?? '');
   const [trainerName, setTrainerName] = useState('');
@@ -44,13 +47,13 @@ export default function SignupGate({ config, personality, onSuccess, onClose, in
           trainerName: trimmedName.toUpperCase().slice(0, 12),
           trainerConfig: config,
           trainerPersonality: personality,
+          reasoning: reasoning || undefined,
         }),
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        // Friendlier messages for known cases
         if (res.status === 429) {
           const secs = data.retryAfter ?? 60;
           const mins = Math.max(1, Math.ceil(secs / 60));
@@ -71,96 +74,119 @@ export default function SignupGate({ config, personality, onSuccess, onClose, in
 
   return (
     <div
-      className="fixed inset-0 bg-[#16272c]/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      style={{ fontFamily: 'var(--font-sora), sans-serif' }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        background: 'rgba(22, 39, 44, 0.45)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="border border-[#90b34d]/30 bg-[#fffdf3] p-8 max-w-md w-full rounded-[24px] shadow-[0_30px_60px_-20px_rgba(22,39,44,0.3)]"
-      >
-        <div className="flex justify-between items-start mb-4">
-          <h2
-            className="text-[#367d95] text-[11px] tracking-[0.2em] uppercase"
-            style={{ fontFamily: 'var(--font-loos)', fontWeight: 700 }}
-          >
-            Register Trainer
+      <div className="w-full max-w-md">
+        <GlassPanel padding="lg" radius="xl" tone="cream" strength="strong">
+          <div className="flex justify-between items-start mb-1">
+            <p className="text-[10px] tracking-[0.2em] uppercase font-bold text-[color:var(--accent-coral)]">
+              Step 2 of 2
+            </p>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="grid place-items-center rounded-full transition opacity-60 hover:opacity-100"
+              style={{ width: 28, height: 28, color: 'var(--ink-soft)' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+                <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+
+          <h2 className="text-[24px] font-bold tracking-tight text-[color:var(--ink)] leading-tight">
+            Claim your trainer.
           </h2>
-          <button
-            onClick={onClose}
-            className="text-[#8a7d4d] hover:text-[#367d95] text-sm"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
+          <p className="text-[13px] text-[color:var(--ink-soft)] leading-relaxed mt-2 mb-5">
+            Enter your details to generate your VERITY trainer card and claim early access to the marketplace drop.
+          </p>
 
-        <p className="text-[#8a7d4d] text-[12px] mb-6 leading-relaxed">
-          Enter your details to generate your VERITY trainer card and claim early access to the marketplace drop.
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-[#367d95] text-[10px] tracking-[0.15em] uppercase font-bold block mb-1">
-              Trainer Name *
-            </label>
-            <input
-              type="text"
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Field
+              label="Trainer name"
+              required
               value={trainerName}
-              onChange={(e) =>
-                setTrainerName(e.target.value.replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 12))
-              }
+              onChange={(v) => setTrainerName(v.replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 12))}
               placeholder="Max 12 chars"
               maxLength={12}
-              className="w-full bg-white border border-[#90b34d]/30 text-[#333] text-sm p-3 rounded-[12px]
-                         focus:border-[#367d95] focus:outline-none uppercase placeholder:text-[#8a7d4d]/50 placeholder:normal-case"
+              uppercase
             />
-          </div>
-
-          <div>
-            <label className="text-[#367d95] text-[10px] tracking-[0.15em] uppercase font-bold block mb-1">
-              Email *
-            </label>
-            <input
+            <Field
+              label="Email"
+              required
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              className="w-full bg-white border border-[#90b34d]/30 text-[#333] text-sm p-3 rounded-[12px]
-                         focus:border-[#367d95] focus:outline-none placeholder:text-[#8a7d4d]/50"
+              onChange={setEmail}
+              placeholder="you@email.com"
             />
-          </div>
-
-          <div>
-            <label className="text-[#367d95] text-[10px] tracking-[0.15em] uppercase font-bold block mb-1">
-              X / Twitter Handle
-            </label>
-            <input
-              type="text"
+            <Field
+              label="X / Twitter handle"
               value={xHandle}
-              onChange={(e) => setXHandle(e.target.value)}
+              onChange={setXHandle}
               placeholder="@handle"
-              className="w-full bg-white border border-[#90b34d]/30 text-[#333] text-sm p-3 rounded-[12px]
-                         focus:border-[#367d95] focus:outline-none placeholder:text-[#8a7d4d]/50"
             />
-          </div>
 
-          {error && <p className="text-[#c94d4d] text-[11px]">{error}</p>}
+            {error && (
+              <p className="text-[12px] text-[color:var(--accent-coral-dark)] tracking-tight">
+                {error}
+              </p>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 rounded-[40px] text-white text-sm tracking-wider transition-all hover:scale-[1.01]
-                       disabled:opacity-60 disabled:cursor-not-allowed
-                       shadow-[0_10px_30px_-10px_rgba(54,125,149,0.5)]"
-            style={{
-              fontWeight: 700,
-              background:
-                'linear-gradient(134.68deg, rgb(144,179,77) 28%, rgb(54,125,149) 77%, rgb(22,39,44) 100%)',
-            }}
-          >
-            {loading ? <span className="animate-pulse">Saving...</span> : 'Generate My Card'}
-          </button>
-        </form>
+            <Button type="submit" variant="primary" size="lg" fullWidth disabled={loading} loading={loading}>
+              {loading ? 'Saving…' : 'Generate my card →'}
+            </Button>
+          </form>
+        </GlassPanel>
       </div>
+    </div>
+  );
+}
+
+interface FieldProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  required?: boolean;
+  maxLength?: number;
+  uppercase?: boolean;
+}
+
+function Field({ label, value, onChange, placeholder, type = 'text', required, maxLength, uppercase }: FieldProps) {
+  return (
+    <div>
+      <label className="block text-[10px] tracking-[0.18em] uppercase font-bold text-[color:var(--ink-soft)] mb-1.5">
+        {label}{required ? ' *' : ''}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className="w-full px-3 py-2.5 rounded-xl text-[14px] focus:outline-none transition"
+        style={{
+          background: 'rgba(255, 255, 255, 0.7)',
+          border: '1px solid rgba(22, 39, 44, 0.15)',
+          color: 'var(--ink)',
+          textTransform: uppercase ? 'uppercase' : 'none',
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = 'var(--accent-coral)';
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = 'rgba(22, 39, 44, 0.15)';
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.7)';
+        }}
+      />
     </div>
   );
 }

@@ -29,12 +29,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!trainer) return { title: 'VERITY Trainer Card' };
 
   const name = sanitizeNameForDisplay(trainer.trainer_name);
-  const { config, personality } = unpackTrainer(trainer);
+  const { config, personality, reasoning } = unpackTrainer(trainer);
   const stats = generateStats(config, personality);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg';
 
   // OG URL params — keys mirror /api/og's expected query.
-  // LimeZu schema: b/h/hc/o required, e (eyes) and ac (accessory) optional.
+  // Order is load-bearing for back-compat with previously-shared URLs;
+  // append-only for new params (slk, sdl).
   const ogParams = new URLSearchParams({
     n: name,
     s: String(stats.style),
@@ -51,6 +52,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     lk: personality.likes.join('|'),
     dl: personality.dislikes.join('|'),
   });
+  // Show-on-card masks — append only when explicitly set so old shared URLs
+  // remain identical (the OG defaults to "all shown" when masks are absent).
+  if (personality.shownLikes && personality.shownLikes.length === personality.likes.length) {
+    ogParams.set('slk', personality.shownLikes.map((b) => (b ? '1' : '0')).join(''));
+  }
+  if (personality.shownDislikes && personality.shownDislikes.length === personality.dislikes.length) {
+    ogParams.set('sdl', personality.shownDislikes.map((b) => (b ? '1' : '0')).join(''));
+  }
+  // r — AI-generated one-liner subtitle. Append-only to preserve URL order.
+  if (reasoning) {
+    ogParams.set('r', reasoning.slice(0, 160));
+  }
   const ogUrl = `${appUrl}/api/og?${ogParams.toString()}`;
 
   return {
@@ -75,7 +88,7 @@ export default async function CardPage({ params }: PageProps) {
   const trainer = await getTrainer(id);
   if (!trainer) notFound();
 
-  const { config, personality } = unpackTrainer(trainer);
+  const { config, personality, reasoning } = unpackTrainer(trainer);
 
   return (
     <CardPageClient
@@ -83,6 +96,7 @@ export default async function CardPage({ params }: PageProps) {
       config={config}
       personality={personality}
       trainerName={sanitizeNameForDisplay(trainer.trainer_name)}
+      reasoning={reasoning}
     />
   );
 }

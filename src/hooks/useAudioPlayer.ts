@@ -6,8 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // Web Audio SFX in src/lib/sounds.ts — that handles short blips, this handles
 // long looping music. Tracks are loaded from public/audio/manifest.json.
 //
-// First play requires a user gesture (autoplay policy). The MusicPlayerWindow's
-// ⏯ button is that gesture.
+// First play requires a user gesture (autoplay policy). The Console screen's
+// ♪ toggle in the header is that gesture.
 
 export interface Track {
   id: string;

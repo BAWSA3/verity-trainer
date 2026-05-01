@@ -13,9 +13,22 @@ const SUGGESTED_DISLIKES = ['hype drops', 'ai art', 'mid graders', 'bots', 'cryp
 interface Props {
   value: TrainerPersonality;
   onChange: (next: TrainerPersonality) => void;
+  /** Show-on-card masks. Same length as likes/dislikes; undefined = treat all as shown. */
+  shownLikes?: boolean[];
+  shownDislikes?: boolean[];
+  /** Toggle whether a like at index i appears on the public card. */
+  onToggleShownLike?: (i: number) => void;
+  onToggleShownDislike?: (i: number) => void;
 }
 
-export default function PersonalityPanel({ value, onChange }: Props) {
+export default function PersonalityPanel({
+  value,
+  onChange,
+  shownLikes,
+  shownDislikes,
+  onToggleShownLike,
+  onToggleShownDislike,
+}: Props) {
   return (
     <div className="space-y-5">
       <div>
@@ -42,18 +55,22 @@ export default function PersonalityPanel({ value, onChange }: Props) {
       <ChipField
         label="Likes"
         chips={value.likes}
+        shown={shownLikes}
+        onToggleShown={onToggleShownLike}
         suggestions={SUGGESTED_LIKES.filter((s) => !value.likes.includes(s))}
         onChange={(chips) => onChange({ ...value, likes: chips })}
       />
       <ChipField
         label="Dislikes"
         chips={value.dislikes}
+        shown={shownDislikes}
+        onToggleShown={onToggleShownDislike}
         suggestions={SUGGESTED_DISLIKES.filter((s) => !value.dislikes.includes(s))}
         onChange={(chips) => onChange({ ...value, dislikes: chips })}
       />
 
       <p className="text-[#8a7d4d]/80 text-[10px] leading-relaxed">
-        Likes and dislikes show up on your trainer card. Up to {MAX_CHIPS} each, {MAX_CHIP_LEN} chars per chip.
+        Tap the eye to hide a chip from your public card. Up to {MAX_CHIPS} each, {MAX_CHIP_LEN} chars per chip.
       </p>
     </div>
   );
@@ -62,11 +79,15 @@ export default function PersonalityPanel({ value, onChange }: Props) {
 function ChipField({
   label,
   chips,
+  shown,
+  onToggleShown,
   suggestions,
   onChange,
 }: {
   label: string;
   chips: string[];
+  shown?: boolean[];
+  onToggleShown?: (i: number) => void;
   suggestions: string[];
   onChange: (chips: string[]) => void;
 }) {
@@ -103,22 +124,39 @@ function ChipField({
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-2">
-        {chips.map((chip, i) => (
-          <span
-            key={`${chip}-${i}`}
-            className="inline-flex items-center gap-1.5 bg-[#90b34d]/15 border border-[#90b34d]/40 text-[#16272c] text-[12px] pl-2.5 pr-1.5 py-1 rounded-full"
-          >
-            {chip}
-            <button
-              type="button"
-              onClick={() => remove(i)}
-              aria-label={`Remove ${chip}`}
-              className="text-[#16272c]/60 hover:text-[#c94d4d] text-[14px] leading-none"
+        {chips.map((chip, i) => {
+          const isShown = shown?.[i] ?? true;
+          const canToggle = !!onToggleShown;
+          return (
+            <span
+              key={`${chip}-${i}`}
+              className={`inline-flex items-center gap-1 bg-[#90b34d]/15 border border-[#90b34d]/40 text-[#16272c] text-[12px] pl-2.5 pr-1 py-1 rounded-full transition-opacity ${
+                isShown ? '' : 'opacity-50 line-through decoration-[#16272c]/40'
+              }`}
             >
-              ×
-            </button>
-          </span>
-        ))}
+              {chip}
+              {canToggle && (
+                <button
+                  type="button"
+                  onClick={() => onToggleShown?.(i)}
+                  aria-label={isShown ? `Hide ${chip} from card` : `Show ${chip} on card`}
+                  title={isShown ? 'Showing on card' : 'Hidden from card'}
+                  className="grid place-items-center w-5 h-5 rounded-full text-[#16272c]/55 hover:text-[#367d95] hover:bg-[#367d95]/10 transition-colors"
+                >
+                  {isShown ? <EyeOpen /> : <EyeClosed />}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                aria-label={`Remove ${chip}`}
+                className="text-[#16272c]/60 hover:text-[#c94d4d] text-[14px] leading-none px-1"
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
       </div>
 
       {!isFull && (
@@ -163,5 +201,38 @@ function ChipField({
         </div>
       )}
     </div>
+  );
+}
+
+function EyeOpen() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" aria-hidden>
+      <path
+        d="M1 8 C3 4 5.5 2.5 8 2.5 C10.5 2.5 13 4 15 8 C13 12 10.5 13.5 8 13.5 C5.5 13.5 3 12 1 8 Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="2" fill="currentColor" />
+    </svg>
+  );
+}
+
+function EyeClosed() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" aria-hidden>
+      <path
+        d="M1.5 6.5 C4 10 6 11 8 11 C10 11 12 10 14.5 6.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M5 11 L4 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M11 11 L12 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M8 11.5 L8 13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
   );
 }

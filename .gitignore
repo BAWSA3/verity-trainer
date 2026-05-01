@@ -47,3 +47,6 @@ next-env.d.ts
 /vendor/manaseed-pack/
 tmp-debug/
 tmp-migrations.sql
+blender/
+public/console/console-iter*.png
+public/console/console-front-blockout*.png

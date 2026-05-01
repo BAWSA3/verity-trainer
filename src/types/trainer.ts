@@ -54,6 +54,11 @@ export interface TrainerPersonality {
   zodiac: Zodiac | '';
   likes: string[];     // 0-5 entries, each <=24 chars
   dislikes: string[];  // 0-5 entries, each <=24 chars
+  // Optional show-on-card masks. Same length as likes/dislikes; absent or
+  // mismatched length = treat all as shown. AI generates 5 each so the user
+  // can curate which to surface on the public trainer card.
+  shownLikes?: boolean[];
+  shownDislikes?: boolean[];
 }
 
 export interface SignupData {
@@ -71,4 +76,8 @@ export interface StoredTrainer {
   config: TrainerConfig;
   personality: TrainerPersonality;
   source?: 'ai' | 'manual';
+  // Optional one-line AI explanation surfaced as a subtitle on /card/[id]
+  // and the OG image. Only present for AI-generated trainers; clamped to
+  // 400 chars upstream by generate-trainer.ts.
+  reasoning?: string;
 }

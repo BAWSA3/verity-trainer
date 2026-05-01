@@ -9,27 +9,20 @@ import type { Zodiac } from '@/types/trainer';
 
 export const runtime = 'nodejs';
 
-// LimeZu source frames are 48 wide × 96 tall (portrait). Composite at 768 wide
-// for crisp output (16x upscale of 48px); height is 1536 (16x of 96px).
-// Then bust-extract a sub-rect.
+// LimeZu source frames are 48x96. Composite at 16x for crispness.
 const CELL_W = 48;
 const CELL_H = 96;
 const SCALE = 16;
-const SPRITE_W = CELL_W * SCALE;     // 768
-const SPRITE_H = CELL_H * SCALE;     // 1536
-const BUST_W = 512;
-const BUST_H = 576;
-
-// Bust source crop in LimeZu 48x96 sprite-space — mirrors manifest.bustCrop.
+const SPRITE_W = CELL_W * SCALE;
+const SPRITE_H = CELL_H * SCALE;
+const BUST_W = 384;
+const BUST_H = 432;
 const BUST_CROP = { left: 8, top: 26, width: 32, height: 40 };
-
-// Always render in south direction for shared cards.
 const SHARE_DIR = 's';
 
 const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=31536000, immutable',
 };
-
 const SPRITE_ROOT = ['public', 'sprites', 'limezu'];
 
 async function loadSprite(...segments: string[]): Promise<Buffer | null> {
@@ -50,7 +43,6 @@ interface CompositeArgs {
   accessory: string;
 }
 
-/** Resolve `<baseId>-<variant>` (e.g. "01-02") -> [baseId, variant]. */
 function splitVariant(compoundId: string): [string, string] | null {
   const idx = compoundId.lastIndexOf('-');
   if (idx <= 0) return null;
@@ -58,12 +50,9 @@ function splitVariant(compoundId: string): [string, string] | null {
 }
 
 async function compositeBust(args: CompositeArgs): Promise<string | null> {
-  // LimeZu layer order, bottom to top:
-  //   body -> outfit -> eyes -> hair -> accessory
   const layerSegments: string[][] = [];
 
   if (args.body) layerSegments.push(['body', `${args.body}-${SHARE_DIR}.png`]);
-
   if (args.outfit && args.outfit !== 'none') {
     const split = splitVariant(args.outfit);
     if (split) layerSegments.push(['outfit', split[0], `${split[1]}-${SHARE_DIR}.png`]);
@@ -97,8 +86,6 @@ async function compositeBust(args: CompositeArgs): Promise<string | null> {
       .png()
       .toBuffer();
 
-    // Bust extract: scale crop region from sprite-space (48x96) to output-space.
-    // Horizontal scale: SPRITE_W / CELL_W = 16. Same scale on Y (no aspect change).
     const extractRegion = {
       left: Math.round(BUST_CROP.left * SCALE),
       top: Math.round(BUST_CROP.top * SCALE),
@@ -119,35 +106,10 @@ async function compositeBust(args: CompositeArgs): Promise<string | null> {
   }
 }
 
-function StatBar({ value }: { value: number }) {
-  const cells = 10;
-  const filled = Math.round((value / 100) * cells);
-  return (
-    <div style={{ display: 'flex', gap: 3 }}>
-      {Array.from({ length: cells }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            width: 22,
-            height: 14,
-            backgroundColor: i < filled ? '#90b34d' : 'rgba(22, 39, 44, 0.15)',
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function StatRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-      <span style={{ color: '#367d95', fontSize: 16, width: 110, letterSpacing: '3px', fontWeight: 700 }}>
-        {label}
-      </span>
-      <StatBar value={value} />
-      <span style={{ color: '#16272c', fontSize: 18 }}>{value}</span>
-    </div>
-  );
+function applyMask(items: string[], mask: string | null): string[] {
+  if (!mask) return items;
+  if (mask.length !== items.length) return items; // length mismatch = ignore mask
+  return items.filter((_, i) => mask[i] === '1');
 }
 
 export async function GET(req: NextRequest) {
@@ -171,8 +133,20 @@ export async function GET(req: NextRequest) {
 
   const zodiacRaw = searchParams.get('z') || '';
   const zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
-  const likes = sanitizeChipsForDisplay(splitPipe(searchParams.get('lk'))).slice(0, 3);
-  const dislikes = sanitizeChipsForDisplay(splitPipe(searchParams.get('dl'))).slice(0, 3);
+  const allLikes = splitPipe(searchParams.get('lk'));
+  const allDislikes = splitPipe(searchParams.get('dl'));
+  const slk = sanitizeMask(searchParams.get('slk'));
+  const sdl = sanitizeMask(searchParams.get('sdl'));
+  const likes = sanitizeChipsForDisplay(applyMask(allLikes, slk)).slice(0, 5);
+  const dislikes = sanitizeChipsForDisplay(applyMask(allDislikes, sdl)).slice(0, 5);
+  // r — AI-generated one-liner. Append-only param. Strip control chars,
+  // truncate to 140 chars so the OG layout stays balanced.
+  const reasoningRaw = searchParams.get('r') || '';
+  const reasoning = reasoningRaw
+    .replace(/[\x00-\x1f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 140);
 
   const bustDataUri = await compositeBust(args);
 
@@ -184,113 +158,188 @@ export async function GET(req: NextRequest) {
           height: 630,
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#fffdf3',
-          border: '8px solid #16272c',
-          borderRadius: 12,
+          // Verity gradient backdrop
+          backgroundImage:
+            'linear-gradient(135deg, #FFE6E6 0%, #F4D2FF 45%, #C2DDFF 100%)',
           fontFamily: 'sans-serif',
+          padding: 30,
         }}
       >
+        {/* Card container */}
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '14px 28px',
-            borderBottom: '2px solid #16272c',
-            backgroundColor: '#fffdf3',
+            flexDirection: 'column',
+            flex: 1,
+            backgroundColor: 'rgba(255, 253, 243, 0.94)',
+            borderRadius: 28,
+            overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.6)',
+            boxShadow: '0 12px 40px -16px rgba(67, 56, 202, 0.25)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 22, height: 22, backgroundColor: '#90b34d', borderRadius: 3, display: 'flex' }} />
-            <span style={{ color: '#16272c', fontSize: 16, letterSpacing: '4px', fontWeight: 700 }}>
-              TRAINER CARD — VERITY
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <span style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, color: '#16272c', textAlign: 'center', fontSize: 14, lineHeight: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>_</span>
-            <div style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, display: 'flex' }} />
-            <span style={{ width: 22, height: 22, border: '1px solid #16272c', borderRadius: 2, color: '#16272c', textAlign: 'center', fontSize: 14, lineHeight: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>x</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flex: 1, padding: 32, gap: 32 }}>
+          {/* Header band */}
           <div
             style={{
-              width: 360,
-              height: 460,
-              border: '3px solid #90b34d',
-              borderRadius: 6,
               display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(144, 179, 77, 0.08)',
-              overflow: 'hidden',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '14px 26px',
+              backgroundImage: 'linear-gradient(90deg, #FF6B5C 0%, #E85544 100%)',
+              color: 'white',
             }}
           >
-            {bustDataUri ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={bustDataUri}
-                alt=""
-                width={360}
-                height={450}
-                style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
-              />
-            ) : (
-              <div style={{ color: '#90b34d', fontSize: 90, display: 'flex', alignItems: 'center', height: '100%' }}>V</div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ fontSize: 18, letterSpacing: '5px', fontWeight: 700 }}>VERITY</span>
+              <span style={{ fontSize: 18, opacity: 0.6 }}>·</span>
+              <span style={{ fontSize: 14, letterSpacing: '5px', fontWeight: 700 }}>TRAINER CARD</span>
+            </div>
+            {/* AVAX corner-mark slot */}
+            <svg width="22" height="22" viewBox="0 0 16 16">
+              <path d="M2 13 L8 3 L14 13 Z" fill="rgba(255,255,255,0.55)" />
+            </svg>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 14 }}>
-            <div style={{ color: '#16272c', fontSize: 56, fontWeight: 700, display: 'flex', letterSpacing: '2px' }}>
-              {name}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#367d95', fontSize: 16, letterSpacing: '4px', textTransform: 'uppercase' }}>
-              {zodiac ? (
-                <span>{zodiac} · streetwear class</span>
+          {/* Body row: bust | identity */}
+          <div style={{ display: 'flex', flex: 1, padding: 28, gap: 28 }}>
+            {/* Bust */}
+            <div
+              style={{
+                width: 280,
+                height: 360,
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255, 253, 243, 0.9)',
+                border: '2px solid rgba(144, 179, 77, 0.4)',
+                borderRadius: 18,
+                overflow: 'hidden',
+                padding: 12,
+              }}
+            >
+              {bustDataUri ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={bustDataUri}
+                  alt=""
+                  width={256}
+                  height={336}
+                  style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
+                />
               ) : (
-                <span>streetwear class</span>
+                <div style={{ color: '#90b34d', fontSize: 100, display: 'flex', alignItems: 'center', height: '100%' }}>V</div>
               )}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-              <StatRow label="STYLE"    value={style} />
-              <StatRow label="CHARISMA" value={charisma} />
-              <StatRow label="STREET"   value={street} />
-              <StatRow label="LUCK"     value={luck} />
-            </div>
-
-            {(likes.length > 0 || dislikes.length > 0) && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(22, 39, 44, 0.15)' }}>
-                {likes.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                    <span style={{ color: '#367d95', fontSize: 13, width: 90, letterSpacing: '3px', fontWeight: 700 }}>LIKES</span>
-                    <span style={{ color: '#16272c', fontSize: 16 }}>{likes.join(' · ')}</span>
-                  </div>
-                )}
-                {dislikes.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                    <span style={{ color: '#c94d4d', fontSize: 13, width: 90, letterSpacing: '3px', fontWeight: 700 }}>DISLIKES</span>
-                    <span style={{ color: '#16272c', fontSize: 16 }}>{dislikes.join(' · ')}</span>
-                  </div>
-                )}
+            {/* Identity column */}
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 12 }}>
+              <div
+                style={{
+                  color: '#16272C',
+                  fontSize: 64,
+                  fontWeight: 700,
+                  display: 'flex',
+                  letterSpacing: '1px',
+                  lineHeight: 1.05,
+                }}
+              >
+                {name}
               </div>
-            )}
-          </div>
-        </div>
 
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: '16px 28px',
-            borderTop: '1px solid rgba(22, 39, 44, 0.15)',
-          }}
-        >
-          <span style={{ color: '#8a7d4d', fontSize: 13, letterSpacing: '5px', fontWeight: 700 }}>
-            VERITY EARLY ACCESS  ·  MAY 2026
-          </span>
+              {reasoning ? (
+                <div
+                  style={{
+                    color: '#5C6770',
+                    fontSize: 18,
+                    display: 'flex',
+                    fontStyle: 'italic',
+                    lineHeight: 1.35,
+                    maxWidth: 540,
+                  }}
+                >
+                  {reasoning}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    color: '#8A95A0',
+                    fontSize: 16,
+                    display: 'flex',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  0x····wallet linking soon
+                </div>
+              )}
+
+              {/* Tags row */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                {zodiac ? (
+                  <span style={tagStyle('rgba(255,253,243,0.85)', 'rgba(22,39,44,0.12)', '#16272C')}>
+                    {ZODIAC_GLYPHS[zodiac]}  {capitalize(zodiac)}
+                  </span>
+                ) : null}
+                <span style={tagStyle('rgba(255, 107, 92, 0.14)', 'rgba(255, 107, 92, 0.5)', '#A53A2E')}>
+                  Truth Seeker
+                </span>
+              </div>
+
+              {/* Stats grid */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
+                <StatCell label="STYLE"  value={style} />
+                <StatCell label="CHARM"  value={charisma} />
+                <StatCell label="STREET" value={street} />
+                <StatCell label="LUCK"   value={luck} />
+              </div>
+
+              {/* Likes row */}
+              {likes.length > 0 && (
+                <div style={chipRowStyle('rgba(144, 179, 77, 0.14)', 'rgba(144, 179, 77, 0.3)')}>
+                  <span style={{ ...chipRowLabelStyle, color: '#3F5520' }}>✓ LIKES</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {likes.map((s, i) => (
+                      <span key={i} style={chipStyle('rgba(144, 179, 77, 0.18)', 'rgba(144, 179, 77, 0.5)', '#3F5520')}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dislikes row */}
+              {dislikes.length > 0 && (
+                <div style={chipRowStyle('rgba(22, 39, 44, 0.06)', 'rgba(22, 39, 44, 0.2)')}>
+                  <span style={{ ...chipRowLabelStyle, color: '#16272C' }}>✕ DISLIKES</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {dislikes.map((s, i) => (
+                      <span key={i} style={chipStyle('rgba(22, 39, 44, 0.08)', 'rgba(22, 39, 44, 0.35)', '#16272C')}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '14px 28px',
+              borderTop: '1px solid rgba(22, 39, 44, 0.08)',
+              color: '#8A95A0',
+              fontSize: 13,
+              letterSpacing: '4px',
+              fontWeight: 700,
+            }}
+          >
+            <span>VERITY · EARLY ACCESS</span>
+            <span>MAY 2026</span>
+            <span>POWERED BY AVAX</span>
+          </div>
         </div>
       </div>
     ),
@@ -300,6 +349,89 @@ export async function GET(req: NextRequest) {
       headers: CACHE_HEADERS,
     },
   );
+}
+
+function StatCell({ label, value }: { label: string; value: number }) {
+  const pct = clamp(value);
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 5,
+        padding: '8px 12px',
+        backgroundColor: 'rgba(255, 253, 243, 0.7)',
+        border: '1px solid rgba(22, 39, 44, 0.08)',
+        borderRadius: 10,
+        width: 130,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ color: '#8A95A0', fontSize: 11, letterSpacing: '3px', fontWeight: 700 }}>{label}</span>
+        <span style={{ color: '#16272C', fontSize: 16, fontWeight: 700 }}>{value}</span>
+      </div>
+      <div style={{ display: 'flex', height: 6, borderRadius: 3, backgroundColor: 'rgba(22, 39, 44, 0.08)', overflow: 'hidden' }}>
+        <div
+          style={{
+            display: 'flex',
+            width: `${pct}%`,
+            height: '100%',
+            backgroundImage: 'linear-gradient(90deg, #FF6B5C 0%, #FFCB9A 100%)',
+            borderRadius: 3,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+const chipRowLabelStyle: Record<string, string | number> = {
+  display: 'flex',
+  fontSize: 12,
+  letterSpacing: '3px',
+  fontWeight: 700,
+  width: 84,
+  flexShrink: 0,
+};
+
+function chipRowStyle(bg: string, border: string): Record<string, string | number> {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '8px 12px',
+    backgroundColor: bg,
+    border: '1px solid ' + border,
+    borderRadius: 12,
+    marginTop: 4,
+  };
+}
+
+function tagStyle(bg: string, border: string, color: string): Record<string, string | number> {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '4px 12px',
+    fontSize: 14,
+    fontWeight: 600,
+    backgroundColor: bg,
+    border: '1px solid ' + border,
+    color,
+    borderRadius: 999,
+  };
+}
+
+function chipStyle(bg: string, border: string, color: string): Record<string, string | number> {
+  return {
+    display: 'flex',
+    padding: '3px 10px',
+    fontSize: 12,
+    fontWeight: 600,
+    backgroundColor: bg,
+    border: '1px solid ' + border,
+    color,
+    borderRadius: 999,
+  };
 }
 
 function clamp(n: number): number {
@@ -314,4 +446,13 @@ function safeId(raw: string | null, fallback: string): string {
 function splitPipe(raw: string | null): string[] {
   if (!raw) return [];
   return raw.split('|').filter(Boolean);
+}
+function sanitizeMask(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!/^[01]+$/.test(raw)) return null;
+  if (raw.length > 10) return null;
+  return raw;
+}
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

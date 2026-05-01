@@ -1,9 +1,11 @@
 'use client';
 
-// TrainerDashboard — orchestrates the multi-window layout.
+// TrainerDashboard V2.1 — single-screen console architecture.
 //
-// Owns the source of truth for trainer config + personality + customizer state.
-// Children windows are dumb — they receive props slices and emit changes back.
+// The chassis is a Blender PNG; all interaction lives inside the screen
+// recess (ConsoleScreen). Same metaphor on desktop and mobile — Console fills
+// the available space, Re-roll/Claim are sticky inside the screen footer,
+// music is a header toggle, AI reasoning persists onto the share card.
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,17 +14,8 @@ import { INITIAL_CONFIG, isReadyToGenerate } from '@/lib/trainer-options';
 import { playGenerate, playSelect } from '@/lib/sounds';
 import type { TabKey } from '@/components/CategoryTabs';
 import SignupGate from '@/components/SignupGate';
-import PokeBackground from '@/components/PokeBackground';
-import {
-  FullBodyWindow,
-  HeadshotWindow,
-  IdentityWindow,
-  LikesWindow,
-  DislikesWindow,
-} from './DashboardWindows';
-import CustomizerWindow from './CustomizerWindow';
-import SceneWindow from './SceneWindow';
-import MusicPlayerWindow from './MusicPlayerWindow';
+import Console from '@/components/device/Console';
+import ConsoleScreen from './ConsoleScreen';
 
 const INITIAL_PERSONALITY: TrainerPersonality = { zodiac: '', likes: [], dislikes: [] };
 
@@ -49,7 +42,6 @@ export default function TrainerDashboard({
   const [showSignup, setShowSignup] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Sync AI-provided initial values when they change (e.g. after re-roll).
   useEffect(() => {
     if (initialConfig) setConfig(initialConfig);
   }, [initialConfig]);
@@ -68,19 +60,32 @@ export default function TrainerDashboard({
     playSelect();
     setConfig(next);
   }
-
   function handleZodiacChange(z: Zodiac | '') {
     setPersonality((prev) => ({ ...prev, zodiac: z }));
   }
-
   function handleGenerate() {
     if (!canGenerate) return;
     playGenerate();
     setShowSignup(true);
   }
-
   function handleSignupSuccess(id: string) {
-    router.push(`/card/${id}`);
+    router.push('/card/' + id);
+  }
+  function toggleShownLike(i: number) {
+    setPersonality((prev) => {
+      const current = prev.shownLikes ?? prev.likes.map(() => true);
+      const next = current.slice();
+      next[i] = !next[i];
+      return { ...prev, shownLikes: next };
+    });
+  }
+  function toggleShownDislike(i: number) {
+    setPersonality((prev) => {
+      const current = prev.shownDislikes ?? prev.dislikes.map(() => true);
+      const next = current.slice();
+      next[i] = !next[i];
+      return { ...prev, shownDislikes: next };
+    });
   }
 
   const missingLabels = useMemo(() => {
@@ -92,61 +97,46 @@ export default function TrainerDashboard({
     return out;
   }, [config]);
 
+  const shownLikes =
+    personality.shownLikes && personality.shownLikes.length === personality.likes.length
+      ? personality.shownLikes
+      : personality.likes.map(() => true);
+  const shownDislikes =
+    personality.shownDislikes && personality.shownDislikes.length === personality.dislikes.length
+      ? personality.shownDislikes
+      : personality.dislikes.map(() => true);
+
   return (
     <div
-      className="min-h-screen bg-[#fffdf3] text-[#16272c] relative"
+      className="dashboard-shell"
       style={{
-        fontFamily: 'var(--font-sora), sans-serif',
         opacity: mounted ? 1 : 0,
         transition: 'opacity 320ms ease-out',
       }}
     >
-      <PokeBackground />
-
-      <div className="relative z-10 w-full px-3 sm:px-5 py-3 sm:py-4">
-        <div className="dashboard-shell">
-          {/* Col 1 — full-body sprite (anchor) */}
-          <div className="dashboard-col col-fullbody">
-            <FullBodyWindow config={config} />
-          </div>
-
-          {/* Col 2 — music + scene stack */}
-          <div className="dashboard-col col-stack">
-            <MusicPlayerWindow config={config} />
-            <SceneWindow config={config} />
-          </div>
-
-          {/* Col 3 — headshot + identity + likes + dislikes stack */}
-          <div className="dashboard-col col-stack">
-            <HeadshotWindow config={config} />
-            <IdentityWindow
-              config={config}
-              personality={personality}
-              trainerName={trainerName}
-              onNameChange={setTrainerName}
-              onZodiacChange={handleZodiacChange}
-            />
-            <LikesWindow items={personality.likes} />
-            <DislikesWindow items={personality.dislikes} />
-          </div>
-
-          {/* Col 4 — customizer (sticky-tall, internal scroll) */}
-          <div className="dashboard-col col-customizer">
-            <CustomizerWindow
-              config={config}
-              personality={personality}
-              onConfigChange={handleConfigChange}
-              onPersonalityChange={setPersonality}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              canGenerate={canGenerate}
-              missingLabels={missingLabels}
-              onGenerate={handleGenerate}
-              aiContext={aiContext}
-              onRegenerate={onRegenerate}
-            />
-          </div>
-        </div>
+      <div className="dashboard-stage">
+        <Console className="dashboard-console">
+          <ConsoleScreen
+            config={config}
+            personality={personality}
+            trainerName={trainerName}
+            activeTab={activeTab}
+            shownLikes={shownLikes}
+            shownDislikes={shownDislikes}
+            canGenerate={canGenerate}
+            missingLabels={missingLabels}
+            hasAi={!!aiContext}
+            onConfigChange={handleConfigChange}
+            onPersonalityChange={setPersonality}
+            onTabChange={setActiveTab}
+            onNameChange={setTrainerName}
+            onZodiacChange={handleZodiacChange}
+            onToggleShownLike={toggleShownLike}
+            onToggleShownDislike={toggleShownDislike}
+            onGenerate={handleGenerate}
+            onRegenerate={onRegenerate}
+          />
+        </Console>
       </div>
 
       {showSignup && (
@@ -156,56 +146,43 @@ export default function TrainerDashboard({
           onSuccess={handleSignupSuccess}
           onClose={() => setShowSignup(false)}
           initialHandle={initialHandle}
+          reasoning={aiContext?.reasoning}
         />
       )}
 
       <style jsx>{`
-        /* Mobile / tablet (<1440px): single-column stack. */
         .dashboard-shell {
+          position: relative;
+          min-height: 100vh;
+          padding: 12px;
           display: flex;
-          flex-direction: column;
-          gap: 12px;
+          align-items: center;
+          justify-content: center;
+          background:
+            radial-gradient(ellipse 60% 55% at 50% 50%, rgba(255, 246, 240, 0.7) 0%, transparent 70%),
+            radial-gradient(ellipse 80% 60% at 50% 90%, rgba(67, 56, 202, 0.10) 0%, transparent 70%),
+            linear-gradient(180deg, #FFE6E6 0%, #F4D2FF 45%, #C2DDFF 100%);
         }
-        .dashboard-col { display: flex; flex-direction: column; gap: 12px; }
-
-        /* Desktop ≥1440px: 4-column fixed-view dashboard. All panels visible,
-           page-level no-scroll. Customizer scrolls internally if too tall. */
-        @media (min-width: 1440px) {
-          .dashboard-shell {
-            display: grid;
-            grid-template-columns:
-              minmax(280px, 1fr)
-              minmax(280px, 1fr)
-              minmax(280px, 1fr)
-              minmax(380px, 480px);
-            gap: 14px;
-            height: calc(100vh - 28px);
-            min-height: 0;
-          }
-          .dashboard-col {
-            min-height: 0;
-            gap: 12px;
-          }
-          .col-stack { /* music+scene OR headshot+identity+likes+dislikes */
-            display: flex;
-            flex-direction: column;
-          }
-          .col-customizer {
-            min-height: 0;
-            overflow: hidden;
-          }
+        .dashboard-stage {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-
-        /* Below 1440px (stacked layout): give col-customizer a DEFINITE height
-           so the internal flex chain resolves (PixelWindow h-full → body
-           flex-1 → scroll div flex-1 actually grows). Without this, h-full at
-           mobile collapses to content-height and the scroll div has no space
-           to flex into. 80vh leaves room above for the trainer-detail windows
-           when scrolled to the customizer. */
-        @media (max-width: 1439px) {
-          .col-customizer {
-            height: 80vh;
-            max-height: 720px;
+        /* Aspect-ratio drives width from height — never set both height AND
+           max-width, that breaks the aspect and letterboxes the chassis IMG
+           inside the shell. */
+        .dashboard-stage :global(.dashboard-console) {
+          height: calc(100vh - 24px);
+          width: auto;
+          aspect-ratio: 1080 / 1680;
+        }
+        /* On very narrow viewports the height-driven width may exceed the
+           viewport width — clamp by sizing from width instead. */
+        @media (max-aspect-ratio: 1080/1680) {
+          .dashboard-stage :global(.dashboard-console) {
+            height: auto;
+            width: calc(100vw - 24px);
           }
         }
       `}</style>

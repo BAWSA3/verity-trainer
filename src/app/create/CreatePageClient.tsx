@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import { randomConfig } from '@/lib/trainer-options';
 import TrainerDashboard from '@/components/dashboard/TrainerDashboard';
-import PokeBackground from '@/components/PokeBackground';
+import { GlassPanel, Button } from '@/components/ui';
 
 const INITIAL_PERSONALITY: TrainerPersonality = { zodiac: '', likes: [], dislikes: [] };
 
@@ -102,119 +102,121 @@ export default function CreatePageClient() {
     );
   }
 
-  return (
-    <div
-      className="min-h-screen bg-[#fffdf3] text-[#16272c] relative"
-      style={{ fontFamily: 'var(--font-sora), sans-serif' }}
-    >
-      <PokeBackground />
-
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4">
-        <div
-          className="w-full max-w-md bg-[#fffdf3] border-2 border-[#16272c] rounded-lg shadow-[0_20px_60px_-20px_rgba(22,39,44,0.3)] overflow-hidden"
-        >
+  if (phase === 'generating') {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center px-6 relative">
+        <div className="w-full max-w-md flex flex-col items-center gap-6">
+          {/* Loading video centerpiece */}
           <div
-            className="px-5 py-3 border-b border-[#16272c]/15 flex items-center gap-3"
-            style={{ background: '#fffdf3' }}
+            className="relative rounded-[28px] overflow-hidden w-full aspect-square animate-float"
+            style={{
+              boxShadow: '0 32px 80px -24px rgba(67, 56, 202, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.6)',
+            }}
           >
-            <span className="text-[#90b34d]">▣</span>
-            <span
-              className="text-[10px] tracking-[0.18em] uppercase text-[#16272c]"
-              style={{ fontFamily: 'var(--font-loos), sans-serif', fontWeight: 700 }}
-            >
-              VERITY · Auto-Generate Trainer
-            </span>
+            <video
+              src="/video/loading.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              aria-hidden
+              className="absolute inset-0 w-full h-full object-cover"
+            />
           </div>
 
-          {phase === 'enter-handle' && (
-            <form onSubmit={handleSubmit} className="p-7 space-y-4">
-              <h1
-                className="text-[22px] leading-tight"
-                style={{ fontFamily: 'var(--font-loos), sans-serif', fontWeight: 700 }}
-              >
+          {/* Status */}
+          <div className="text-center">
+            <p
+              className="text-[14px] tracking-tight font-semibold text-[color:var(--ink)] mb-1"
+            >
+              {statusText}
+            </p>
+            <p className="text-[12px] text-[color:var(--ink-muted)]">
+              Building your trainer from @{handle.replace(/^@/, '')}…
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // enter-handle phase
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md">
+        <GlassPanel padding="lg" radius="xl" tone="cream" strength="strong">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <p className="text-[10px] tracking-[0.2em] uppercase font-bold text-[color:var(--accent-coral)] mb-2">
+                Step 1 of 2
+              </p>
+              <h1 className="text-[26px] sm:text-[28px] leading-tight font-bold tracking-tight text-[color:var(--ink)]">
                 Get your trainer in 10 seconds.
               </h1>
-              <p className="text-[13px] text-[#8a7d4d] leading-relaxed">
-                Drop your X handle. We&apos;ll read your bio + recent posts and generate a
-                hi-fi pixel trainer that captures your vibe. You can tweak it before you
-                claim it.
-              </p>
-              <div>
-                <label
-                  className="block text-[10px] tracking-[0.15em] uppercase text-[#367d95] mb-2"
-                  style={{ fontFamily: 'var(--font-loos), sans-serif', fontWeight: 700 }}
-                >
-                  X Handle
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a7d4d]">@</span>
-                  <input
-                    type="text"
-                    value={handle}
-                    onChange={(e) => setHandle(e.target.value)}
-                    placeholder="elonmusk"
-                    autoComplete="off"
-                    spellCheck={false}
-                    className="w-full pl-7 pr-3 py-3 border-2 border-[#16272c]/20 rounded text-[14px] focus:outline-none focus:border-[#367d95]"
-                    style={{ background: 'white' }}
-                  />
-                </div>
-                {error && (
-                  <p className="text-[11px] text-[#c94d4d] mt-2 tracking-wide">{error}</p>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={!handle.trim()}
-                className="w-full py-3.5 rounded-[40px] text-white text-[12px] tracking-[0.18em] uppercase transition-all enabled:hover:scale-[1.01] disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{
-                  fontFamily: 'var(--font-loos), sans-serif',
-                  fontWeight: 700,
-                  background:
-                    'linear-gradient(134.68deg, rgb(144,179,77) 28%, rgb(54,125,149) 77%, rgb(22,39,44) 100%)',
-                }}
-              >
-                ▶ Generate My Trainer
-              </button>
-              <p className="text-center text-[10px] text-[#8a7d4d] tracking-[0.12em]">
-                Demo: works without an X login. Your handle is read once for
-                generation, no login required.
-              </p>
-            </form>
-          )}
-
-          {phase === 'generating' && (
-            <div className="p-10 flex flex-col items-center gap-5 min-h-[280px] justify-center">
-              <Spinner />
-              <p
-                className="text-[12px] tracking-[0.15em] uppercase text-[#367d95]"
-                style={{ fontFamily: 'var(--font-loos), sans-serif', fontWeight: 700 }}
-              >
-                {statusText}
-              </p>
-              <p className="text-[11px] text-[#8a7d4d] text-center">
-                Building your trainer from @{handle.replace(/^@/, '')}…
+              <p className="text-[13px] text-[color:var(--ink-soft)] leading-relaxed mt-2">
+                Drop your X handle. We&apos;ll read your bio + recent posts and generate a hi-fi pixel
+                trainer that captures your vibe. You can tweak it before you claim it.
               </p>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function Spinner() {
-  return (
-    <div className="relative w-16 h-16">
-      <div
-        className="absolute inset-0 border-[3px] border-[#367d95]/20 rounded-full"
-        style={{ borderTopColor: '#367d95', animation: 'verity-spin 0.9s linear infinite' }}
-      />
-      <style jsx>{`
-        @keyframes verity-spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
+            <div>
+              <label
+                htmlFor="x-handle"
+                className="block text-[10px] tracking-[0.18em] uppercase font-bold text-[color:var(--ink-soft)] mb-2"
+              >
+                X Handle
+              </label>
+              <div className="relative">
+                <span
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--ink-muted)] font-medium pointer-events-none"
+                  aria-hidden
+                >
+                  @
+                </span>
+                <input
+                  id="x-handle"
+                  type="text"
+                  value={handle}
+                  onChange={(e) => setHandle(e.target.value)}
+                  placeholder="elonmusk"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="w-full pl-8 pr-3 py-3 rounded-xl text-[15px] focus:outline-none transition"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.7)',
+                    border: '1px solid rgba(22, 39, 44, 0.15)',
+                    color: 'var(--ink)',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--accent-coral)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(22, 39, 44, 0.15)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.7)';
+                  }}
+                />
+              </div>
+              {error && (
+                <p className="text-[12px] text-[color:var(--accent-coral-dark)] mt-2 tracking-tight">
+                  {error}
+                </p>
+              )}
+            </div>
+
+            <Button type="submit" variant="primary" size="lg" fullWidth disabled={!handle.trim()}>
+              Pull my trainer →
+            </Button>
+
+            <p className="text-center text-[11px] text-[color:var(--ink-muted)] leading-relaxed">
+              We read your public X profile to generate your trainer.
+              <br />
+              We never post on your behalf.
+            </p>
+          </form>
+        </GlassPanel>
+      </div>
+    </main>
   );
 }

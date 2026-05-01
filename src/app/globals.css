@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Press Start 2P — opt-in only via .font-pixel. No global override. */
 @font-face {
   font-family: 'Press Start 2P';
   src: url('https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2') format('woff2');
@@ -9,90 +10,147 @@
 }
 
 :root {
-  --neon-green: #39FF14;
-  --hot-pink: #FF006E;
-  --bg: #0a0a0a;
+  /* Verity brand tokens — keep in sync with src/lib/brand.ts */
+  --grad-start: #FFE6E6;
+  --grad-mid:   #F4D2FF;
+  --grad-end:   #C2DDFF;
+  --grad-warm:  #FFCB9A;
+
+  --chassis-cream:      #FFFDF3;
+  --chassis-cream-warm: #F5F1D6;
+  --chassis-shadow:     rgba(67, 56, 202, 0.12);
+
+  --glass-fill:        rgba(255, 253, 243, 0.55);
+  --glass-fill-strong: rgba(255, 253, 243, 0.78);
+  --glass-fill-soft:   rgba(255, 253, 243, 0.35);
+  --glass-border:      rgba(255, 255, 255, 0.6);
+  --glass-border-ink:  rgba(22, 39, 44, 0.08);
+  --glass-blur:        20px;
+
+  --ink:        #16272C;
+  --ink-soft:   #4A5560;
+  --ink-muted:  #8A95A0;
+
+  --accent-coral:      #FF6B5C;
+  --accent-coral-dark: #E85544;
+  --accent-olive:      #90B34D;
+  --accent-olive-dark: #6F8E37;
+  --accent-dark-teal:  #16272C;
+  --accent-avax:       #E84142; /* reserved */
 }
 
-* {
-  font-family: 'Press Start 2P', 'Courier New', monospace;
-}
-
-body {
-  background: var(--bg);
-  color: white;
-}
-
-/* Scanline effect */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(255, 255, 255, 0.015) 2px,
-    rgba(255, 255, 255, 0.015) 4px
-  );
-}
-
-/* CRT vignette */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9998;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 60%,
-    rgba(0, 0, 0, 0.4) 100%
-  );
-}
-
-/* Blinking cursor */
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-.animate-blink {
-  animation: blink 1s step-end infinite;
-}
-
-/* Glow pulse for buttons */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(57, 255, 20, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(57, 255, 20, 0.6); }
-}
-.animate-glow {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
-
-/* Selection color */
-::selection {
-  background: var(--neon-green);
-  color: black;
-}
-
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Hide scrollbar but allow scrolling */
-body::-webkit-scrollbar {
-  width: 4px;
+body {
+  color: var(--ink);
+  font-family: var(--font-sora), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 95%, var(--grad-warm) 0%, transparent 55%),
+    linear-gradient(135deg, var(--grad-start) 0%, var(--grad-mid) 45%, var(--grad-end) 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
 }
-body::-webkit-scrollbar-track {
-  background: var(--bg);
+
+/* Reusable backdrop — apply on a wrapping element to opt into the Verity gradient */
+.bg-verity-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 95%, var(--grad-warm) 0%, transparent 55%),
+    linear-gradient(135deg, var(--grad-start) 0%, var(--grad-mid) 45%, var(--grad-end) 100%);
 }
-body::-webkit-scrollbar-thumb {
-  background: #222;
-  border-radius: 2px;
+
+/* Glass panel — frosted card chrome */
+.glass {
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 8px 32px -12px var(--chassis-shadow),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
 }
-body::-webkit-scrollbar-thumb:hover {
-  background: var(--neon-green);
+.glass-strong {
+  background: var(--glass-fill-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 8px 32px -12px var(--chassis-shadow),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+}
+.glass-soft {
+  background: var(--glass-fill-soft);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.6));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.6));
+  border: 1px solid var(--glass-border);
+}
+
+/* Flatten glass for html2canvas — solid fill, no backdrop-filter (not supported by html2canvas) */
+[data-flatten-glass='true'] .glass,
+[data-flatten-glass='true'] .glass-strong,
+[data-flatten-glass='true'] .glass-soft {
+  background: var(--chassis-cream);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Pixel-art font, opt-in */
+.font-pixel {
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  letter-spacing: 0.04em;
+}
+
+/* Pixel sprites */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Selection */
+::selection {
+  background: var(--accent-coral);
+  color: white;
+}
+
+/* Scrollbar — thin, ink */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(22, 39, 44, 0.2);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(22, 39, 44, 0.35);
+}
+
+/* Subtle shimmer for loading states */
+@keyframes verity-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: verity-shimmer 2.4s ease-in-out infinite;
+}
+
+/* Soft float for the loading capsule */
+@keyframes verity-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.animate-float {
+  animation: verity-float 3.8s ease-in-out infinite;
 }
