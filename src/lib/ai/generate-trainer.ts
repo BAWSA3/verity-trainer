@@ -64,7 +64,7 @@ async function callAnthropic(
   profile: XProfile,
   slots: ManifestSlots,
   options: GenerateOptions,
-): Promise<{ config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; knownFor?: string }; reasoning: string }> {
+): Promise<{ config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; quote?: string; knownFor?: string }; reasoning: string }> {
   const system = buildSystemPrompt(slots);
   const userText = buildUserMessage(
     profile,
@@ -102,7 +102,7 @@ async function callAnthropic(
   }
   const input = toolUse.input as {
     config: TrainerConfig;
-    personality: { zodiac: string; abilities?: unknown; knownFor?: string };
+    personality: { zodiac: string; abilities?: unknown; quote?: string; knownFor?: string };
     reasoning: string;
   };
   return input;
@@ -111,7 +111,7 @@ async function callAnthropic(
 // ---------- validation + coercion ----------
 
 function validateAndCoerce(
-  raw: { config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; knownFor?: string; likes?: unknown; dislikes?: unknown }; reasoning: string },
+  raw: { config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; quote?: string; knownFor?: string; likes?: unknown; dislikes?: unknown }; reasoning: string },
   slots: ManifestSlots,
   profile: XProfile,
   source: 'live' | 'mock',
@@ -138,7 +138,7 @@ function validateAndCoerce(
     likes: [],
     dislikes: [],
     abilities: clampAbilities(raw.personality?.abilities),
-    knownFor: clampKnownFor(raw.personality?.knownFor),
+    quote: clampQuote(raw.personality?.quote ?? raw.personality?.knownFor),
   };
 
   const reasoning = (raw.reasoning ?? '').toString().trim().slice(0, 400);
@@ -182,9 +182,15 @@ function clampAbilities(raw: unknown): { name: string; description: string }[] {
     .slice(0, 2);
 }
 
-function clampKnownFor(raw: unknown): string {
+function clampQuote(raw: unknown): string {
   if (typeof raw !== 'string') return '';
-  return raw.trim().replace(/\s+/g, ' ').slice(0, 200);
+  return raw
+    .trim()
+    .replace(/[\x00-\x1f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    // Strip emojis since the prompt says no emojis but models sometimes add them.
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    .slice(0, 200);
 }
 
 // ---------- mock fallback ----------
@@ -209,7 +215,7 @@ function mockTrainer(profile: XProfile, slots: ManifestSlots, options: GenerateO
     likes: [],
     dislikes: [],
     abilities,
-    knownFor: mockKnownFor(profile, seed),
+    quote: mockQuote(seed),
   };
 
   const reasoning = profile.source === 'mock'
@@ -230,12 +236,77 @@ const MOCK_ABILITY_POOL: { name: string; description: string }[] = [
   { name: 'Builder’s Eye',  description: 'sees the load-bearing wall in every team meeting' },
 ];
 
-const MOCK_KNOWN_FOR_POOL: string[] = [
-  'the kind of builder who ships at 2am, posts the postmortem at noon, and quietly mentors three juniors by Friday.',
-  'a signal in a feed of takes — small craft, sharp eye, the rare voice that earns its quiet.',
-  'shows up early to the future and does the boring work that lets everyone else look creative.',
-  'turns half-baked ideas into shipped systems and never takes the credit you’d expect them to.',
-  'reads the room twice, then does exactly what nobody asked for and somehow it works.',
+// 60+ hand-written sharp-edge roasts for keyless dev. Each one is brand-safe
+// (no race / sex / orientation / disability / religion content); the comedy
+// targets productivity LARPing, posting habits, tool obsessions, niche flexes,
+// and Pokémon-coded character bits. Selected deterministically by handle hash
+// so the same demo handle always produces the same quote.
+const MOCK_QUOTE_POOL: string[] = [
+  // Pokémon-coded
+  'would probably lose in their first Pokémon battle.',
+  'brings a Magikarp to a Mewtwo fight and calls it confidence.',
+  'evolves once, then quits the journey to start a substack.',
+  'has a full Pokédex in Notion and zero badges to show for it.',
+  'still doesn’t know what their starter is and refuses to commit.',
+  'would lose to Youngster Joey on the first route.',
+  'picked Charmander, didn’t evolve it, lost the league, blamed the meta.',
+  'their pokémon are stronger than them at this point.',
+  'rage-quits after one critical hit and posts about it for a week.',
+  'still using a Bidoof in 2026 and calling it a power move.',
+  // Productivity / tool LARPing
+  'has 14 unfinished side projects and still posts productivity hacks.',
+  'uses Linear like it’s a personality trait.',
+  'has a Notion template for everything except their actual life.',
+  'has read more "how to ship" essays than they’ve shipped features.',
+  'starts a substack every six months, posts twice, then deletes it.',
+  'has more stickers on their laptop than shipped features.',
+  'their system is a system of systems they’ll get to next quarter.',
+  'lives in their second-brain and visits the first one on weekends.',
+  'has three OKRs and a Trello board nobody can see.',
+  'reads James Clear and reorganizes their pen tray.',
+  // Online behavior
+  'has "thoughts on AGI" in their bio and 200 followers.',
+  'screenshots their own tweets for the algorithm.',
+  'follows 3000 people and reads about 12.',
+  'posts a thread every Sunday and replies to themselves.',
+  'subtweets their own opinions to test market fit.',
+  'quote-tweets their own quote tweets.',
+  'has a take on every cycle and a stake in none.',
+  'liked a tweet from 2014 last month and got caught.',
+  'their drafts folder has more conviction than their feed.',
+  'reposts dunks to seem above the dunks.',
+  // Aesthetic / vibe
+  'mistakes minimalism for having nothing to say.',
+  'redesigns their website more often than they update the content.',
+  'their dotfiles repo has more activity than their actual job.',
+  'owns three terminal emulators and uses none of them right.',
+  'thinks Helvetica is a personality.',
+  'their portfolio is a portfolio of portfolios.',
+  'their setup costs more than their output earns.',
+  'switched to a split keyboard and now types slower with attitude.',
+  // Niche / takes
+  'has a hot take on hot takes.',
+  'has been "almost done with their book" since 2022.',
+  'follows F1 on Instagram and calls themselves a fan.',
+  'rewatches the same 4 movies and has theories about all of them.',
+  'starts every conversation with "have you read ___" and never finishes the sentence.',
+  'quotes Naval at parties and is surprised when nobody invites them back.',
+  'their Spotify Wrapped is an apology letter.',
+  // Behavioral tics
+  'shows up early to every meeting they didn’t want to attend.',
+  'agrees in the room, disagrees in the group chat ten minutes later.',
+  'opens 47 tabs to research a 12-minute task.',
+  'their browser history is a roadmap of unfinished curiosity.',
+  'cancels plans to "ship something" and watches a documentary instead.',
+  'has 3 timers running and isn’t timing anything.',
+  'replies-all to one email per quarter and ruins everyone’s day.',
+  // Soft self-aware
+  'is everyone’s favorite person to ask, never the one being asked.',
+  'is right about the future and wrong about the timing.',
+  'probably overthinks this trainer card more than anyone else who pulled one.',
+  'would absolutely buy a Verity card just to flex it on themselves.',
+  'is the friend who reads the patch notes.',
+  'their group chat depends on them more than they realize.',
 ];
 
 function mockAbilities(seed: number): { name: string; description: string }[] {
@@ -245,9 +316,9 @@ function mockAbilities(seed: number): { name: string; description: string }[] {
   return [a, MOCK_ABILITY_POOL[bIdx]];
 }
 
-function mockKnownFor(profile: XProfile, seed: number): string {
-  const idx = Math.abs(seed + 31) % MOCK_KNOWN_FOR_POOL.length;
-  return MOCK_KNOWN_FOR_POOL[idx];
+function mockQuote(seed: number): string {
+  const idx = Math.abs(seed + 31) % MOCK_QUOTE_POOL.length;
+  return MOCK_QUOTE_POOL[idx];
 }
 
 function pickByIdx(values: string[], seed: number): string {

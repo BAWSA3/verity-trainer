@@ -2,7 +2,9 @@ import type {
   TrainerConfig,
   TrainerPersonality,
   StoredTrainer,
+  TierKey,
 } from '@/types/trainer';
+import { TIER_KEYS } from '@/types/trainer';
 
 // Two `trainer_signups.trainer_config` JSONB shapes coexist:
 //
@@ -26,6 +28,7 @@ interface UnpackedTrainer {
   source?: 'ai' | 'manual';
   reasoning?: string;
   referredBy?: string;
+  tier?: TierKey;
 }
 
 const EMPTY_PERSONALITY: TrainerPersonality = {
@@ -49,12 +52,16 @@ export function unpackTrainer(row: { trainer_config: unknown }): UnpackedTrainer
     const referredBy = typeof obj.referredBy === 'string'
       ? obj.referredBy.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15) || undefined
       : undefined;
+    const tier = typeof obj.tier === 'string' && (TIER_KEYS as readonly string[]).includes(obj.tier)
+      ? (obj.tier as TierKey)
+      : undefined;
     return {
       config: normalizeConfig(obj.config as Record<string, unknown>),
       personality: normalizePersonality(obj.personality as Record<string, unknown>),
       source: obj.source === 'ai' || obj.source === 'manual' ? obj.source : undefined,
       reasoning,
       referredBy,
+      tier,
     };
   }
 
@@ -72,6 +79,7 @@ export function packTrainer(
   source?: 'ai' | 'manual',
   reasoning?: string,
   referredBy?: string,
+  tier?: TierKey,
 ): StoredTrainer {
   const stored: StoredTrainer = { schemaVersion: 2, config, personality };
   if (source) stored.source = source;
@@ -79,6 +87,9 @@ export function packTrainer(
   if (referredBy) {
     const cleaned = referredBy.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
     if (cleaned) stored.referredBy = cleaned;
+  }
+  if (tier && (TIER_KEYS as readonly string[]).includes(tier)) {
+    stored.tier = tier;
   }
   return stored;
 }
@@ -125,9 +136,12 @@ function normalizePersonality(raw: Record<string, unknown>): TrainerPersonality 
         .slice(0, 2)
     : undefined;
 
-  const knownFor = typeof raw.knownFor === 'string'
-    ? raw.knownFor.slice(0, 200)
-    : undefined;
+  // V3.1 quote replaces V3 knownFor. Read both for back-compat; prefer quote.
+  const quote = typeof raw.quote === 'string'
+    ? raw.quote.slice(0, 200)
+    : typeof raw.knownFor === 'string'
+      ? raw.knownFor.slice(0, 200)
+      : undefined;
 
   const out: TrainerPersonality = {
     zodiac: zodiac as TrainerPersonality['zodiac'],
@@ -141,7 +155,7 @@ function normalizePersonality(raw: Record<string, unknown>): TrainerPersonality 
     out.shownDislikes = rawShownDislikes;
   }
   if (abilities && abilities.length > 0) out.abilities = abilities;
-  if (knownFor) out.knownFor = knownFor;
+  if (quote) out.quote = quote;
   return out;
 }
 

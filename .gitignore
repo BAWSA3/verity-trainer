@@ -50,3 +50,5 @@ tmp-migrations.sql
 blender/
 public/console/console-iter*.png
 public/console/console-front-blockout*.png
+
+.env*.local

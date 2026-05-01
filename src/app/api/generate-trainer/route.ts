@@ -51,7 +51,7 @@ function scrubPersonality(p: TrainerPersonality, handle: string): TrainerPersona
     if (dislikes.dropped.length) console.warn(`[generate-trainer] dropped AI dislikes for @${handle}:`, dislikes.dropped);
   }
   if (p.abilities && p.abilities.length > 0) out.abilities = p.abilities;
-  if (p.knownFor) out.knownFor = p.knownFor;
+  if (p.quote) out.quote = p.quote;
   return out;
 }
 

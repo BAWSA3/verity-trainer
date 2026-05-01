@@ -58,7 +58,7 @@ export default function TrainerCard({
   const stats = generateStats(config, personality);
   const zodiacGlyph = personality.zodiac ? ZODIAC_GLYPHS[personality.zodiac] : null;
   const displayName = (trainerName || 'TRAINER').toUpperCase().slice(0, 12);
-  const knownFor = personality.knownFor?.trim() ?? '';
+  const quote = (personality.quote ?? personality.knownFor)?.trim() ?? '';
   const abilities = personality.abilities ?? [];
 
   return (
@@ -107,10 +107,9 @@ export default function TrainerCard({
         <div className="identity-col">
           <h2 className="trainer-name">{displayName}</h2>
 
-          {knownFor ? (
+          {quote ? (
             <div className="known-for-block">
-              <span className="section-eyebrow">Known For</span>
-              <p className="known-for-body">{knownFor}</p>
+              <p className="known-for-body">&ldquo;{quote}&rdquo;</p>
             </div>
           ) : null}
 

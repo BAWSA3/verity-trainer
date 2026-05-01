@@ -25,9 +25,16 @@ const repoRoot = path.resolve(here, '..');
 const MIGRATIONS = [
   'supabase-migration.sql',
   'supabase-migration-moderation.sql',
+  'supabase-migration-tiers.sql',
 ];
 
-const EXPECTED_TABLES = ['trainer_signups', 'signup_attempts', 'signup_audit_log'];
+const EXPECTED_TABLES = [
+  'trainer_signups',
+  'signup_attempts',
+  'signup_audit_log',
+  'tier_supply',
+  'tier_roll_log',
+];
 
 async function loadEnv() {
   // Lightweight .env.local parser — Node.js doesn't auto-load .env outside Next.
@@ -48,16 +55,52 @@ async function loadEnv() {
 }
 
 function splitStatements(sql) {
-  // Naive splitter — strip comments + split on `;` at line ends.
-  // Sufficient for our migrations which don't have stored procs / DO blocks.
-  const lines = sql
+  // Strip line comments first, then walk char-by-char so semicolons inside
+  // dollar-quoted blocks ($$ ... $$) don't split a statement. The tier
+  // migration uses a plpgsql function, which is one long statement that
+  // contains internal semicolons — without this the function body breaks.
+  const stripped = sql
     .split(/\r?\n/)
     .filter((l) => !l.trim().startsWith('--'))
     .join('\n');
-  return lines
-    .split(';')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+
+  const statements = [];
+  let buf = '';
+  let i = 0;
+  let inDollar = false;
+  let dollarTag = '';
+  while (i < stripped.length) {
+    const ch = stripped[i];
+    // Detect $tag$ delimiter (commonly $$ or $body$).
+    if (ch === '$') {
+      const match = /^\$([A-Za-z0-9_]*)\$/.exec(stripped.slice(i));
+      if (match) {
+        const tag = match[0];
+        if (!inDollar) {
+          inDollar = true;
+          dollarTag = tag;
+        } else if (tag === dollarTag) {
+          inDollar = false;
+          dollarTag = '';
+        }
+        buf += tag;
+        i += tag.length;
+        continue;
+      }
+    }
+    if (ch === ';' && !inDollar) {
+      const stmt = buf.trim();
+      if (stmt.length > 0) statements.push(stmt);
+      buf = '';
+      i += 1;
+      continue;
+    }
+    buf += ch;
+    i += 1;
+  }
+  const tail = buf.trim();
+  if (tail.length > 0) statements.push(tail);
+  return statements;
 }
 
 async function runMigration(client, file) {

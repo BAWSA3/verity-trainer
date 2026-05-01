@@ -21,6 +21,27 @@
 export const DIRECTIONS = ['s', 'e', 'w', 'n'] as const;
 export type Direction = (typeof DIRECTIONS)[number];
 
+// Tier system — TCG grading-coded rarity for the launch drop. Capacities
+// are enforced server-side via the tier_supply table + roll_tier() RPC;
+// rolling is weighted by remaining supply so distribution stays close
+// to target even as rare tiers deplete.
+export type TierKey = 'founder' | 'black-label' | 'gem' | 'mint' | 'near-mint';
+export const TIER_KEYS: readonly TierKey[] = ['founder', 'black-label', 'gem', 'mint', 'near-mint'] as const;
+export const TIER_CAPACITY: Record<TierKey, number> = {
+  'founder': 1,
+  'black-label': 30,
+  'gem': 270,
+  'mint': 900,
+  'near-mint': 1800,
+};
+export const TIER_LABELS: Record<TierKey, string> = {
+  'founder': 'FOUNDER',
+  'black-label': 'BLACK LABEL',
+  'gem': 'GEM',
+  'mint': 'MINT',
+  'near-mint': 'NEAR MINT',
+};
+
 export type Zodiac =
   | 'aries' | 'taurus' | 'gemini' | 'cancer' | 'leo' | 'virgo'
   | 'libra' | 'scorpio' | 'sagittarius' | 'capricorn' | 'aquarius' | 'pisces';
@@ -62,10 +83,14 @@ export interface TrainerPersonality {
   zodiac: Zodiac | '';
   // V3 — AI-generated, surfaced on the share card. 0-2 abilities.
   abilities?: TrainerAbility[];
-  // V3 — single tagline, ~140 char max ("Known For ...").
+  // V3.1 — sharp-edge roast quote (replaces V3 'knownFor' tagline).
+  // Brand-safe floor: no race/sex/orientation/religion/disability content;
+  // self-roast about productivity / online behavior / aesthetic / niches OK.
+  quote?: string;
+  /** @deprecated V3 only — read via unpackTrainer for back-compat. */
   knownFor?: string;
 
-  // V2 legacy — likes/dislikes are deprecated in favour of abilities/knownFor
+  // V2 legacy — likes/dislikes are deprecated in favour of abilities/quote
   // but kept for back-compat reads of pre-2026-05-01 rows.
   likes: string[];
   dislikes: string[];
@@ -88,11 +113,9 @@ export interface StoredTrainer {
   config: TrainerConfig;
   personality: TrainerPersonality;
   source?: 'ai' | 'manual';
-  // Optional one-line AI explanation surfaced as a subtitle on /card/[id]
-  // and the OG image. Only present for AI-generated trainers; clamped to
-  // 400 chars upstream by generate-trainer.ts.
   reasoning?: string;
-  // X handle of the trainer card whose QR scan brought this user here. Used
-  // for referral attribution. Sanitized to X handle rules at write time.
+  // X handle of the trainer card whose QR scan brought this user here.
   referredBy?: string;
+  // Rolled at signup time via roll_tier() RPC. Absent for legacy rows.
+  tier?: TierKey;
 }

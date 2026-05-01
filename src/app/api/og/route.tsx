@@ -159,11 +159,12 @@ export async function GET(req: NextRequest) {
   const zodiacRaw = searchParams.get('z') || '';
   const zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
 
-  // V3 — knownFor + 2 abilities replace likes/dislikes.
+  // V3.1 — quote + 2 abilities replace likes/dislikes. URL key 'kf' kept
+  // for back-compat with v3 shared URLs but now carries the roast quote.
   const cleanText = (raw: string, max: number) =>
     raw.replace(/[\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 
-  const knownFor = cleanText(searchParams.get('kf') || '', 200);
+  const quote = cleanText(searchParams.get('kf') || '', 200);
   const ability1Name = cleanText(searchParams.get('a1n') || '', 32);
   const ability1Desc = cleanText(searchParams.get('a1d') || '', 140);
   const ability2Name = cleanText(searchParams.get('a2n') || '', 32);
@@ -321,23 +322,19 @@ export async function GET(req: NextRequest) {
                 {name}
               </div>
 
-              {knownFor ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ display: 'flex', fontSize: 11, letterSpacing: '5px', fontWeight: 700, color: '#367D95', fontFamily: 'Moderniz' }}>
-                    KNOWN FOR
-                  </span>
-                  <div
-                    style={{
-                      color: 'rgba(22, 39, 44, 0.82)',
-                      fontSize: 20,
-                      display: 'flex',
-                      lineHeight: 1.4,
-                      maxWidth: 720,
-                      fontFamily: 'Inter',
-                    }}
-                  >
-                    {knownFor}
-                  </div>
+              {quote ? (
+                <div
+                  style={{
+                    color: 'rgba(22, 39, 44, 0.82)',
+                    fontSize: 22,
+                    display: 'flex',
+                    lineHeight: 1.4,
+                    maxWidth: 720,
+                    fontFamily: 'Inter',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  &ldquo;{quote}&rdquo;
                 </div>
               ) : null}
 

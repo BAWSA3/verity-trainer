@@ -52,7 +52,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     z: personality.zodiac,
   });
   if (reasoning) ogParams.set('r', reasoning.slice(0, 160));
-  if (personality.knownFor) ogParams.set('kf', personality.knownFor.slice(0, 200));
+  // 'kf' URL param key kept for back-compat with v3 shared URLs; semantics
+  // changed in v3.1 — it now carries the roast quote, not a tagline.
+  const quoteText = personality.quote ?? personality.knownFor;
+  if (quoteText) ogParams.set('kf', quoteText.slice(0, 200));
   const a1 = personality.abilities?.[0];
   const a2 = personality.abilities?.[1];
   if (a1) {

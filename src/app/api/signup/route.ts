@@ -235,6 +235,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: friendly }, { status: 400 });
     }
 
+    // 7.5. Roll tier — atomic weighted random across remaining supply.
+    // The roll_tier() RPC locks tier_supply, picks one tier weighted by
+    // remaining count, decrements, and writes a tier_roll_log row.
+    let assignedTier: import('@/types/trainer').TierKey | undefined;
+    try {
+      const { data: tier, error: tierErr } = await supabaseAdmin.rpc('roll_tier');
+      if (tierErr) {
+        console.warn('[signup] roll_tier failed, claim proceeds untiered:', tierErr.message);
+      } else if (typeof tier === 'string') {
+        assignedTier = tier as import('@/types/trainer').TierKey;
+      }
+    } catch (err) {
+      console.warn('[signup] roll_tier exception:', err);
+    }
+
     // 8. Upsert the signup (v2 JSONB shape: {schemaVersion, config, personality})
     const { data, error: dbErr } = await supabaseAdmin
       .from('trainer_signups')
@@ -249,6 +264,7 @@ export async function POST(req: NextRequest) {
             aiReasoning ? 'ai' : undefined,
             aiReasoning,
             referrerHandle,
+            assignedTier,
           ),
         },
         { onConflict: 'email' },
@@ -271,7 +287,7 @@ export async function POST(req: NextRequest) {
     // 6. Audit success
     await logAudit({ email, trainerName, xHandle, flagged: false });
 
-    return NextResponse.json({ id: data.id });
+    return NextResponse.json({ id: data.id, tier: assignedTier ?? null });
   } catch (err) {
     console.error('[signup] unexpected error:', err);
     return NextResponse.json({ error: 'System error.' }, { status: 500 });
