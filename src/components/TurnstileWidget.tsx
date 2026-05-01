@@ -33,10 +33,12 @@ declare global {
           'error-callback'?: () => void;
           theme?: string;
           appearance?: 'always' | 'execute' | 'interaction-only';
+          size?: 'normal' | 'compact' | 'invisible';
         },
       ) => string;
       remove: (widgetId: string) => void;
       reset: (widgetId: string) => void;
+      execute: (widgetId?: string) => void;
     };
     onloadTurnstileCallback?: () => void;
   }
@@ -86,7 +88,11 @@ export default function TurnstileWidget({
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey,
           theme,
-          appearance: 'execute',
+          // size:'invisible' auto-runs the challenge on render and fires the
+          // callback when a token is ready. No execute() call needed; widget
+          // is fully hidden + the user never sees a checkbox unless CF flags
+          // them as suspicious (in which case it shows a brief interstitial).
+          size: 'invisible',
           callback: (token: string) => onVerify(token),
           'expired-callback': () => {
             if (onExpire) onExpire();

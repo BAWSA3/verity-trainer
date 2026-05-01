@@ -1,7 +1,7 @@
 -- VERITY Trainer Creator - Supabase Migration
--- Run this in your Supabase SQL Editor
+-- Run this in your Supabase SQL Editor. Idempotent — safe to re-run.
 
-CREATE TABLE trainer_signups (
+CREATE TABLE IF NOT EXISTS trainer_signups (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email TEXT NOT NULL,
   x_handle TEXT,
@@ -11,7 +11,7 @@ CREATE TABLE trainer_signups (
 );
 
 -- Unique index for dedup on email (supports upsert)
-CREATE UNIQUE INDEX idx_trainer_signups_email ON trainer_signups(email);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_trainer_signups_email ON trainer_signups(email);
 
 -- Enable RLS - no public policies, all access via service role key
 ALTER TABLE trainer_signups ENABLE ROW LEVEL SECURITY;
