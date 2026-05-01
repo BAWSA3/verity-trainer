@@ -35,9 +35,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const xHandle = typeof trainer.x_handle === 'string' ? trainer.x_handle : '';
 
   // OG URL params. Stat keys (s/c/st/lk_v) keep their names but now mean
-  // presence/wit/taste/resolve. Append-only for new params; legacy lk/dl/slk/sdl
-  // are dropped in v3 — old shared URLs degrade gracefully (no chips section).
+  // presence/wit/taste/resolve. The OG route prefers the DB lookup via `cid`
+  // when present (V3.2 anti-forgery) and treats the rest as fallback for
+  // shared v3 URLs that don't have cid. We still emit the legacy params so
+  // old crawlers / cached metadata keep rendering.
   const ogParams = new URLSearchParams({
+    cid: id,
     n: name,
     s: String(stats.presence),
     c: String(stats.wit),

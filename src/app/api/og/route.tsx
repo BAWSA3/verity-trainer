@@ -7,6 +7,9 @@ import QRCode from 'qrcode';
 import { sanitizeNameForDisplay, sanitizeChipsForDisplay } from '@/lib/moderation/sanitize';
 import { ZODIAC_GLYPHS, VALID_ZODIACS } from '@/lib/personality';
 import type { Zodiac } from '@/types/trainer';
+import { generateStats } from '@/lib/card-utils';
+import { unpackTrainer } from '@/lib/trainer-data';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
 
@@ -135,19 +138,27 @@ function applyMask(items: string[], mask: string | null): string[] {
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
-  const name = sanitizeNameForDisplay(searchParams.get('n'));
+  const cleanText = (raw: string, max: number) =>
+    raw.replace(/[\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 
-  // V3 stat semantics (key kept for back-compat with old shared URLs):
-  //   s    → presence
-  //   c    → wit
-  //   st   → taste
-  //   lk_v → resolve
-  const presence = clamp(parseInt(searchParams.get('s')    || '70'));
-  const wit      = clamp(parseInt(searchParams.get('c')    || '70'));
-  const taste    = clamp(parseInt(searchParams.get('st')   || '70'));
-  const resolve  = clamp(parseInt(searchParams.get('lk_v') || '70'));
+  // V3.2 — if `cid` is present, fetch authoritative card data from the DB
+  // and ignore tampered text URL params. This blocks forged share images
+  // (e.g. crafting a URL with offensive copy attributed to a real handle).
+  // For back-compat, the GET still falls back to URL params when cid is
+  // absent or the row isn't found, so old shared v3 URLs still render.
+  const cidRaw = (searchParams.get('cid') || '').trim();
+  // UUID v4 shape: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx, lower-case hex.
+  const cid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cidRaw)
+    ? cidRaw
+    : null;
 
-  const args: CompositeArgs = {
+  let name = sanitizeNameForDisplay(searchParams.get('n'));
+  let presence = clamp(parseInt(searchParams.get('s')    || '70'));
+  let wit      = clamp(parseInt(searchParams.get('c')    || '70'));
+  let taste    = clamp(parseInt(searchParams.get('st')   || '70'));
+  let resolve  = clamp(parseInt(searchParams.get('lk_v') || '70'));
+
+  let args: CompositeArgs = {
     body:      safeId(searchParams.get('b'),  ''),
     hair:      safeId(searchParams.get('h'),  ''),
     hairColor: safeId(searchParams.get('hc'), ''),
@@ -156,19 +167,61 @@ export async function GET(req: NextRequest) {
     accessory: safeId(searchParams.get('ac'), 'none'),
   };
 
-  const zodiacRaw = searchParams.get('z') || '';
-  const zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
+  let zodiacRaw = searchParams.get('z') || '';
+  let zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
 
-  // V3.1 — quote + 2 abilities replace likes/dislikes. URL key 'kf' kept
-  // for back-compat with v3 shared URLs but now carries the roast quote.
-  const cleanText = (raw: string, max: number) =>
-    raw.replace(/[\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+  let quote = cleanText(searchParams.get('kf') || '', 200);
+  let ability1Name = cleanText(searchParams.get('a1n') || '', 32);
+  let ability1Desc = cleanText(searchParams.get('a1d') || '', 140);
+  let ability2Name = cleanText(searchParams.get('a2n') || '', 32);
+  let ability2Desc = cleanText(searchParams.get('a2d') || '', 140);
 
-  const quote = cleanText(searchParams.get('kf') || '', 200);
-  const ability1Name = cleanText(searchParams.get('a1n') || '', 32);
-  const ability1Desc = cleanText(searchParams.get('a1d') || '', 140);
-  const ability2Name = cleanText(searchParams.get('a2n') || '', 32);
-  const ability2Desc = cleanText(searchParams.get('a2d') || '', 140);
+  let refHandle = (searchParams.get('ref') || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
+
+  // DB-backed render path — only when cid is a valid UUID. Errors fall
+  // back to URL params silently so the OG never returns a hard error
+  // for a valid in-app share URL when Supabase has a transient failure.
+  if (cid) {
+    try {
+      const { data: row } = await getSupabaseAdmin()
+        .from('trainer_signups')
+        .select('id, x_handle, trainer_name, trainer_config')
+        .eq('id', cid)
+        .maybeSingle();
+      if (row) {
+        const { config, personality } = unpackTrainer(row);
+        const stats = generateStats(config, personality);
+        name = sanitizeNameForDisplay(row.trainer_name);
+        presence = clamp(stats.presence);
+        wit      = clamp(stats.wit);
+        taste    = clamp(stats.taste);
+        resolve  = clamp(stats.resolve);
+        args = {
+          body: config.body,
+          hair: config.hair,
+          hairColor: config.hairColor,
+          outfit: config.outfit,
+          eyes: config.eyes,
+          accessory: config.accessory,
+        };
+        zodiacRaw = personality.zodiac;
+        zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
+        quote = cleanText(personality.quote ?? personality.knownFor ?? '', 200);
+        const a1 = personality.abilities?.[0];
+        const a2 = personality.abilities?.[1];
+        ability1Name = a1 ? cleanText(a1.name, 32) : '';
+        ability1Desc = a1 ? cleanText(a1.description, 140) : '';
+        ability2Name = a2 ? cleanText(a2.name, 32) : '';
+        ability2Desc = a2 ? cleanText(a2.description, 140) : '';
+        refHandle = typeof row.x_handle === 'string'
+          ? row.x_handle.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15)
+          : '';
+      }
+    } catch (err) {
+      console.warn('[og] cid lookup failed, falling back to URL params:', err);
+    }
+  }
+
   const abilities = [
     ability1Name && ability1Desc ? { name: ability1Name, description: ability1Desc } : null,
     ability2Name && ability2Desc ? { name: ability2Name, description: ability2Desc } : null,
@@ -177,10 +230,6 @@ export async function GET(req: NextRequest) {
   const fullBodyDataUri = await compositeFullBody(args);
 
   // QR — referral entry point. Encodes <appUrl>/create?ref=<xHandle>.
-  // The X handle of the card owner is the human-readable referral code,
-  // passed by /card/[id]/page.tsx via the OG URL builder. X handles are
-  // [a-zA-Z0-9_], 1-15 chars per X's own rules.
-  const refHandle = (searchParams.get('ref') || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://verity-trainer.vercel.app';
   const qrTarget = refHandle
     ? `${appUrl}/create?ref=${refHandle}`

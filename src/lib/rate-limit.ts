@@ -43,45 +43,63 @@ export interface RateCheckResult {
  * hourly budget.
  */
 export async function checkSignupRate(ipHash: string): Promise<RateCheckResult> {
-  const windowStart = new Date(Date.now() - WINDOW_MS).toISOString();
+  return checkRateLimit(ipHash, { action: 'signup', max: MAX_ATTEMPTS, windowMs: WINDOW_MS });
+}
 
-  // Count recent attempts
+/**
+ * Generic rate-limit check, partitioned by `action`. Used for per-endpoint
+ * caps — e.g. /api/generate-trainer wants its own budget separate from
+ * /api/signup so a few real signups don't drain the AI-cost budget for the
+ * whole IP.
+ */
+export interface RateLimitOptions {
+  action: 'signup' | 'generate-trainer';
+  max: number;
+  windowMs: number;
+}
+
+export async function checkRateLimit(
+  ipHash: string,
+  opts: RateLimitOptions,
+): Promise<RateCheckResult> {
+  const windowStart = new Date(Date.now() - opts.windowMs).toISOString();
+
   const { count, error: countErr } = await supabaseAdmin
     .from('signup_attempts')
     .select('*', { count: 'exact', head: true })
     .eq('ip_hash', ipHash)
+    .eq('action', opts.action)
     .gte('created_at', windowStart);
 
   if (countErr) {
-    console.warn('[rate-limit] count query failed, failing open:', countErr);
+    console.warn(`[rate-limit:${opts.action}] count query failed, failing open:`, countErr);
     return { ok: true };
   }
 
-  if ((count ?? 0) >= MAX_ATTEMPTS) {
-    // Figure out retryAfter — oldest attempt in window + WINDOW_MS.
+  if ((count ?? 0) >= opts.max) {
     const { data: oldest } = await supabaseAdmin
       .from('signup_attempts')
       .select('created_at')
       .eq('ip_hash', ipHash)
+      .eq('action', opts.action)
       .gte('created_at', windowStart)
       .order('created_at', { ascending: true })
       .limit(1)
       .single();
 
-    let retryAfter = 3600;
+    let retryAfter = Math.ceil(opts.windowMs / 1000);
     if (oldest?.created_at) {
-      const freeAt = new Date(oldest.created_at).getTime() + WINDOW_MS;
+      const freeAt = new Date(oldest.created_at).getTime() + opts.windowMs;
       retryAfter = Math.max(1, Math.ceil((freeAt - Date.now()) / 1000));
     }
     return { ok: false, retryAfter };
   }
 
-  // Record this attempt
   const { error: insertErr } = await supabaseAdmin
     .from('signup_attempts')
-    .insert({ ip_hash: ipHash });
+    .insert({ ip_hash: ipHash, action: opts.action });
   if (insertErr) {
-    console.warn('[rate-limit] insert failed:', insertErr);
+    console.warn(`[rate-limit:${opts.action}] insert failed:`, insertErr);
     // Fail open — don't block real users on a DB hiccup
   }
 

@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import { randomConfig } from '@/lib/trainer-options';
 import TrainerDashboard from '@/components/dashboard/TrainerDashboard';
 import { GlassPanel, Button } from '@/components/ui';
+import TurnstileWidget, { TURNSTILE_ENABLED } from '@/components/TurnstileWidget';
 
 const INITIAL_PERSONALITY: TrainerPersonality = { zodiac: '', likes: [], dislikes: [] };
 // Local-storage key for the referral handle so it survives the X-auth bounce
@@ -28,6 +29,13 @@ export default function CreatePageClient() {
   const [error, setError] = useState<string | null>(null);
   const [ai, setAi] = useState<AiResult | null>(null);
   const [statusText, setStatusText] = useState('Reading your X profile…');
+  // Turnstile token captured from the invisible widget on this page; only
+  // enforced when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set in the environment.
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(null), []);
 
   // Capture ?ref=<handle> from the URL on first load and stash it. Survives
   // the AI generation phase + signup gate so /api/signup can attribute.
@@ -45,13 +53,21 @@ export default function CreatePageClient() {
 
   async function generate(input: string, regenerate = false) {
     setError(null);
+    if (TURNSTILE_ENABLED && !turnstileToken) {
+      setError('Captcha check pending — try again in a second.');
+      return;
+    }
     setPhase('generating');
     cycleStatus();
     try {
       const r = await fetch('/api/generate-trainer', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ handle: input, regenerate }),
+        body: JSON.stringify({
+          handle: input,
+          regenerate,
+          turnstileToken: turnstileToken || undefined,
+        }),
       });
       if (!r.ok) {
         const data = (await r.json().catch(() => ({}))) as { error?: string; message?: string };
@@ -226,6 +242,12 @@ export default function CreatePageClient() {
             <Button type="submit" variant="primary" size="lg" fullWidth disabled={!handle.trim()}>
               Pull my trainer →
             </Button>
+
+            {/* Invisible Cloudflare Turnstile — only renders in prod */}
+            <TurnstileWidget
+              onVerify={handleTurnstileVerify}
+              onExpire={handleTurnstileExpire}
+            />
 
             <p className="text-center text-[11px] text-[color:var(--ink-muted)] leading-relaxed">
               We read your public X profile to generate your trainer.

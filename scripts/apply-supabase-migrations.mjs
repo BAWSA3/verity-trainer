@@ -26,6 +26,7 @@ const MIGRATIONS = [
   'supabase-migration.sql',
   'supabase-migration-moderation.sql',
   'supabase-migration-tiers.sql',
+  'supabase-migration-uniqueness.sql',
 ];
 
 const EXPECTED_TABLES = [

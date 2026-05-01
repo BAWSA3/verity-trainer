@@ -4,10 +4,14 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkTrainerName } from '@/lib/moderation/check-name';
 import { checkHandle } from '@/lib/moderation/check-handle';
 import { checkTrainerConfig } from '@/lib/moderation/check-config';
-import { checkPersonality } from '@/lib/moderation/check-personality';
+import { checkPersonality, checkQuote } from '@/lib/moderation/check-personality';
+import { mockQuoteForHash } from '@/lib/ai/mock-quotes';
 import { isDisposableEmail, emailDomain } from '@/lib/moderation/disposable-domains';
 import { checkSignupRate, extractIp, hashIp } from '@/lib/rate-limit';
 import { packTrainer } from '@/lib/trainer-data';
+import { normalizeEmail } from '@/lib/moderation/normalize-email';
+import { verifyTurnstile } from '@/lib/turnstile';
+import { checkOrigin } from '@/lib/origin-check';
 import type { TrainerPersonality } from '@/types/trainer';
 
 const EMPTY_PERSONALITY: TrainerPersonality = { zodiac: '', likes: [], dislikes: [] };
@@ -64,11 +68,42 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Origin allow-list — blocks naive cross-origin bot POSTs without setting
+  // browser-y headers. Same-origin browser submissions pass automatically.
+  const originCheck = checkOrigin(req);
+  if (!originCheck.ok) {
+    return NextResponse.json(
+      { error: 'Forbidden.' },
+      { status: 403 },
+    );
+  }
+
   try {
     const body = await req.json();
-    const { email, xHandle, trainerName, trainerConfig, trainerPersonality, reasoning, referredBy } = body ?? {};
+    const {
+      email, xHandle, trainerName, trainerConfig, trainerPersonality,
+      reasoning, referredBy, turnstileToken,
+    } = body ?? {};
     const personality: TrainerPersonality = trainerPersonality ?? EMPTY_PERSONALITY;
     const aiReasoning = typeof reasoning === 'string' && reasoning.trim() ? reasoning.trim() : undefined;
+
+    // 0. Cloudflare Turnstile verification — short-circuits ok when no
+    // secret configured (dev / preview), enforces in prod. Run BEFORE the
+    // rate-limit + DB checks so trivially-bad bots don't even hit our DB.
+    const turnstile = await verifyTurnstile(turnstileToken, ip);
+    if (!turnstile.ok && turnstile.reason !== 'no_key') {
+      await logAudit({
+        email,
+        trainerName,
+        xHandle,
+        flagged: true,
+        flagReason: `turnstile_${turnstile.reason ?? 'unknown'}`,
+      });
+      return NextResponse.json(
+        { error: 'Verification failed. Refresh the page and try again.' },
+        { status: 403 },
+      );
+    }
     // Referral handle (the X handle of the trainer card whose QR was scanned).
     // Sanitize to X handle rules even though it's user-supplied via localStorage.
     const referrerHandle = typeof referredBy === 'string'
@@ -235,6 +270,63 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: friendly }, { status: 400 });
     }
 
+    // 7.3. Quote re-moderation (defense in depth). The /api/generate-trainer
+    // route already moderates the AI quote, but a tampered client could
+    // submit a different quote in personality.quote. Run the same gate;
+    // on flag, silently substitute from the safe mock pool keyed by handle.
+    if (personality.quote) {
+      const quoteCheck = await checkQuote(personality.quote);
+      if (!quoteCheck.ok) {
+        console.warn(
+          '[signup] quote re-flagged at submission:',
+          quoteCheck.reason,
+          quoteCheck.categories ?? quoteCheck.match ?? '',
+        );
+        const handleSeed = (xHandle ?? email).toLowerCase();
+        let h = 0;
+        for (let i = 0; i < handleSeed.length; i++) {
+          h = ((h << 5) - h + handleSeed.charCodeAt(i)) | 0;
+        }
+        personality.quote = mockQuoteForHash(Math.abs(h));
+      }
+    }
+
+    // 7.4. Anti-farming pre-check — has this X handle or this normalized
+    // email already claimed? Done BEFORE the tier roll so we don't burn a
+    // tier slot on a request that's about to fail the unique constraint.
+    const xHandleNormalized = xHandle?.toLowerCase().trim().replace(/^@/, '') || null;
+    const emailNormalized = normalizeEmail(email);
+    let claimedAlready = false;
+    if (xHandleNormalized) {
+      const { data } = await supabaseAdmin
+        .from('trainer_signups')
+        .select('id')
+        .eq('x_handle', xHandleNormalized)
+        .maybeSingle();
+      if (data?.id) claimedAlready = true;
+    }
+    if (!claimedAlready && emailNormalized) {
+      const { data } = await supabaseAdmin
+        .from('trainer_signups')
+        .select('id')
+        .eq('normalized_email', emailNormalized)
+        .maybeSingle();
+      if (data?.id) claimedAlready = true;
+    }
+    if (claimedAlready) {
+      await logAudit({
+        email,
+        trainerName,
+        xHandle,
+        flagged: true,
+        flagReason: 'already_claimed',
+      });
+      return NextResponse.json(
+        { error: 'This X handle (or email) has already claimed a trainer card.' },
+        { status: 409 },
+      );
+    }
+
     // 7.5. Roll tier — atomic weighted random across remaining supply.
     // The roll_tier() RPC locks tier_supply, picks one tier weighted by
     // remaining count, decrements, and writes a tier_roll_log row.
@@ -273,6 +365,27 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (dbErr) {
+      // Postgres unique-violation = 23505. Hits when two requests for the
+      // same X handle / normalized email race past the pre-check. The tier
+      // roll is already committed; we accept the orphaned tier slot rather
+      // than complicating the flow with a release-tier RPC. Pre-check above
+      // catches the common case so this fires <0.1% of the time.
+      const isUniqueViolation =
+        (dbErr as { code?: string }).code === '23505' ||
+        /duplicate key|already exists/i.test(dbErr.message ?? '');
+      if (isUniqueViolation) {
+        await logAudit({
+          email,
+          trainerName,
+          xHandle,
+          flagged: true,
+          flagReason: 'race_already_claimed',
+        });
+        return NextResponse.json(
+          { error: 'This X handle (or email) has already claimed a trainer card.' },
+          { status: 409 },
+        );
+      }
       console.error('[signup] supabase upsert error:', dbErr);
       await logAudit({
         email,

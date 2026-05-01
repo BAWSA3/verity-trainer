@@ -166,3 +166,71 @@ export function scrubAIChips(chips: readonly string[]): ChipScrubResult {
   }
   return { cleaned, dropped };
 }
+
+/**
+ * Sharp-edge AI roast quote moderation. Two-layer:
+ *   1. Static slur match — instant reject
+ *   2. OpenAI omni-moderation — full classification across hate/sexual/etc.
+ *
+ * The quote prompt explicitly bans race/sex/orientation/religion/disability
+ * topics, but Claude can still misfire on sparse or weird X profiles. This
+ * runs as a backstop — flagged quotes get swapped for a brand-safe mock-pool
+ * pick before reaching the user.
+ *
+ * Fails OPEN on infra errors (no key, timeout, non-200) so signups don't
+ * stall when OpenAI is down. The static slur layer always runs.
+ */
+export interface QuoteCheckResult {
+  ok: boolean;
+  reason?: 'slur' | 'openai' | 'openai_error';
+  match?: string;
+  /** Which top-level OpenAI category fired (when reason === 'openai'). */
+  categories?: string[];
+}
+
+export async function checkQuote(quote: string): Promise<QuoteCheckResult> {
+  if (!quote || typeof quote !== 'string') return { ok: true };
+  const trimmed = quote.trim();
+  if (trimmed.length === 0) return { ok: true };
+
+  // 1. Static slur layer — fast, deterministic, no network.
+  const slur = findBlocklistMatch(trimmed, SLURS);
+  if (slur) return { ok: false, reason: 'slur', match: slur };
+
+  // 2. OpenAI omni-moderation
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: true };
+  try {
+    const res = await fetch('https://api.openai.com/v1/moderations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'omni-moderation-latest',
+        input: trimmed,
+      }),
+    });
+    if (!res.ok) {
+      console.warn('[moderation] OpenAI quote HTTP', res.status);
+      return { ok: true, reason: 'openai_error' };
+    }
+    const data = (await res.json()) as {
+      results?: Array<{ flagged?: boolean; categories?: Record<string, boolean> }>;
+    };
+    const result = data.results?.[0];
+    if (result?.flagged) {
+      const triggered = result.categories
+        ? Object.entries(result.categories)
+            .filter(([, v]) => v === true)
+            .map(([k]) => k)
+        : [];
+      return { ok: false, reason: 'openai', categories: triggered };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.warn('[moderation] OpenAI quote threw', err);
+    return { ok: true, reason: 'openai_error' };
+  }
+}

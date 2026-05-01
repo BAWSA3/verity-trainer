@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import { Button, GlassPanel } from './ui';
+import TurnstileWidget, { TURNSTILE_ENABLED } from './TurnstileWidget';
 
 // Mirrors the key in CreatePageClient — read on submit so attribution travels
 // from the QR scan → onboarding → signup without a server-side cookie.
@@ -37,6 +38,15 @@ export default function SignupGate({ config, personality, onSuccess, onClose, in
   const [trainerName, setTrainerName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Turnstile token, only required when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set.
+  // The widget verifies invisibly for most users; some get a checkbox.
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +57,10 @@ export default function SignupGate({ config, personality, onSuccess, onClose, in
     }
     if (trimmedName.length < 2) {
       setError('Trainer name must be at least 2 characters');
+      return;
+    }
+    if (TURNSTILE_ENABLED && !turnstileToken) {
+      setError('Captcha check pending — please try again in a moment.');
       return;
     }
 
@@ -65,6 +79,7 @@ export default function SignupGate({ config, personality, onSuccess, onClose, in
           trainerPersonality: personality,
           reasoning: reasoning || undefined,
           referredBy: readReferralFromStorage(),
+          turnstileToken: turnstileToken || undefined,
         }),
       });
 
@@ -147,6 +162,12 @@ export default function SignupGate({ config, personality, onSuccess, onClose, in
               value={xHandle}
               onChange={setXHandle}
               placeholder="@handle"
+            />
+
+            {/* Invisible Turnstile widget — only renders when env var set */}
+            <TurnstileWidget
+              onVerify={handleTurnstileVerify}
+              onExpire={handleTurnstileExpire}
             />
 
             {error && (

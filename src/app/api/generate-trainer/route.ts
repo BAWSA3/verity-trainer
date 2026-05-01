@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchXProfile } from '@/lib/x-profile';
 import { generateTrainer } from '@/lib/ai/generate-trainer';
-import { scrubAIChips } from '@/lib/moderation/check-personality';
+import { scrubAIChips, checkQuote } from '@/lib/moderation/check-personality';
+import { checkRateLimit, extractIp, hashIp } from '@/lib/rate-limit';
+import { verifyTurnstile } from '@/lib/turnstile';
+import { checkOrigin } from '@/lib/origin-check';
 import type { TrainerPersonality } from '@/types/trainer';
+// Mirrors the deterministic pool used by mockTrainer for keyless dev. When a
+// live AI quote gets flagged, we silently substitute one of these so the user
+// never sees the unsafe original. Same pool, same hash logic, predictable.
+import { mockQuoteForHash } from '@/lib/ai/mock-quotes';
 
 export const runtime = 'nodejs';
 
@@ -67,9 +74,17 @@ interface RequestBody {
   handle?: string;
   regenerate?: boolean;
   hint?: string;
+  turnstileToken?: string;
 }
 
 export async function POST(req: NextRequest) {
+  // Origin allow-list — see /lib/origin-check.ts. Cross-origin bot POSTs
+  // without browser-y headers get rejected before we hit Anthropic.
+  const originCheck = checkOrigin(req);
+  if (!originCheck.ok) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+
   let body: RequestBody;
   try {
     body = (await req.json()) as RequestBody;
@@ -82,6 +97,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_handle' }, { status: 400 });
   }
 
+  // Cloudflare Turnstile — verify before spending money on AI + SocialData.
+  // No-op when TURNSTILE_SECRET_KEY is unset (dev / preview).
+  const ip = extractIp(req);
+  const turnstile = await verifyTurnstile(body.turnstileToken, ip);
+  if (!turnstile.ok && turnstile.reason !== 'no_key') {
+    return NextResponse.json(
+      { error: 'verification_failed', message: 'Captcha verification failed. Refresh and try again.' },
+      { status: 403 },
+    );
+  }
+
+  // AI cost guard — 10 generations per IP per hour. Independent budget
+  // from /api/signup so a few real claims don't lock out re-rolls.
+  const ipHash = hashIp(ip);
+  const rate = await checkRateLimit(ipHash, {
+    action: 'generate-trainer',
+    max: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rate.ok) {
+    return NextResponse.json(
+      {
+        error: 'rate_limited',
+        message: 'Too many generations from your network. Try again later.',
+        retryAfter: rate.retryAfter,
+      },
+      {
+        status: 429,
+        headers: rate.retryAfter ? { 'Retry-After': String(rate.retryAfter) } : undefined,
+      },
+    );
+  }
+
   try {
     const profile = await fetchXProfile(handle);
     const trainer = await generateTrainer(profile, {
@@ -89,6 +137,30 @@ export async function POST(req: NextRequest) {
       hint: typeof body.hint === 'string' ? body.hint : undefined,
     });
     const cleanedPersonality = scrubPersonality(trainer.personality, handle);
+
+    // Post-AI quote moderation. The system prompt enumerates hard-blocks
+    // (race / sex / orientation / religion / disability) but Claude can
+    // still misfire on sparse profiles. checkQuote runs OpenAI omni-mod;
+    // flagged quotes are silently substituted from the mock pool so the
+    // user never sees the unsafe original.
+    if (cleanedPersonality.quote) {
+      const quoteCheck = await checkQuote(cleanedPersonality.quote);
+      if (!quoteCheck.ok) {
+        console.warn(
+          `[generate-trainer] quote flagged for @${handle}:`,
+          quoteCheck.reason,
+          quoteCheck.categories ?? quoteCheck.match ?? '',
+        );
+        // Hash the handle to pick a deterministic substitute so a re-roll
+        // for the same user lands on the same fallback (no randomness drift).
+        let h = 0;
+        for (let i = 0; i < handle.length; i++) {
+          h = ((h << 5) - h + handle.charCodeAt(i)) | 0;
+        }
+        cleanedPersonality.quote = mockQuoteForHash(Math.abs(h));
+      }
+    }
+
     return NextResponse.json({
       config: trainer.config,
       personality: cleanedPersonality,
