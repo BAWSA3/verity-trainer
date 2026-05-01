@@ -64,7 +64,7 @@ async function callAnthropic(
   profile: XProfile,
   slots: ManifestSlots,
   options: GenerateOptions,
-): Promise<{ config: TrainerConfig; personality: TrainerPersonality; reasoning: string }> {
+): Promise<{ config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; knownFor?: string }; reasoning: string }> {
   const system = buildSystemPrompt(slots);
   const userText = buildUserMessage(
     profile,
@@ -102,7 +102,7 @@ async function callAnthropic(
   }
   const input = toolUse.input as {
     config: TrainerConfig;
-    personality: TrainerPersonality;
+    personality: { zodiac: string; abilities?: unknown; knownFor?: string };
     reasoning: string;
   };
   return input;
@@ -111,7 +111,7 @@ async function callAnthropic(
 // ---------- validation + coercion ----------
 
 function validateAndCoerce(
-  raw: { config: TrainerConfig; personality: TrainerPersonality; reasoning: string },
+  raw: { config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; knownFor?: string; likes?: unknown; dislikes?: unknown }; reasoning: string },
   slots: ManifestSlots,
   profile: XProfile,
   source: 'live' | 'mock',
@@ -135,8 +135,10 @@ function validateAndCoerce(
 
   const personality: TrainerPersonality = {
     zodiac,
-    likes: clampChips(raw.personality?.likes ?? []),
-    dislikes: clampChips(raw.personality?.dislikes ?? []),
+    likes: [],
+    dislikes: [],
+    abilities: clampAbilities(raw.personality?.abilities),
+    knownFor: clampKnownFor(raw.personality?.knownFor),
   };
 
   const reasoning = (raw.reasoning ?? '').toString().trim().slice(0, 400);
@@ -168,6 +170,23 @@ function clampChips(arr: unknown): string[] {
     .slice(0, 5);
 }
 
+function clampAbilities(raw: unknown): { name: string; description: string }[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')
+    .map((a) => ({
+      name: typeof a.name === 'string' ? a.name.trim().slice(0, 32) : '',
+      description: typeof a.description === 'string' ? a.description.trim().slice(0, 140) : '',
+    }))
+    .filter((a) => a.name.length > 0 && a.description.length > 0)
+    .slice(0, 2);
+}
+
+function clampKnownFor(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  return raw.trim().replace(/\s+/g, ' ').slice(0, 200);
+}
+
 // ---------- mock fallback ----------
 
 function mockTrainer(profile: XProfile, slots: ManifestSlots, options: GenerateOptions): GeneratedTrainer {
@@ -184,10 +203,13 @@ function mockTrainer(profile: XProfile, slots: ManifestSlots, options: GenerateO
   };
 
   const zodiacIdx = Math.abs(seed + 7) % ZODIAC_OPTIONS.length;
+  const abilities = mockAbilities(seed);
   const personality: TrainerPersonality = {
     zodiac: ZODIAC_OPTIONS[zodiacIdx].id,
-    likes: deriveChips(profile, true).slice(0, 3),
-    dislikes: deriveChips(profile, false).slice(0, 2),
+    likes: [],
+    dislikes: [],
+    abilities,
+    knownFor: mockKnownFor(profile, seed),
   };
 
   const reasoning = profile.source === 'mock'
@@ -195,6 +217,37 @@ function mockTrainer(profile: XProfile, slots: ManifestSlots, options: GenerateO
     : `Built from @${profile.handle}'s vibe — bio, recent posts, and following count shaped these choices.`;
 
   return { config, personality, reasoning, source: 'mock' };
+}
+
+const MOCK_ABILITY_POOL: { name: string; description: string }[] = [
+  { name: 'Quick Wit',          description: 'turns small ideas into clean systems before lunch' },
+  { name: 'Crowd Reader',       description: 'reads a room before it speaks; speaks last by choice' },
+  { name: 'Signal Through Noise', description: 'finds the one thread worth pulling in any thread' },
+  { name: 'Late-Night Resolve', description: 'ships at 2am, debugs at 3, posts the lesson at noon' },
+  { name: 'Quiet Mentor',       description: 'leaves better juniors behind without ever calling it that' },
+  { name: 'Taste Maker',        description: 'small details that other people will steal next quarter' },
+  { name: 'Pattern Hunter',     description: 'three weak signals + one strong question = a thesis' },
+  { name: 'Builder’s Eye',  description: 'sees the load-bearing wall in every team meeting' },
+];
+
+const MOCK_KNOWN_FOR_POOL: string[] = [
+  'the kind of builder who ships at 2am, posts the postmortem at noon, and quietly mentors three juniors by Friday.',
+  'a signal in a feed of takes — small craft, sharp eye, the rare voice that earns its quiet.',
+  'shows up early to the future and does the boring work that lets everyone else look creative.',
+  'turns half-baked ideas into shipped systems and never takes the credit you’d expect them to.',
+  'reads the room twice, then does exactly what nobody asked for and somehow it works.',
+];
+
+function mockAbilities(seed: number): { name: string; description: string }[] {
+  const a = MOCK_ABILITY_POOL[Math.abs(seed + 11) % MOCK_ABILITY_POOL.length];
+  let bIdx = Math.abs(seed + 23) % MOCK_ABILITY_POOL.length;
+  if (MOCK_ABILITY_POOL[bIdx].name === a.name) bIdx = (bIdx + 1) % MOCK_ABILITY_POOL.length;
+  return [a, MOCK_ABILITY_POOL[bIdx]];
+}
+
+function mockKnownFor(profile: XProfile, seed: number): string {
+  const idx = Math.abs(seed + 31) % MOCK_KNOWN_FOR_POOL.length;
+  return MOCK_KNOWN_FOR_POOL[idx];
 }
 
 function pickByIdx(values: string[], seed: number): string {

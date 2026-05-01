@@ -19,12 +19,22 @@ export function hashConfig(c: TrainerConfig, p: TrainerPersonality): number {
   return Math.abs(hash);
 }
 
+// V3 trainer-coded stats: PRESENCE, WIT, TASTE, RESOLVE.
+// The shape replaces v2's style/charisma/street/luck. Legacy v2 rows still
+// compute these (with `likes` length defaulting to 0 for influence on RESOLVE).
 export interface TrainerStats {
-  style: number;
-  charisma: number;
-  street: number;
-  luck: number;
+  presence: number;
+  wit: number;
+  taste: number;
+  resolve: number;
 }
+
+export const STAT_LABELS: Record<keyof TrainerStats, string> = {
+  presence: 'PRESENCE',
+  wit: 'WIT',
+  taste: 'TASTE',
+  resolve: 'RESOLVE',
+};
 
 const MIN_STAT = 40;
 const MAX_STAT = 100;
@@ -34,12 +44,14 @@ const clamp = (n: number) => Math.max(MIN_STAT, Math.min(MAX_STAT, n));
 export function generateStats(c: TrainerConfig, p: TrainerPersonality): TrainerStats {
   const h = hashConfig(c, p);
   const zodiacMod = p.zodiac ? (ZODIAC_MODIFIERS[p.zodiac as Zodiac] ?? 0) : 0;
-  // Accessories lend "street cred" in the new LimeZu layer model.
   const accessoryBonus = c.accessory && c.accessory !== 'none' ? 8 : 0;
+  // Resolve was previously boosted by likes count. With v3 abilities replacing
+  // likes, fall back to abilities count or knownFor presence as the bonus.
+  const lateBonus = (p.abilities?.length ?? p.likes?.length ?? 0) * 2;
   return {
-    style:    clamp(MIN_STAT + (h % RANGE)),
-    charisma: clamp(MIN_STAT + ((h >> 8)  % RANGE) + zodiacMod),
-    street:   clamp(MIN_STAT + ((h >> 16) % RANGE) + accessoryBonus),
-    luck:     clamp(MIN_STAT + ((h >> 24) % RANGE) + p.likes.length * 2),
+    presence: clamp(MIN_STAT + (h % RANGE) + zodiacMod),
+    wit:      clamp(MIN_STAT + ((h >> 8)  % RANGE)),
+    taste:    clamp(MIN_STAT + ((h >> 16) % RANGE) + accessoryBonus),
+    resolve:  clamp(MIN_STAT + ((h >> 24) % RANGE) + lateBonus),
   };
 }

@@ -4,6 +4,22 @@ import { useState } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import { Button, GlassPanel } from './ui';
 
+// Mirrors the key in CreatePageClient — read on submit so attribution travels
+// from the QR scan → onboarding → signup without a server-side cookie.
+const REFERRAL_KEY = 'verity:ref:v1';
+
+function readReferralFromStorage(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const raw = window.localStorage.getItem(REFERRAL_KEY);
+    if (!raw) return undefined;
+    const cleaned = raw.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
+    return cleaned || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 interface SignupGateProps {
   config: TrainerConfig;
   personality: TrainerPersonality;
@@ -48,6 +64,7 @@ export default function SignupGate({ config, personality, onSuccess, onClose, in
           trainerConfig: config,
           trainerPersonality: personality,
           reasoning: reasoning || undefined,
+          referredBy: readReferralFromStorage(),
         }),
       });
 

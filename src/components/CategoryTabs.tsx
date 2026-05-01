@@ -2,7 +2,7 @@
 
 import { playHover } from '@/lib/sounds';
 
-export type TabKey = 'body' | 'wear' | 'vibe';
+export type TabKey = 'body' | 'wear';
 
 interface Tab {
   key: TabKey;
@@ -12,7 +12,6 @@ interface Tab {
 const TABS: Tab[] = [
   { key: 'body', label: 'Body' },
   { key: 'wear', label: 'Wear' },
-  { key: 'vibe', label: 'Vibe' },
 ];
 
 interface Props {

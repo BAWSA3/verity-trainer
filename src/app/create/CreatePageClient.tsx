@@ -1,12 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import { randomConfig } from '@/lib/trainer-options';
 import TrainerDashboard from '@/components/dashboard/TrainerDashboard';
 import { GlassPanel, Button } from '@/components/ui';
 
 const INITIAL_PERSONALITY: TrainerPersonality = { zodiac: '', likes: [], dislikes: [] };
+// Local-storage key for the referral handle so it survives the X-auth bounce
+// + AI generation phase before signup. Captured from `?ref=<handle>` on the
+// /create landing.
+const REFERRAL_KEY = 'verity:ref:v1';
 
 type Phase = 'enter-handle' | 'generating' | 'reviewing';
 
@@ -24,6 +28,20 @@ export default function CreatePageClient() {
   const [error, setError] = useState<string | null>(null);
   const [ai, setAi] = useState<AiResult | null>(null);
   const [statusText, setStatusText] = useState('Reading your X profile…');
+
+  // Capture ?ref=<handle> from the URL on first load and stash it. Survives
+  // the AI generation phase + signup gate so /api/signup can attribute.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      const cleaned = ref.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
+      if (cleaned) {
+        try { window.localStorage.setItem(REFERRAL_KEY, cleaned); } catch {}
+      }
+    }
+  }, []);
 
   async function generate(input: string, regenerate = false) {
     setError(null);

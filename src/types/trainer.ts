@@ -50,13 +50,25 @@ export interface TrainerConfig {
   accessory: string;
 }
 
+// V3 ability — Pokédex-style named flavor produced by the AI generator.
+export interface TrainerAbility {
+  /** Short title, ~16 char max (e.g. "Quick Wit"). */
+  name: string;
+  /** One-line description, ~80 char max. */
+  description: string;
+}
+
 export interface TrainerPersonality {
   zodiac: Zodiac | '';
-  likes: string[];     // 0-5 entries, each <=24 chars
-  dislikes: string[];  // 0-5 entries, each <=24 chars
-  // Optional show-on-card masks. Same length as likes/dislikes; absent or
-  // mismatched length = treat all as shown. AI generates 5 each so the user
-  // can curate which to surface on the public trainer card.
+  // V3 — AI-generated, surfaced on the share card. 0-2 abilities.
+  abilities?: TrainerAbility[];
+  // V3 — single tagline, ~140 char max ("Known For ...").
+  knownFor?: string;
+
+  // V2 legacy — likes/dislikes are deprecated in favour of abilities/knownFor
+  // but kept for back-compat reads of pre-2026-05-01 rows.
+  likes: string[];
+  dislikes: string[];
   shownLikes?: boolean[];
   shownDislikes?: boolean[];
 }
@@ -80,4 +92,7 @@ export interface StoredTrainer {
   // and the OG image. Only present for AI-generated trainers; clamped to
   // 400 chars upstream by generate-trainer.ts.
   reasoning?: string;
+  // X handle of the trainer card whose QR scan brought this user here. Used
+  // for referral attribution. Sanitized to X handle rules at write time.
+  referredBy?: string;
 }

@@ -1,43 +1,49 @@
 'use client';
 
-// TrainerCard V2 — horizontal share card matching the team mocks.
+// TrainerCard V3 — landscape card with full-body sprite, AI-generated
+// Special Abilities, and a Known For tagline. Verity color system only.
 //
-// Layout: [Header band] · [Bust | Identity | QR] · [Likes row] · [Dislikes row] · [Footer]
+//   Header band      VERITY · TRAINER CARD                    [zodiac]
+//   Body row         [ full-body sprite | name + known-for + stats + abilities ]
+//   Footer           VERITY · EARLY ACCESS · MAY 2026
 //
-// Same id="trainer-card" as v1 so ShareButtons html2canvas download works
-// untouched. The card is wrapped with data-flatten-glass="true" during capture
-// to swap backdrop-filter for a solid fill (html2canvas can't render blur).
+// Same id="trainer-card" as v1/v2 so the html2canvas download in ShareButtons
+// keeps working. data-flatten-glass="true" on capture flips backdrop-filter
+// for solid fills (html2canvas can't render blur).
 
 import { useEffect, useState } from 'react';
 import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
 import { ZODIAC_GLYPHS } from '@/lib/personality';
-import { sanitizeChipsForDisplay } from '@/lib/moderation/sanitize';
+import { generateStats, STAT_LABELS, type TrainerStats } from '@/lib/card-utils';
 import TrainerSprite from './TrainerSprite';
-import { Chip } from './ui';
 
 interface TrainerCardProps {
   config: TrainerConfig;
   personality: TrainerPersonality;
   trainerName: string;
   cardId?: string;
-  /** Public URL for QR; defaults to NEXT_PUBLIC_APP_URL/card/<id>. */
-  cardUrl?: string;
+  /** Owner's X handle — drives the referral QR target (`/create?ref=<handle>`). */
+  xHandle?: string;
   /** AI-generated one-liner subtitle (only present for AI-generated trainers). */
   reasoning?: string;
 }
 
 export default function TrainerCard({
-  config, personality, trainerName, cardId, cardUrl, reasoning,
+  config, personality, trainerName, cardId, xHandle,
 }: TrainerCardProps) {
-  // Resolve QR URL
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg';
-  const url = cardUrl || (cardId ? appUrl + '/card/' + cardId : appUrl);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://verity-trainer.vercel.app';
+  // QR encodes the referral entry — scanning brings someone to the trainer
+  // creation flow with the owner's handle attached for attribution.
+  const cleanHandle = (xHandle ?? '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
+  const qrTarget = cleanHandle
+    ? `${appUrl}/create?ref=${cleanHandle}`
+    : `${appUrl}/create`;
 
   const [qrDataUri, setQrDataUri] = useState<string>('');
   useEffect(() => {
     let cancelled = false;
     import('qrcode').then(({ default: QRCode }) => {
-      QRCode.toDataURL(url, {
+      QRCode.toDataURL(qrTarget, {
         margin: 1,
         width: 280,
         color: { dark: '#16272C', light: '#00000000' },
@@ -47,193 +53,385 @@ export default function TrainerCard({
       });
     });
     return () => { cancelled = true; };
-  }, [url]);
+  }, [qrTarget]);
 
-  // Filter to chips selected for the card
-  const shownLikes = filterShown(personality.likes, personality.shownLikes);
-  const shownDislikes = filterShown(personality.dislikes, personality.shownDislikes);
-  const safeLikes = sanitizeChipsForDisplay(shownLikes);
-  const safeDislikes = sanitizeChipsForDisplay(shownDislikes);
-
+  const stats = generateStats(config, personality);
   const zodiacGlyph = personality.zodiac ? ZODIAC_GLYPHS[personality.zodiac] : null;
   const displayName = (trainerName || 'TRAINER').toUpperCase().slice(0, 12);
+  const knownFor = personality.knownFor?.trim() ?? '';
+  const abilities = personality.abilities ?? [];
 
   return (
     <div
       id="trainer-card"
-      className="w-full max-w-[640px] rounded-3xl overflow-hidden relative"
+      className="trainer-card"
       style={{
-        background: 'rgba(255, 253, 243, 0.92)',
-        border: '1px solid rgba(255, 255, 255, 0.6)',
-        boxShadow: '0 24px 64px -16px rgba(67, 56, 202, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+        width: '100%',
+        maxWidth: 720,
       }}
     >
-      {/* Header band */}
-      <div
-        className="px-5 py-3 flex items-center justify-between"
-        style={{
-          background: 'linear-gradient(90deg, rgba(255,107,92,0.95) 0%, rgba(232,85,68,0.95) 100%)',
-          color: 'white',
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <span className="font-pixel text-[10px] tracking-[0.18em]">VERITY</span>
-          <span className="text-white/70 text-[12px]">·</span>
-          <span className="font-pixel text-[9px] tracking-[0.18em]">TRAINER CARD</span>
-        </div>
-        <div data-avax-slot className="opacity-70" aria-hidden>
-          {/* AVAX corner-mark slot — visual treatment deferred per plan */}
-          <svg width="16" height="16" viewBox="0 0 16 16">
-            <path d="M2 13 L8 3 L14 13 Z" fill="rgba(255,255,255,0.5)" />
+      {/* Header strip */}
+      <div className="card-header">
+        <span className="brand-mark">
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden>
+            <path d="M2 13 L8 3 L14 13 Z" fill="#FFFDF3" />
           </svg>
+          <span className="brand-text">VERITY</span>
+          <span className="brand-divider">·</span>
+          <span className="brand-sub">TRAINER CARD</span>
+        </span>
+        {zodiacGlyph ? (
+          <span className="zodiac-pill">
+            <span className="zodiac-glyph" aria-hidden>{zodiacGlyph}</span>
+            <span className="zodiac-name">{personality.zodiac}</span>
+          </span>
+        ) : null}
+      </div>
+
+      {/* Body row */}
+      <div className="card-body">
+        {/* Sprite column (full body, no bust crop) */}
+        <div className="sprite-col">
+          <div className="sprite-frame">
+            <div className="sprite-grid" aria-hidden />
+            <div className="sprite-wrap">
+              <TrainerSprite config={config} size={180} />
+            </div>
+          </div>
+          <div className="sprite-tag">
+            <span className="tag-no">№ {(cardId ?? '0001').slice(-4).toUpperCase()}</span>
+          </div>
+        </div>
+
+        {/* Identity column */}
+        <div className="identity-col">
+          <h2 className="trainer-name">{displayName}</h2>
+
+          {knownFor ? (
+            <div className="known-for-block">
+              <span className="section-eyebrow">Known For</span>
+              <p className="known-for-body">{knownFor}</p>
+            </div>
+          ) : null}
+
+          {/* Stats — 4 PRESENCE/WIT/TASTE/RESOLVE */}
+          <div className="stats-grid">
+            {(Object.keys(STAT_LABELS) as Array<keyof TrainerStats>).map((key) => (
+              <StatCell key={key} label={STAT_LABELS[key]} value={stats[key]} />
+            ))}
+          </div>
+
+          {/* Special Abilities + QR row */}
+          <div className="abilities-row">
+            {abilities.length > 0 ? (
+              <div className="abilities-block">
+                <span className="section-eyebrow">Special Abilities</span>
+                <div className="abilities-list">
+                  {abilities.slice(0, 2).map((a, i) => (
+                    <div key={i} className="ability">
+                      <div className="ability-name">{a.name}</div>
+                      <div className="ability-desc">{a.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : <div style={{ flex: 1 }} />}
+
+            {/* Referral QR */}
+            <div className="qr-block">
+              <div className="qr-frame">
+                {qrDataUri ? (
+                  <img src={qrDataUri} alt="" className="qr-img" />
+                ) : null}
+              </div>
+              <span className="qr-caption">SCAN · MAKE YOURS</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Body row: bust | identity | QR */}
-      <div className="px-5 pt-5 pb-4 flex items-stretch gap-4">
-        {/* Bust */}
-        <div className="flex-shrink-0">
-          <div
-            className="rounded-2xl p-2 relative"
-            style={{
-              background: 'rgba(255, 253, 243, 0.9)',
-              border: '1px solid rgba(144, 179, 77, 0.4)',
-              boxShadow: 'inset 0 0 0 1px rgba(144, 179, 77, 0.15)',
-            }}
-          >
-            <TrainerSprite config={config} size={120} crop="bust" />
-            {/* Olive corner caps */}
-            <span className="absolute -top-1 -left-1 w-2.5 h-2.5 border-t-2 border-l-2 rounded-tl-md" style={{ borderColor: '#90B34D' }} />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 border-t-2 border-r-2 rounded-tr-md" style={{ borderColor: '#90B34D' }} />
-            <span className="absolute -bottom-1 -left-1 w-2.5 h-2.5 border-b-2 border-l-2 rounded-bl-md" style={{ borderColor: '#90B34D' }} />
-            <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 border-b-2 border-r-2 rounded-br-md" style={{ borderColor: '#90B34D' }} />
-          </div>
-        </div>
-
-        {/* Identity */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between">
-          <div>
-            <h2
-              className="font-bold tracking-tight text-[color:var(--ink)] leading-tight truncate text-[24px] sm:text-[26px]"
-              style={{ fontFamily: 'var(--font-sora), sans-serif' }}
-            >
-              {displayName}
-            </h2>
-            {reasoning ? (
-              <p
-                className="text-[11px] italic text-[color:var(--ink-muted)] tracking-tight mt-1 leading-snug line-clamp-2"
-                style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-              >
-                {reasoning.slice(0, 140)}
-              </p>
-            ) : (
-              <p className="text-[11px] text-[color:var(--ink-muted)] tracking-tight mt-0.5 truncate font-mono">
-                0x····wallet linking soon
-              </p>
-            )}
-          </div>
-
-          {/* Tags row */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-2">
-            {zodiacGlyph ? (
-              <Chip variant="cream" size="sm">
-                <span className="mr-1 text-[14px] leading-none" aria-hidden>{zodiacGlyph}</span>
-                <span className="capitalize">{personality.zodiac}</span>
-              </Chip>
-            ) : null}
-            <Chip variant="coral" size="sm">Truth Seeker</Chip>
-          </div>
-        </div>
-
-        {/* QR */}
-        <div className="flex-shrink-0 flex flex-col items-center justify-center gap-1">
-          <div
-            className="rounded-xl p-1.5 grid place-items-center"
-            style={{
-              background: 'rgba(255, 253, 243, 0.85)',
-              border: '1px solid rgba(22, 39, 44, 0.12)',
-              width: 92,
-              height: 92,
-            }}
-          >
-            {qrDataUri ? (
-              <img src={qrDataUri} alt="" aria-hidden className="w-full h-full" />
-            ) : (
-              <div className="w-full h-full grid place-items-center text-[10px] text-[color:var(--ink-muted)]">QR</div>
-            )}
-          </div>
-          <span className="text-[8px] tracking-[0.16em] uppercase font-bold text-[color:var(--ink-muted)]">
-            Scan
-          </span>
-        </div>
-      </div>
-
-      {/* Likes row */}
-      {safeLikes.length > 0 && (
-        <div
-          className="mx-5 mb-2 px-3 py-2 rounded-xl flex items-center gap-2 flex-wrap"
-          style={{ background: 'rgba(144, 179, 77, 0.14)', border: '1px solid rgba(144, 179, 77, 0.3)' }}
-        >
-          <span
-            className="grid place-items-center rounded-md text-[11px] font-bold flex-shrink-0"
-            style={{ width: 20, height: 20, background: 'rgba(144, 179, 77, 0.3)', color: '#3F5520' }}
-            aria-hidden
-          >
-            ✓
-          </span>
-          <span className="text-[10px] tracking-[0.18em] uppercase font-bold flex-shrink-0" style={{ color: '#3F5520' }}>
-            Likes
-          </span>
-          <div className="flex flex-wrap gap-1 flex-1">
-            {safeLikes.map((s, i) => (
-              <Chip key={i + s} variant="olive" size="sm">{s}</Chip>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Dislikes row */}
-      {safeDislikes.length > 0 && (
-        <div
-          className="mx-5 mb-3 px-3 py-2 rounded-xl flex items-center gap-2 flex-wrap"
-          style={{ background: 'rgba(22, 39, 44, 0.06)', border: '1px solid rgba(22, 39, 44, 0.2)' }}
-        >
-          <span
-            className="grid place-items-center rounded-md text-[11px] font-bold flex-shrink-0"
-            style={{ width: 20, height: 20, background: 'rgba(22, 39, 44, 0.12)', color: 'var(--ink)' }}
-            aria-hidden
-          >
-            ✕
-          </span>
-          <span className="text-[10px] tracking-[0.18em] uppercase font-bold flex-shrink-0 text-[color:var(--ink)]">
-            Dislikes
-          </span>
-          <div className="flex flex-wrap gap-1 flex-1">
-            {safeDislikes.map((s, i) => (
-              <Chip key={i + s} variant="dark" size="sm">{s}</Chip>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <div
-        className="px-5 py-3 flex items-center justify-between text-[9px] tracking-[0.18em] uppercase font-bold"
-        style={{
-          background: 'rgba(255, 253, 243, 0.6)',
-          borderTop: '1px solid rgba(22, 39, 44, 0.08)',
-          color: 'var(--ink-muted)',
-        }}
-      >
-        <span className="font-pixel">VERITY · EARLY ACCESS</span>
+      {/* Footer strip */}
+      <div className="card-footer">
+        <span>VERITY</span>
+        <span className="dot" aria-hidden>·</span>
+        <span>EARLY ACCESS</span>
+        <span className="dot" aria-hidden>·</span>
         <span>MAY 2026</span>
-        <span className="opacity-70">Powered by <span data-avax-slot="footer">AVAX</span></span>
       </div>
+
+      <style jsx>{`
+        .trainer-card {
+          position: relative;
+          background: #FFFDF3;
+          border: 1px solid rgba(22, 39, 44, 0.14);
+          border-radius: 18px;
+          overflow: hidden;
+          box-shadow:
+            0 32px 64px -24px rgba(22, 39, 44, 0.22),
+            0 8px 16px -4px rgba(22, 39, 44, 0.10);
+          font-family: var(--font-body), 'Inter', system-ui, sans-serif;
+          color: #16272C;
+        }
+
+        /* Header */
+        .card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 22px;
+          background: #16272C;
+          color: #FFFDF3;
+          letter-spacing: 0.18em;
+        }
+        .brand-mark {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--font-moderniz), 'Inter', sans-serif;
+          font-size: 11px;
+          letter-spacing: 0.32em;
+          text-transform: uppercase;
+        }
+        .brand-text { font-weight: 700; }
+        .brand-divider { opacity: 0.45; }
+        .brand-sub { color: rgba(255, 253, 243, 0.7); font-weight: 500; }
+        .zodiac-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: rgba(255, 253, 243, 0.08);
+          border: 1px solid rgba(255, 253, 243, 0.22);
+          font-family: var(--font-moderniz), 'Inter', sans-serif;
+          font-size: 10px;
+          letter-spacing: 0.26em;
+          text-transform: uppercase;
+        }
+        .zodiac-glyph { font-size: 12px; line-height: 1; }
+        .zodiac-name { color: rgba(255, 253, 243, 0.85); }
+
+        /* Body */
+        .card-body {
+          display: grid;
+          grid-template-columns: 220px 1fr;
+          gap: 22px;
+          padding: 22px;
+        }
+
+        .sprite-col {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .sprite-frame {
+          position: relative;
+          aspect-ratio: 1 / 2;
+          background:
+            linear-gradient(180deg, rgba(54, 125, 149, 0.06) 0%, rgba(144, 179, 77, 0.10) 100%),
+            #FFFDF3;
+          border: 1px solid rgba(22, 39, 44, 0.16);
+          border-radius: 12px;
+          overflow: hidden;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          padding: 14px 0;
+        }
+        .sprite-grid {
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(rgba(22, 39, 44, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(22, 39, 44, 0.05) 1px, transparent 1px);
+          background-size: 18px 18px;
+          opacity: 0.6;
+          pointer-events: none;
+        }
+        .sprite-wrap { position: relative; z-index: 1; }
+        .sprite-tag {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0 4px;
+          font-family: var(--font-moderniz), 'Inter', sans-serif;
+          font-size: 9px;
+          letter-spacing: 0.26em;
+          text-transform: uppercase;
+          color: rgba(22, 39, 44, 0.55);
+        }
+        .tag-no { letter-spacing: 0.22em; }
+
+        /* Identity column */
+        .identity-col {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          min-width: 0;
+        }
+        .trainer-name {
+          font-family: var(--font-agency), 'Impact', sans-serif;
+          font-size: 56px;
+          line-height: 0.95;
+          letter-spacing: 0.02em;
+          color: #16272C;
+          margin: 0;
+          word-break: break-word;
+        }
+
+        .section-eyebrow {
+          display: inline-block;
+          font-family: var(--font-moderniz), 'Inter', sans-serif;
+          font-size: 9px;
+          letter-spacing: 0.32em;
+          text-transform: uppercase;
+          color: #367D95;
+          font-weight: 700;
+        }
+
+        .known-for-block { display: flex; flex-direction: column; gap: 4px; }
+        .known-for-body {
+          font-family: var(--font-body), 'Inter', sans-serif;
+          font-size: 13px;
+          line-height: 1.45;
+          color: rgba(22, 39, 44, 0.78);
+          margin: 0;
+        }
+
+        /* Stats */
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+        }
+
+        /* Abilities + QR row */
+        .abilities-row {
+          display: flex;
+          gap: 16px;
+          align-items: flex-end;
+        }
+        .abilities-block { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+        .abilities-list { display: flex; flex-direction: column; gap: 6px; }
+        .qr-block {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+        .qr-frame {
+          width: 124px;
+          height: 124px;
+          padding: 8px;
+          background: #FFFDF3;
+          border: 1px solid rgba(22, 39, 44, 0.14);
+          border-radius: 10px;
+        }
+        .qr-img { width: 100%; height: 100%; display: block; }
+        .qr-caption {
+          font-family: var(--font-moderniz), 'Inter', sans-serif;
+          font-size: 9px;
+          letter-spacing: 0.32em;
+          color: rgba(22, 39, 44, 0.55);
+          font-weight: 700;
+        }
+        .ability {
+          display: grid;
+          grid-template-columns: minmax(96px, 28%) 1fr;
+          gap: 12px;
+          align-items: baseline;
+          padding: 10px 12px;
+          background: rgba(144, 179, 77, 0.08);
+          border: 1px solid rgba(144, 179, 77, 0.30);
+          border-radius: 10px;
+        }
+        .ability-name {
+          font-family: var(--font-moderniz), 'Inter', sans-serif;
+          font-size: 11px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: #3F5520;
+        }
+        .ability-desc {
+          font-family: var(--font-body), 'Inter', sans-serif;
+          font-size: 12.5px;
+          line-height: 1.4;
+          color: #16272C;
+        }
+
+        /* Footer */
+        .card-footer {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 14px;
+          padding: 12px 22px;
+          background: #FFFDF3;
+          border-top: 1px solid rgba(22, 39, 44, 0.10);
+          font-family: var(--font-moderniz), 'Inter', sans-serif;
+          font-size: 9px;
+          letter-spacing: 0.32em;
+          text-transform: uppercase;
+          color: rgba(22, 39, 44, 0.55);
+        }
+        .card-footer .dot { color: rgba(22, 39, 44, 0.30); }
+      `}</style>
     </div>
   );
 }
 
-function filterShown(items: string[], shown?: boolean[]): string[] {
-  if (!shown || shown.length !== items.length) return items;
-  return items.filter((_, i) => shown[i]);
+function StatCell({ label, value }: { label: string; value: number }) {
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <div className="stat-cell">
+      <span className="stat-label">{label}</span>
+      <span className="stat-value">{value}</span>
+      <div className="stat-track">
+        <div className="stat-fill" style={{ width: pct + '%' }} />
+      </div>
+      <style jsx>{`
+        .stat-cell {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          row-gap: 4px;
+          align-items: baseline;
+          padding: 8px 10px;
+          background: #FFFDF3;
+          border: 1px solid rgba(22, 39, 44, 0.10);
+          border-radius: 8px;
+          min-width: 0;
+        }
+        .stat-label {
+          font-family: var(--font-moderniz), 'Inter', sans-serif;
+          font-size: 9px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: rgba(22, 39, 44, 0.55);
+        }
+        .stat-value {
+          font-family: var(--font-agency), 'Impact', sans-serif;
+          font-size: 18px;
+          line-height: 1;
+          color: #16272C;
+          letter-spacing: 0.02em;
+        }
+        .stat-track {
+          grid-column: 1 / -1;
+          height: 4px;
+          background: rgba(22, 39, 44, 0.08);
+          border-radius: 999px;
+          overflow: hidden;
+        }
+        .stat-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #367D95 0%, #90B34D 100%);
+          border-radius: 999px;
+          transition: width 220ms ease;
+        }
+      `}</style>
+    </div>
+  );
 }

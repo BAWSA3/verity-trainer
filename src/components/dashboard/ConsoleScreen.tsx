@@ -2,27 +2,27 @@
 
 // ConsoleScreen — the entire interactive surface that lives inside the
 // Console's screen cutout. Header (name, zodiac, level, music toggle), stat
-// strip, trainer hero, 3 tabs (BODY/WEAR/VIBE), scrolling selector body, and
-// a sticky footer with Re-roll + Claim CTAs.
+// strip, trainer hero, 2 tabs (BODY/WEAR), scrolling selector body, and a
+// sticky footer with Re-roll + Claim CTAs. AI-generated abilities + knownFor
+// are read-only and surface on the share card after claim.
 
 import { useEffect } from 'react';
 import type { TrainerConfig, TrainerPersonality, Zodiac } from '@/types/trainer';
 import { ZODIAC_GLYPHS, ZODIAC_OPTIONS } from '@/lib/personality';
-import { generateStats } from '@/lib/card-utils';
+import { generateStats, STAT_LABELS, type TrainerStats } from '@/lib/card-utils';
 import { CATEGORIES } from '@/lib/trainer-options';
 import TrainerSprite from '@/components/TrainerSprite';
 import CategoryTabs, { type TabKey } from '@/components/CategoryTabs';
 import CategorySelector from '@/components/CategorySelector';
-import PersonalityPanel from '@/components/PersonalityPanel';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { usePressState } from '@/components/device/ConsolePressState';
 
-const TAB_CATEGORIES: Record<Exclude<TabKey, 'vibe'>, Array<keyof TrainerConfig>> = {
+const TAB_CATEGORIES: Record<TabKey, Array<keyof TrainerConfig>> = {
   body: ['body', 'hair', 'hairColor', 'eyes'],
   wear: ['outfit', 'accessory'],
 };
 
-const TAB_ORDER: TabKey[] = ['body', 'wear', 'vibe'];
+const TAB_ORDER: TabKey[] = ['body', 'wear'];
 
 interface ConsoleScreenProps {
   config: TrainerConfig;
@@ -93,7 +93,7 @@ export default function ConsoleScreen({
     audio.toggle();
   }
   const stats = generateStats(config, personality);
-  const total = stats.style + stats.charisma + stats.street + stats.luck;
+  const total = stats.presence + stats.wit + stats.taste + stats.resolve;
   const level = Math.max(1, Math.min(10, Math.floor(total / 40)));
   const glyph = personality.zodiac ? ZODIAC_GLYPHS[personality.zodiac] : '◯';
 
@@ -102,7 +102,7 @@ export default function ConsoleScreen({
     wear: !config.outfit,
   };
 
-  const activeKeys = activeTab === 'vibe' ? [] : TAB_CATEGORIES[activeTab];
+  const activeKeys = TAB_CATEGORIES[activeTab];
   const visibleCategories = CATEGORIES.filter((c) => activeKeys.includes(c.key));
 
   function handleSelect(category: keyof TrainerConfig, id: string) {
@@ -153,10 +153,9 @@ export default function ConsoleScreen({
 
       {/* Stat strip */}
       <div className="screen-stats">
-        <Stat label="STYLE"  value={stats.style} />
-        <Stat label="CHARM"  value={stats.charisma} />
-        <Stat label="STREET" value={stats.street} />
-        <Stat label="LUCK"   value={stats.luck} />
+        {(Object.keys(STAT_LABELS) as Array<keyof TrainerStats>).map((k) => (
+          <Stat key={k} label={STAT_LABELS[k]} value={stats[k]} />
+        ))}
       </div>
 
       {/* Trainer hero — size responsive via wrapper */}
@@ -174,30 +173,19 @@ export default function ConsoleScreen({
 
       {/* Selector body — scrolls internally */}
       <div className="screen-body">
-        {activeTab === 'vibe' ? (
-          <PersonalityPanel
-            value={personality}
-            onChange={onPersonalityChange}
-            shownLikes={shownLikes}
-            shownDislikes={shownDislikes}
-            onToggleShownLike={onToggleShownLike}
-            onToggleShownDislike={onToggleShownDislike}
+        {visibleCategories.map((cat) => (
+          <CategorySelector
+            key={cat.key}
+            label={cat.label}
+            categoryKey={cat.key}
+            options={cat.options}
+            selected={config[cat.key] ?? ''}
+            onSelect={(id) => handleSelect(cat.key, id)}
+            currentBody={config.body || ''}
+            currentHairStyle={config.hair || '01'}
+            currentHairColor={config.hairColor || '01'}
           />
-        ) : (
-          visibleCategories.map((cat) => (
-            <CategorySelector
-              key={cat.key}
-              label={cat.label}
-              categoryKey={cat.key}
-              options={cat.options}
-              selected={config[cat.key] ?? ''}
-              onSelect={(id) => handleSelect(cat.key, id)}
-              currentBody={config.body || ''}
-              currentHairStyle={config.hair || '01'}
-              currentHairColor={config.hairColor || '01'}
-            />
-          ))
-        )}
+        ))}
       </div>
 
       {/* Sticky footer — Re-roll + Claim */}

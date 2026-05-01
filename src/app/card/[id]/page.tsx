@@ -31,17 +31,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const name = sanitizeNameForDisplay(trainer.trainer_name);
   const { config, personality, reasoning } = unpackTrainer(trainer);
   const stats = generateStats(config, personality);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://verity-trainer.vercel.app';
+  const xHandle = typeof trainer.x_handle === 'string' ? trainer.x_handle : '';
 
-  // OG URL params — keys mirror /api/og's expected query.
-  // Order is load-bearing for back-compat with previously-shared URLs;
-  // append-only for new params (slk, sdl).
+  // OG URL params. Stat keys (s/c/st/lk_v) keep their names but now mean
+  // presence/wit/taste/resolve. Append-only for new params; legacy lk/dl/slk/sdl
+  // are dropped in v3 — old shared URLs degrade gracefully (no chips section).
   const ogParams = new URLSearchParams({
     n: name,
-    s: String(stats.style),
-    c: String(stats.charisma),
-    st: String(stats.street),
-    lk_v: String(stats.luck),
+    s: String(stats.presence),
+    c: String(stats.wit),
+    st: String(stats.taste),
+    lk_v: String(stats.resolve),
     b: config.body,
     h: config.hair,
     hc: config.hairColor,
@@ -49,21 +50,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     e: config.eyes,
     ac: config.accessory,
     z: personality.zodiac,
-    lk: personality.likes.join('|'),
-    dl: personality.dislikes.join('|'),
   });
-  // Show-on-card masks — append only when explicitly set so old shared URLs
-  // remain identical (the OG defaults to "all shown" when masks are absent).
-  if (personality.shownLikes && personality.shownLikes.length === personality.likes.length) {
-    ogParams.set('slk', personality.shownLikes.map((b) => (b ? '1' : '0')).join(''));
+  if (reasoning) ogParams.set('r', reasoning.slice(0, 160));
+  if (personality.knownFor) ogParams.set('kf', personality.knownFor.slice(0, 200));
+  const a1 = personality.abilities?.[0];
+  const a2 = personality.abilities?.[1];
+  if (a1) {
+    ogParams.set('a1n', a1.name.slice(0, 32));
+    ogParams.set('a1d', a1.description.slice(0, 140));
   }
-  if (personality.shownDislikes && personality.shownDislikes.length === personality.dislikes.length) {
-    ogParams.set('sdl', personality.shownDislikes.map((b) => (b ? '1' : '0')).join(''));
+  if (a2) {
+    ogParams.set('a2n', a2.name.slice(0, 32));
+    ogParams.set('a2d', a2.description.slice(0, 140));
   }
-  // r — AI-generated one-liner subtitle. Append-only to preserve URL order.
-  if (reasoning) {
-    ogParams.set('r', reasoning.slice(0, 160));
-  }
+  if (xHandle) ogParams.set('ref', xHandle.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15));
   const ogUrl = `${appUrl}/api/og?${ogParams.toString()}`;
 
   return {
@@ -96,6 +96,7 @@ export default async function CardPage({ params }: PageProps) {
       config={config}
       personality={personality}
       trainerName={sanitizeNameForDisplay(trainer.trainer_name)}
+      xHandle={typeof trainer.x_handle === 'string' ? trainer.x_handle : undefined}
       reasoning={reasoning}
     />
   );

@@ -25,6 +25,7 @@ interface UnpackedTrainer {
   personality: TrainerPersonality;
   source?: 'ai' | 'manual';
   reasoning?: string;
+  referredBy?: string;
 }
 
 const EMPTY_PERSONALITY: TrainerPersonality = {
@@ -45,11 +46,15 @@ export function unpackTrainer(row: { trainer_config: unknown }): UnpackedTrainer
   // Mana Seed-era configs lack eyes/accessory; normalizeConfig fills with 'none'.
   if ((obj.schemaVersion as number) === 2 && obj.config && obj.personality) {
     const reasoning = typeof obj.reasoning === 'string' ? obj.reasoning : undefined;
+    const referredBy = typeof obj.referredBy === 'string'
+      ? obj.referredBy.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15) || undefined
+      : undefined;
     return {
       config: normalizeConfig(obj.config as Record<string, unknown>),
       personality: normalizePersonality(obj.personality as Record<string, unknown>),
       source: obj.source === 'ai' || obj.source === 'manual' ? obj.source : undefined,
       reasoning,
+      referredBy,
     };
   }
 
@@ -66,10 +71,15 @@ export function packTrainer(
   personality: TrainerPersonality,
   source?: 'ai' | 'manual',
   reasoning?: string,
+  referredBy?: string,
 ): StoredTrainer {
   const stored: StoredTrainer = { schemaVersion: 2, config, personality };
   if (source) stored.source = source;
   if (reasoning) stored.reasoning = reasoning.slice(0, 400);
+  if (referredBy) {
+    const cleaned = referredBy.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
+    if (cleaned) stored.referredBy = cleaned;
+  }
   return stored;
 }
 
@@ -96,13 +106,27 @@ function normalizePersonality(raw: Record<string, unknown>): TrainerPersonality 
     ? raw.dislikes.filter((s): s is string => typeof s === 'string').slice(0, 5)
     : [];
 
-  // Optional show-on-card masks. Only retained when the array length matches
-  // its source (likes / dislikes) — otherwise drop and treat as all-shown.
   const rawShownLikes = Array.isArray(raw.shownLikes)
     ? raw.shownLikes.map((v) => v === true)
     : undefined;
   const rawShownDislikes = Array.isArray(raw.shownDislikes)
     ? raw.shownDislikes.map((v) => v === true)
+    : undefined;
+
+  // V3 abilities — { name, description }[]. Cap at 2 entries.
+  const abilities = Array.isArray(raw.abilities)
+    ? (raw.abilities as unknown[])
+        .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')
+        .map((a) => ({
+          name: typeof a.name === 'string' ? a.name.slice(0, 32) : '',
+          description: typeof a.description === 'string' ? a.description.slice(0, 140) : '',
+        }))
+        .filter((a) => a.name.length > 0)
+        .slice(0, 2)
+    : undefined;
+
+  const knownFor = typeof raw.knownFor === 'string'
+    ? raw.knownFor.slice(0, 200)
     : undefined;
 
   const out: TrainerPersonality = {
@@ -116,6 +140,8 @@ function normalizePersonality(raw: Record<string, unknown>): TrainerPersonality 
   if (rawShownDislikes && rawShownDislikes.length === dislikes.length) {
     out.shownDislikes = rawShownDislikes;
   }
+  if (abilities && abilities.length > 0) out.abilities = abilities;
+  if (knownFor) out.knownFor = knownFor;
   return out;
 }
 

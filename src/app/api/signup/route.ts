@@ -66,9 +66,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { email, xHandle, trainerName, trainerConfig, trainerPersonality, reasoning } = body ?? {};
+    const { email, xHandle, trainerName, trainerConfig, trainerPersonality, reasoning, referredBy } = body ?? {};
     const personality: TrainerPersonality = trainerPersonality ?? EMPTY_PERSONALITY;
     const aiReasoning = typeof reasoning === 'string' && reasoning.trim() ? reasoning.trim() : undefined;
+    // Referral handle (the X handle of the trainer card whose QR was scanned).
+    // Sanitize to X handle rules even though it's user-supplied via localStorage.
+    const referrerHandle = typeof referredBy === 'string'
+      ? referredBy.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15) || undefined
+      : undefined;
 
     // 1. Rate limit
     const rate = await checkSignupRate(ipHash);
@@ -238,7 +243,13 @@ export async function POST(req: NextRequest) {
           email: email.toLowerCase().trim(),
           x_handle: xHandle?.toLowerCase().trim().replace(/^@/, '') || null,
           trainer_name: trainerName.toUpperCase().slice(0, 12),
-          trainer_config: packTrainer(trainerConfig, personality, aiReasoning ? 'ai' : undefined, aiReasoning),
+          trainer_config: packTrainer(
+            trainerConfig,
+            personality,
+            aiReasoning ? 'ai' : undefined,
+            aiReasoning,
+            referrerHandle,
+          ),
         },
         { onConflict: 'email' },
       )

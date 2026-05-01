@@ -32,21 +32,27 @@ function backfill(cleaned: string[], pool: readonly string[], target: number): s
 }
 
 function scrubPersonality(p: TrainerPersonality, handle: string): TrainerPersonality {
-  const likes = scrubAIChips(p.likes);
-  const dislikes = scrubAIChips(p.dislikes);
-  if (likes.dropped.length || dislikes.dropped.length) {
-    console.warn(
-      `[generate-trainer] dropped AI chips for @${handle}:`,
-      [...likes.dropped, ...dislikes.dropped]
-        .map((d) => `${d.layer}/${d.match}: "${d.chip}"`)
-        .join(', '),
-    );
-  }
-  return {
+  // V3 abilities/knownFor are AI-prompted to be brand-safe; the signup-time
+  // moderation pipeline (check-personality.ts) is the backstop. Legacy
+  // likes/dislikes (v2) still go through the chip scrubber when present.
+  const out: TrainerPersonality = {
     zodiac: p.zodiac,
-    likes: backfill(likes.cleaned, FALLBACK_LIKES, p.likes.length),
-    dislikes: backfill(dislikes.cleaned, FALLBACK_DISLIKES, p.dislikes.length),
+    likes: [],
+    dislikes: [],
   };
+  if (p.likes && p.likes.length > 0) {
+    const likes = scrubAIChips(p.likes);
+    out.likes = backfill(likes.cleaned, FALLBACK_LIKES, p.likes.length);
+    if (likes.dropped.length) console.warn(`[generate-trainer] dropped AI likes for @${handle}:`, likes.dropped);
+  }
+  if (p.dislikes && p.dislikes.length > 0) {
+    const dislikes = scrubAIChips(p.dislikes);
+    out.dislikes = backfill(dislikes.cleaned, FALLBACK_DISLIKES, p.dislikes.length);
+    if (dislikes.dropped.length) console.warn(`[generate-trainer] dropped AI dislikes for @${handle}:`, dislikes.dropped);
+  }
+  if (p.abilities && p.abilities.length > 0) out.abilities = p.abilities;
+  if (p.knownFor) out.knownFor = p.knownFor;
+  return out;
 }
 
 // POST /api/generate-trainer

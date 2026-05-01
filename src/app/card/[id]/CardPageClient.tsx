@@ -13,10 +13,11 @@ interface CardPageClientProps {
   personality: TrainerPersonality;
   trainerName: string;
   reasoning?: string;
+  xHandle?: string;
 }
 
 export default function CardPageClient({
-  id, config, personality, trainerName, reasoning,
+  id, config, personality, trainerName, reasoning, xHandle,
 }: CardPageClientProps) {
   const [revealed, setRevealed] = useState(false);
   const [showCard, setShowCard] = useState(false);
@@ -51,6 +52,7 @@ export default function CardPageClient({
             personality={personality}
             trainerName={trainerName}
             cardId={id}
+            xHandle={xHandle}
             reasoning={reasoning}
           />
         </div>
