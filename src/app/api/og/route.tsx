@@ -28,8 +28,9 @@ const CACHE_HEADERS = {
 const SPRITE_ROOT = ['public', 'sprites', 'limezu'];
 const FONT_DIR = ['src', 'fonts'];
 
-let cachedFonts: { name: string; data: Buffer; weight: number; style: 'normal' }[] | null = null;
-async function loadOgFonts() {
+type OgFont = { name: string; data: Buffer; weight: 400 | 600 | 700; style: 'normal' };
+let cachedFonts: OgFont[] | null = null;
+async function loadOgFonts(): Promise<OgFont[]> {
   if (cachedFonts) return cachedFonts;
   try {
     const agencyPath = path.join(process.cwd(), ...FONT_DIR, 'Agency.ttf');
@@ -37,12 +38,10 @@ async function loadOgFonts() {
     const [agency, moderniz, inter400, inter600] = await Promise.all([
       readFile(agencyPath),
       readFile(modernizPath),
-      // Inter as the body font for OG (knownFor + ability descriptions).
-      // Fetched once + cached in module scope.
       fetch('https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Regular.ttf').then((r) => r.ok ? r.arrayBuffer() : null).then((b) => b ? Buffer.from(b) : null).catch(() => null),
       fetch('https://github.com/rsms/inter/raw/master/docs/font-files/Inter-SemiBold.ttf').then((r) => r.ok ? r.arrayBuffer() : null).then((b) => b ? Buffer.from(b) : null).catch(() => null),
     ]);
-    const fonts: { name: string; data: Buffer; weight: number; style: 'normal' }[] = [
+    const fonts: OgFont[] = [
       { name: 'Agency', data: agency, weight: 700, style: 'normal' },
       { name: 'Moderniz', data: moderniz, weight: 700, style: 'normal' },
     ];
