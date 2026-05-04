@@ -303,36 +303,26 @@ export default function ConsoleScreen({
         .screen-hero.is-rolling .hero-sprite-wrap {
           animation: sprite-pull 360ms ease-out;
         }
+        /* Sprite wrap fits the hero box: fill height, derive width from the
+           48×96 (1:2) LimeZu aspect, and let the inner sprite stretch to 100%
+           via the override below. Avoids the previous fixed-px sizing that
+           overflowed .screen-hero (which has overflow:hidden) and clipped the
+           lower body — most visible at desktop widths and at small viewports
+           where vertical space gets squeezed. No min-height on purpose: on
+           tight portrait viewports the sprite shrinks rather than overflows. */
         .hero-sprite-wrap {
           position: relative;
-          width: 132px;
-          height: 264px;
-          flex-shrink: 0;
+          height: 100%;
+          max-height: 100%;
+          aspect-ratio: 1 / 2;
+          flex-shrink: 1;
         }
         .hero-sprite-wrap > :global(*) {
-          position: absolute;
-          top: 0;
-          left: 0;
-          transform: scale(0.6);
-          transform-origin: top left;
-        }
-        @media (max-width: 479px) {
-          .hero-sprite-wrap {
-            width: 110px;
-            height: 220px;
-          }
-          .hero-sprite-wrap > :global(*) {
-            transform: scale(0.5);
-          }
-        }
-        @media (min-width: 1280px) {
-          .hero-sprite-wrap {
-            width: 154px;
-            height: 308px;
-          }
-          .hero-sprite-wrap > :global(*) {
-            transform: scale(0.7);
-          }
+          position: absolute !important;
+          inset: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          transform: none !important;
         }
         .hero-floor {
           position: absolute;
@@ -462,6 +452,40 @@ export default function ConsoleScreen({
           60%  { transform: scale(1.12); opacity: 1; }
           100% { transform: scale(1);    opacity: 1; }
         }
+
+        /* Mobile compaction. The console aspect-ratio (1080/1680) makes the
+           screen short on portrait viewports, so we have to claw back vertical
+           space for the sprite hero. Concretely: name row gets its own line
+           (otherwise the input shrinks to ~18px), zodiac glyph is hidden
+           (redundant with the select), stats collapse to a single 4-col row
+           (saves ~40px vs 2x2), and quote/footer paddings tighten. */
+        /* Mobile compaction (≤479px). Screen height is constrained by the
+           console's 1080/1680 aspect, so every block has to give a little:
+           - Banner: name row gets its own line so the input doesn't shrink
+             to ~18px; zodiac glyph is dropped (redundant with the select).
+           - Stats collapse to a single 4-col row with shorter labels so a
+             second row doesn't eat ~32px of vertical space.
+           - Hero gets a min-height so the sprite stays visible even when
+             everything else is laid out.
+           - Quote trims to a single line + ellipsis. Footer paddings shrink.
+         */
+        @media (max-width: 479px) {
+          .screen-grid { padding: 6px 8px; gap: 4px; font-size: 11px; }
+          .screen-name { flex-basis: 100%; }
+          .zodiac-glyph { display: none; }
+          .screen-stats { grid-template-columns: repeat(4, 1fr); gap: 3px; }
+          .screen-hero { min-height: 100px; padding: 2px 0; }
+          .screen-quote { padding: 4px 8px; }
+          .quote-mark { font-size: 16px; }
+          .quote-body {
+            font-size: 10px;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .footer-btn { padding: 8px 10px; font-size: 10px; }
+        }
       `}</style>
     </div>
   );
@@ -515,6 +539,13 @@ function Stat({ label, value }: { label: string; value: number }) {
           background: linear-gradient(90deg, #367D95 0%, #90B34D 100%);
           border-radius: 2px;
           transition: width 220ms ease;
+        }
+        /* Mobile: tighter so 4-col stats fits "RESOLVE 67" without clipping. */
+        @media (max-width: 479px) {
+          .stat-cell { padding: 3px 4px; gap: 2px; }
+          .stat-label { font-size: 7px; letter-spacing: 0.10em; }
+          .stat-value { font-size: 9px; }
+          .stat-track { height: 2px; }
         }
       `}</style>
     </div>

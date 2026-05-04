@@ -6,6 +6,7 @@ import { randomConfig } from '@/lib/trainer-options';
 import TrainerDashboard from '@/components/dashboard/TrainerDashboard';
 import { GlassPanel, Button } from '@/components/ui';
 import TurnstileWidget, { TURNSTILE_ENABLED } from '@/components/TurnstileWidget';
+import { MOCK_QUOTE_POOL } from '@/lib/ai/mock-quotes';
 
 const INITIAL_PERSONALITY: TrainerPersonality = { zodiac: '', likes: [], dislikes: [] };
 // Local-storage key for the referral handle so it survives the X-auth bounce
@@ -112,14 +113,16 @@ export default function CreatePageClient() {
     generate(trimmed);
   }
 
-  // Re-roll: local random shuffle of the visual layers. NOT a re-scan of the
-  // X profile (that's only the initial generation). Keeps personality + AI
-  // reasoning intact; only the visual config changes. Instant + free.
+  // Re-roll: local random shuffle of the visual layers + a fresh roast quote
+  // pulled from the brand-safe mock pool. NOT a re-scan of the X profile (that
+  // only runs on initial pull). Zodiac stays put because it's the user's pick.
   function handleRegenerate() {
     if (!ai) return;
+    const nextQuote = MOCK_QUOTE_POOL[Math.floor(Math.random() * MOCK_QUOTE_POOL.length)];
     setAi({
       ...ai,
       config: randomConfig(),
+      personality: { ...ai.personality, quote: nextQuote },
       reasoning: '🎲 Random remix. Tweak any layer below or claim as-is.',
     });
   }
