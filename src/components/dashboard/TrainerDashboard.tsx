@@ -1,11 +1,11 @@
 'use client';
 
-// TrainerDashboard V2.1 — single-screen console architecture.
+// TrainerDashboard V3.3 — chassis-free panel.
 //
-// The chassis is a Blender PNG; all interaction lives inside the screen
-// recess (ConsoleScreen). Same metaphor on desktop and mobile — Console fills
-// the available space, Re-roll/Claim are sticky inside the screen footer,
-// music is a header toggle, AI reasoning persists onto the share card.
+// Previous V2.1 wrapped everything in a Blender-rendered handheld console
+// chassis. That chassis was dropped per product call; the value-first re-roll
+// loop content (banner / stats / sprite / quote / footer) survives and now
+// lives in a plain centered cream panel. Same flow, no gameboy aesthetic.
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,7 +13,6 @@ import type { TrainerConfig, TrainerPersonality, Zodiac } from '@/types/trainer'
 import { INITIAL_CONFIG, isReadyToGenerate } from '@/lib/trainer-options';
 import { playGenerate } from '@/lib/sounds';
 import SignupGate from '@/components/SignupGate';
-import Console from '@/components/device/Console';
 import ConsoleScreen from './ConsoleScreen';
 
 const INITIAL_PERSONALITY: TrainerPersonality = { zodiac: '', likes: [], dislikes: [] };
@@ -83,21 +82,19 @@ export default function TrainerDashboard({
         transition: 'opacity 320ms ease-out',
       }}
     >
-      <div className="dashboard-stage">
-        <Console className="dashboard-console">
-          <ConsoleScreen
-            config={config}
-            personality={personality}
-            trainerName={trainerName}
-            canGenerate={canGenerate}
-            missingLabels={missingLabels}
-            hasAi={!!aiContext}
-            onNameChange={setTrainerName}
-            onZodiacChange={handleZodiacChange}
-            onGenerate={handleGenerate}
-            onRegenerate={onRegenerate}
-          />
-        </Console>
+      <div className="dashboard-panel">
+        <ConsoleScreen
+          config={config}
+          personality={personality}
+          trainerName={trainerName}
+          canGenerate={canGenerate}
+          missingLabels={missingLabels}
+          hasAi={!!aiContext}
+          onNameChange={setTrainerName}
+          onZodiacChange={handleZodiacChange}
+          onGenerate={handleGenerate}
+          onRegenerate={onRegenerate}
+        />
       </div>
 
       {showSignup && (
@@ -115,36 +112,25 @@ export default function TrainerDashboard({
         .dashboard-shell {
           position: relative;
           min-height: 100vh;
-          padding: 12px;
+          padding: 24px 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background:
-            radial-gradient(ellipse 60% 55% at 50% 50%, rgba(255, 246, 240, 0.7) 0%, transparent 70%),
-            radial-gradient(ellipse 80% 60% at 50% 90%, rgba(67, 56, 202, 0.10) 0%, transparent 70%),
-            linear-gradient(180deg, #FFE6E6 0%, #F4D2FF 45%, #C2DDFF 100%);
+          background: var(--brand-bg, #FFFDF3);
         }
-        .dashboard-stage {
+        /* Centered cream card. Width adapts: comfortable reading width on
+           desktop, edge-bleed on phones. No fixed aspect ratio anymore — let
+           content drive the height. */
+        .dashboard-panel {
           width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        /* Aspect-ratio drives width from height — never set both height AND
-           max-width, that breaks the aspect and letterboxes the chassis IMG
-           inside the shell. */
-        .dashboard-stage :global(.dashboard-console) {
-          height: calc(100vh - 24px);
-          width: auto;
-          aspect-ratio: 1080 / 1680;
-        }
-        /* On very narrow viewports the height-driven width may exceed the
-           viewport width — clamp by sizing from width instead. */
-        @media (max-aspect-ratio: 1080/1680) {
-          .dashboard-stage :global(.dashboard-console) {
-            height: auto;
-            width: calc(100vw - 24px);
-          }
+          max-width: 560px;
+          background: #FFFDF3;
+          border: 1px solid rgba(22, 39, 44, 0.10);
+          border-radius: 18px;
+          box-shadow:
+            0 24px 48px -16px rgba(22, 39, 44, 0.12),
+            0 4px 8px -2px rgba(22, 39, 44, 0.06);
+          overflow: hidden;
         }
       `}</style>
     </div>

@@ -6,6 +6,10 @@
 // commit. Tier rolls happen at claim, not at re-roll, so users never know
 // what tier they'll get until they sign.
 //
+// V3.3 — moved out of the gameboy console chassis into a plain centered
+// panel. The screen-recess + aspect-ratio CSS gymnastics are gone; layout
+// flows naturally and breathes on every viewport.
+//
 // Customization tabs (BODY/WEAR/VIBE) intentionally removed — the flow now
 // trades manual overrides for a tighter funnel + slot-machine engagement.
 
@@ -15,7 +19,6 @@ import { ZODIAC_GLYPHS, ZODIAC_OPTIONS } from '@/lib/personality';
 import { generateStats, STAT_LABELS, type TrainerStats } from '@/lib/card-utils';
 import TrainerSprite from '@/components/TrainerSprite';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
-import { usePressState } from '@/components/device/ConsolePressState';
 
 interface ConsoleScreenProps {
   config: TrainerConfig;
@@ -37,7 +40,6 @@ export default function ConsoleScreen({
   onGenerate, onRegenerate,
 }: ConsoleScreenProps) {
   const audio = useAudioPlayer();
-  const { pulse } = usePressState();
 
   // Roll counter + animation state. Drives the dopamine loop:
   //   - "ROLL #N" badge increments on each re-roll
@@ -47,24 +49,13 @@ export default function ConsoleScreen({
   const [isRolling, setIsRolling] = useState(false);
   const rollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Status LEDs — green pulses while sprite is mounted; azure while audio plays.
-  useEffect(() => {
-    pulse('ledGreen', 600);
-  }, [config, pulse]);
-  useEffect(() => {
-    if (audio.isPlaying) pulse('ledAzure', 600);
-  }, [audio.isPlaying, pulse]);
-
   function handleClaim() {
     if (!canGenerate) return;
-    pulse('btnA', 280);
     onGenerate();
   }
 
   function handleRegenerate() {
     if (!onRegenerate) return;
-    pulse('btnB', 280);
-    pulse('ledCoral', 600);
     setRollCount((n) => n + 1);
     setIsRolling(true);
     if (rollTimeoutRef.current) clearTimeout(rollTimeoutRef.current);
@@ -73,7 +64,6 @@ export default function ConsoleScreen({
   }
 
   function handleMusicToggle() {
-    pulse('btnX');
     audio.toggle();
   }
 
@@ -180,17 +170,18 @@ export default function ConsoleScreen({
       </div>
 
       <style jsx>{`
+        /* V3.3 panel — no aspect-ratio container, no overflow:hidden. The
+           panel grows with content; viewport scrolls if needed. Padding +
+           gap are larger than the chassis era because we're no longer
+           fighting for vertical space inside a fixed screen recess. */
         .screen-grid {
           width: 100%;
-          height: 100%;
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          padding: 10px 12px;
-          font-size: 12px;
+          gap: 14px;
+          padding: 18px 20px;
+          font-size: 13px;
           color: var(--ink);
-          overflow: hidden;
-          min-height: 0;
         }
 
         .screen-header {
@@ -294,11 +285,10 @@ export default function ConsoleScreen({
           background:
             radial-gradient(ellipse 70% 35% at 50% 95%, rgba(67, 56, 202, 0.10) 0%, transparent 70%),
             transparent;
-          border-radius: 8px;
-          padding: 10px 0;
-          flex: 1 1 auto;
-          min-height: 0;
-          overflow: hidden;
+          border-radius: 12px;
+          padding: 16px 0 12px;
+          /* Plenty of room for the sprite now that the chassis is gone. */
+          min-height: 280px;
         }
         .screen-hero.is-rolling .hero-sprite-wrap {
           animation: sprite-pull 360ms ease-out;
@@ -459,32 +449,14 @@ export default function ConsoleScreen({
            (otherwise the input shrinks to ~18px), zodiac glyph is hidden
            (redundant with the select), stats collapse to a single 4-col row
            (saves ~40px vs 2x2), and quote/footer paddings tighten. */
-        /* Mobile compaction (≤479px). Screen height is constrained by the
-           console's 1080/1680 aspect, so every block has to give a little:
-           - Banner: name row gets its own line so the input doesn't shrink
-             to ~18px; zodiac glyph is dropped (redundant with the select).
-           - Stats collapse to a single 4-col row with shorter labels so a
-             second row doesn't eat ~32px of vertical space.
-           - Hero gets a min-height so the sprite stays visible even when
-             everything else is laid out.
-           - Quote trims to a single line + ellipsis. Footer paddings shrink.
-         */
+        /* Mobile (≤479px). The chassis aspect-ratio is gone, so the only
+           reason to compact here is to give the sprite enough breathing room
+           on small screens — name still gets its own row so the input
+           doesn't fight the zodiac/level chips for width. */
         @media (max-width: 479px) {
-          .screen-grid { padding: 6px 8px; gap: 4px; font-size: 11px; }
+          .screen-grid { padding: 14px 16px; gap: 12px; }
           .screen-name { flex-basis: 100%; }
-          .zodiac-glyph { display: none; }
-          .screen-stats { grid-template-columns: repeat(4, 1fr); gap: 3px; }
-          .screen-hero { min-height: 100px; padding: 2px 0; }
-          .screen-quote { padding: 4px 8px; }
-          .quote-mark { font-size: 16px; }
-          .quote-body {
-            font-size: 10px;
-            line-height: 1.3;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-          .footer-btn { padding: 8px 10px; font-size: 10px; }
+          .screen-hero { min-height: 240px; }
         }
       `}</style>
     </div>
