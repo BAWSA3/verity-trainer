@@ -136,6 +136,19 @@ function normalizePersonality(raw: Record<string, unknown>): TrainerPersonality 
         .slice(0, 2)
     : undefined;
 
+  // V3.2 weaknesses — same shape as abilities. Pre-V3.2 rows simply lack the
+  // field, which is fine: render path treats undefined as "skip the section".
+  const weaknesses = Array.isArray(raw.weaknesses)
+    ? (raw.weaknesses as unknown[])
+        .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')
+        .map((a) => ({
+          name: typeof a.name === 'string' ? a.name.slice(0, 32) : '',
+          description: typeof a.description === 'string' ? a.description.slice(0, 140) : '',
+        }))
+        .filter((a) => a.name.length > 0)
+        .slice(0, 2)
+    : undefined;
+
   // V3.1 quote replaces V3 knownFor. Read both for back-compat; prefer quote.
   const quote = typeof raw.quote === 'string'
     ? raw.quote.slice(0, 200)
@@ -155,6 +168,7 @@ function normalizePersonality(raw: Record<string, unknown>): TrainerPersonality 
     out.shownDislikes = rawShownDislikes;
   }
   if (abilities && abilities.length > 0) out.abilities = abilities;
+  if (weaknesses && weaknesses.length > 0) out.weaknesses = weaknesses;
   if (quote) out.quote = quote;
   return out;
 }

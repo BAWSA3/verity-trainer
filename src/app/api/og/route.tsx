@@ -175,6 +175,10 @@ export async function GET(req: NextRequest) {
   let ability1Desc = cleanText(searchParams.get('a1d') || '', 140);
   let ability2Name = cleanText(searchParams.get('a2n') || '', 32);
   let ability2Desc = cleanText(searchParams.get('a2d') || '', 140);
+  let weakness1Name = cleanText(searchParams.get('w1n') || '', 32);
+  let weakness1Desc = cleanText(searchParams.get('w1d') || '', 140);
+  let weakness2Name = cleanText(searchParams.get('w2n') || '', 32);
+  let weakness2Desc = cleanText(searchParams.get('w2d') || '', 140);
 
   let refHandle = (searchParams.get('ref') || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
 
@@ -213,6 +217,12 @@ export async function GET(req: NextRequest) {
         ability1Desc = a1 ? cleanText(a1.description, 140) : '';
         ability2Name = a2 ? cleanText(a2.name, 32) : '';
         ability2Desc = a2 ? cleanText(a2.description, 140) : '';
+        const w1 = personality.weaknesses?.[0];
+        const w2 = personality.weaknesses?.[1];
+        weakness1Name = w1 ? cleanText(w1.name, 32) : '';
+        weakness1Desc = w1 ? cleanText(w1.description, 140) : '';
+        weakness2Name = w2 ? cleanText(w2.name, 32) : '';
+        weakness2Desc = w2 ? cleanText(w2.description, 140) : '';
         refHandle = typeof row.x_handle === 'string'
           ? row.x_handle.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15)
           : '';
@@ -225,6 +235,11 @@ export async function GET(req: NextRequest) {
   const abilities = [
     ability1Name && ability1Desc ? { name: ability1Name, description: ability1Desc } : null,
     ability2Name && ability2Desc ? { name: ability2Name, description: ability2Desc } : null,
+  ].filter((a): a is { name: string; description: string } => a !== null);
+
+  const weaknesses = [
+    weakness1Name && weakness1Desc ? { name: weakness1Name, description: weakness1Desc } : null,
+    weakness2Name && weakness2Desc ? { name: weakness2Name, description: weakness2Desc } : null,
   ].filter((a): a is { name: string; description: string } => a !== null);
 
   const fullBodyDataUri = await compositeFullBody(args);
@@ -395,47 +410,93 @@ export async function GET(req: NextRequest) {
                 <StatCell label="RESOLVE"  value={resolve} />
               </div>
 
-              {/* Special Abilities + QR */}
+              {/* Special Abilities + Weaknesses + QR */}
               <div style={{ display: 'flex', gap: 14, marginTop: 4, alignItems: 'flex-end' }}>
-                {abilities.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'flex', fontSize: 11, letterSpacing: '5px', fontWeight: 700, color: '#367D95' }}>
-                      SPECIAL ABILITIES
-                    </span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {abilities.map((a, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            display: 'flex',
-                            gap: 14,
-                            padding: '8px 12px',
-                            backgroundColor: 'rgba(144, 179, 77, 0.08)',
-                            border: '1px solid rgba(144, 179, 77, 0.30)',
-                            borderRadius: 10,
-                            alignItems: 'baseline',
-                          }}
-                        >
-                          <span
-                            style={{
-                              display: 'flex',
-                              fontSize: 12,
-                              letterSpacing: '2px',
-                              textTransform: 'uppercase',
-                              fontWeight: 700,
-                              color: '#3F5520',
-                              width: 170,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {a.name}
-                          </span>
-                          <span style={{ display: 'flex', fontSize: 14, lineHeight: 1.4, color: '#16272C', flex: 1, fontFamily: 'Inter' }}>
-                            {a.description}
-                          </span>
+                {abilities.length > 0 || weaknesses.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
+                    {abilities.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+                        <span style={{ display: 'flex', fontSize: 11, letterSpacing: '5px', fontWeight: 700, color: '#367D95' }}>
+                          SPECIAL ABILITIES
+                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {abilities.map((a, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                display: 'flex',
+                                gap: 14,
+                                padding: '8px 12px',
+                                backgroundColor: 'rgba(144, 179, 77, 0.08)',
+                                border: '1px solid rgba(144, 179, 77, 0.30)',
+                                borderRadius: 10,
+                                alignItems: 'baseline',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  display: 'flex',
+                                  fontSize: 12,
+                                  letterSpacing: '2px',
+                                  textTransform: 'uppercase',
+                                  fontWeight: 700,
+                                  color: '#3F5520',
+                                  width: 170,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {a.name}
+                              </span>
+                              <span style={{ display: 'flex', fontSize: 14, lineHeight: 1.4, color: '#16272C', flex: 1, fontFamily: 'Inter' }}>
+                                {a.description}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ) : null}
+
+                    {weaknesses.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+                        <span style={{ display: 'flex', fontSize: 11, letterSpacing: '5px', fontWeight: 700, color: '#A53A2E' }}>
+                          WEAKNESSES
+                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {weaknesses.map((w, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                display: 'flex',
+                                gap: 14,
+                                padding: '8px 12px',
+                                backgroundColor: 'rgba(232, 85, 68, 0.07)',
+                                border: '1px solid rgba(232, 85, 68, 0.30)',
+                                borderRadius: 10,
+                                alignItems: 'baseline',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  display: 'flex',
+                                  fontSize: 12,
+                                  letterSpacing: '2px',
+                                  textTransform: 'uppercase',
+                                  fontWeight: 700,
+                                  color: '#A53A2E',
+                                  width: 170,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {w.name}
+                              </span>
+                              <span style={{ display: 'flex', fontSize: 14, lineHeight: 1.4, color: '#16272C', flex: 1, fontFamily: 'Inter' }}>
+                                {w.description}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ) : <div style={{ flex: 1 }} />}
 

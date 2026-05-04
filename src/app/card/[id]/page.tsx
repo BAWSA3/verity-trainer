@@ -69,6 +69,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ogParams.set('a2n', a2.name.slice(0, 32));
     ogParams.set('a2d', a2.description.slice(0, 140));
   }
+  const w1 = personality.weaknesses?.[0];
+  const w2 = personality.weaknesses?.[1];
+  if (w1) {
+    ogParams.set('w1n', w1.name.slice(0, 32));
+    ogParams.set('w1d', w1.description.slice(0, 140));
+  }
+  if (w2) {
+    ogParams.set('w2n', w2.name.slice(0, 32));
+    ogParams.set('w2d', w2.description.slice(0, 140));
+  }
   if (xHandle) ogParams.set('ref', xHandle.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15));
   const ogUrl = `${appUrl}/api/og?${ogParams.toString()}`;
 

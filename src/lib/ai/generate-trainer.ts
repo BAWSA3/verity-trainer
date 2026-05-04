@@ -65,7 +65,7 @@ async function callAnthropic(
   profile: XProfile,
   slots: ManifestSlots,
   options: GenerateOptions,
-): Promise<{ config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; quote?: string; knownFor?: string }; reasoning: string }> {
+): Promise<{ config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; weaknesses?: unknown; quote?: string; knownFor?: string }; reasoning: string }> {
   const system = buildSystemPrompt(slots);
   const userText = buildUserMessage(
     profile,
@@ -103,7 +103,7 @@ async function callAnthropic(
   }
   const input = toolUse.input as {
     config: TrainerConfig;
-    personality: { zodiac: string; abilities?: unknown; quote?: string; knownFor?: string };
+    personality: { zodiac: string; abilities?: unknown; weaknesses?: unknown; quote?: string; knownFor?: string };
     reasoning: string;
   };
   return input;
@@ -112,7 +112,7 @@ async function callAnthropic(
 // ---------- validation + coercion ----------
 
 function validateAndCoerce(
-  raw: { config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; quote?: string; knownFor?: string; likes?: unknown; dislikes?: unknown }; reasoning: string },
+  raw: { config: TrainerConfig; personality: { zodiac: string; abilities?: unknown; weaknesses?: unknown; quote?: string; knownFor?: string; likes?: unknown; dislikes?: unknown }; reasoning: string },
   slots: ManifestSlots,
   profile: XProfile,
   source: 'live' | 'mock',
@@ -139,6 +139,7 @@ function validateAndCoerce(
     likes: [],
     dislikes: [],
     abilities: clampAbilities(raw.personality?.abilities),
+    weaknesses: clampAbilities(raw.personality?.weaknesses),
     quote: clampQuote(raw.personality?.quote ?? raw.personality?.knownFor),
   };
 
@@ -211,11 +212,13 @@ function mockTrainer(profile: XProfile, slots: ManifestSlots, options: GenerateO
 
   const zodiacIdx = Math.abs(seed + 7) % ZODIAC_OPTIONS.length;
   const abilities = mockAbilities(seed);
+  const weaknesses = mockWeaknesses(seed);
   const personality: TrainerPersonality = {
     zodiac: ZODIAC_OPTIONS[zodiacIdx].id,
     likes: [],
     dislikes: [],
     abilities,
+    weaknesses,
     quote: mockQuoteForHash(seed),
   };
 
@@ -242,6 +245,26 @@ function mockAbilities(seed: number): { name: string; description: string }[] {
   let bIdx = Math.abs(seed + 23) % MOCK_ABILITY_POOL.length;
   if (MOCK_ABILITY_POOL[bIdx].name === a.name) bIdx = (bIdx + 1) % MOCK_ABILITY_POOL.length;
   return [a, MOCK_ABILITY_POOL[bIdx]];
+}
+
+const MOCK_WEAKNESS_POOL: { name: string; description: string }[] = [
+  { name: 'Open Tabs',         description: 'cannot resist a rabbit hole that starts with one tab' },
+  { name: 'Cold Inbox',        description: 'opens email at 9, replies at 5, apologizes by 6' },
+  { name: 'Group Chat',        description: 'loses a full afternoon the moment a thread gets spicy' },
+  { name: 'Meeting Drift',     description: 'agrees in the room, regrets it on the walk back' },
+  { name: 'Refactor Itch',     description: 'rewrites working code instead of shipping the next thing' },
+  { name: 'Empty DMs',         description: 'reads receipts on, drafts that never send' },
+  { name: 'Algorithm Pull',    description: 'opens X to check one thing, resurfaces 40 minutes later' },
+  { name: 'Roadmap Mood',      description: 'changes the plan after a single compelling tweet' },
+  { name: 'Naming Loop',       description: 'spends an hour on a variable that no one will read' },
+  { name: 'Quiet Saturday',    description: 'two coffees in before remembering the actual goal' },
+];
+
+function mockWeaknesses(seed: number): { name: string; description: string }[] {
+  const a = MOCK_WEAKNESS_POOL[Math.abs(seed + 41) % MOCK_WEAKNESS_POOL.length];
+  let bIdx = Math.abs(seed + 67) % MOCK_WEAKNESS_POOL.length;
+  if (MOCK_WEAKNESS_POOL[bIdx].name === a.name) bIdx = (bIdx + 1) % MOCK_WEAKNESS_POOL.length;
+  return [a, MOCK_WEAKNESS_POOL[bIdx]];
 }
 
 function pickByIdx(values: string[], seed: number): string {

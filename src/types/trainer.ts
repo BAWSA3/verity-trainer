@@ -83,6 +83,9 @@ export interface TrainerPersonality {
   zodiac: Zodiac | '';
   // V3 — AI-generated, surfaced on the share card. 0-2 abilities.
   abilities?: TrainerAbility[];
+  // V3.2 — Pokémon-style weaknesses paired with abilities. 0-2 entries,
+  // same { name, description } shape. Same brand-safe floor as abilities.
+  weaknesses?: TrainerAbility[];
   // V3.1 — sharp-edge roast quote (replaces V3 'knownFor' tagline).
   // Brand-safe floor: no race/sex/orientation/religion/disability content;
   // self-roast about productivity / online behavior / aesthetic / niches OK.

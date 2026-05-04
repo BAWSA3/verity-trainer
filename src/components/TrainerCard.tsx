@@ -60,6 +60,7 @@ export default function TrainerCard({
   const displayName = (trainerName || 'TRAINER').toUpperCase().slice(0, 12);
   const quote = (personality.quote ?? personality.knownFor)?.trim() ?? '';
   const abilities = personality.abilities ?? [];
+  const weaknesses = personality.weaknesses ?? [];
 
   return (
     <div
@@ -120,21 +121,39 @@ export default function TrainerCard({
             ))}
           </div>
 
-          {/* Special Abilities + QR row */}
+          {/* Special Abilities + Weaknesses + QR row */}
           <div className="abilities-row">
-            {abilities.length > 0 ? (
-              <div className="abilities-block">
-                <span className="section-eyebrow">Special Abilities</span>
-                <div className="abilities-list">
-                  {abilities.slice(0, 2).map((a, i) => (
-                    <div key={i} className="ability">
-                      <div className="ability-name">{a.name}</div>
-                      <div className="ability-desc">{a.description}</div>
-                    </div>
-                  ))}
+            <div className="abilities-stack">
+              {abilities.length > 0 ? (
+                <div className="abilities-block">
+                  <span className="section-eyebrow">Special Abilities</span>
+                  <div className="abilities-list">
+                    {abilities.slice(0, 2).map((a, i) => (
+                      <div key={i} className="ability">
+                        <div className="ability-name">{a.name}</div>
+                        <div className="ability-desc">{a.description}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : <div style={{ flex: 1 }} />}
+              ) : null}
+
+              {weaknesses.length > 0 ? (
+                <div className="abilities-block">
+                  <span className="section-eyebrow weakness-eyebrow">Weaknesses</span>
+                  <div className="abilities-list">
+                    {weaknesses.slice(0, 2).map((w, i) => (
+                      <div key={i} className="ability weakness">
+                        <div className="ability-name weakness-name">{w.name}</div>
+                        <div className="ability-desc">{w.description}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {abilities.length === 0 && weaknesses.length === 0 ? <div style={{ flex: 1 }} /> : null}
+            </div>
 
             {/* Referral QR */}
             <div className="qr-block">
@@ -310,7 +329,8 @@ export default function TrainerCard({
           gap: 16px;
           align-items: flex-end;
         }
-        .abilities-block { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+        .abilities-stack { display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 0; }
+        .abilities-block { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
         .abilities-list { display: flex; flex-direction: column; gap: 6px; }
         .qr-block {
           display: flex;
@@ -359,6 +379,15 @@ export default function TrainerCard({
           line-height: 1.4;
           color: #16272C;
         }
+        /* Weaknesses share the ability layout but use the brand coral so the
+           card reads as paired ability/weakness blocks (Pokémon TCG-style)
+           without needing a separate component. */
+        .ability.weakness {
+          background: rgba(232, 85, 68, 0.07);
+          border-color: rgba(232, 85, 68, 0.30);
+        }
+        .ability-name.weakness-name { color: #A53A2E; }
+        .section-eyebrow.weakness-eyebrow { color: #A53A2E; }
 
         /* Footer */
         .card-footer {
