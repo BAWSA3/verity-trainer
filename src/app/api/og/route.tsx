@@ -169,6 +169,10 @@ export async function GET(req: NextRequest) {
   let tierFromParam: TierKey | undefined =
     (TIER_KEYS as readonly string[]).includes(tParam) ? (tParam as TierKey) : undefined;
 
+  // V5 — AI hero art (DB-only; can't be passed via URL params at any
+  // reasonable size). Used in place of the LimeZu sprite when present.
+  let heroArtSrc: string | undefined;
+
   if (cid) {
     try {
       const { data: row } = await getSupabaseAdmin()
@@ -177,7 +181,8 @@ export async function GET(req: NextRequest) {
         .eq('id', cid)
         .maybeSingle();
       if (row) {
-        const { config, tier } = unpackTrainer(row);
+        const unpacked = unpackTrainer(row);
+        const { config, tier } = unpacked;
         name = sanitizeNameForDisplay(row.trainer_name);
         args = {
           body: config.body,
@@ -191,6 +196,7 @@ export async function GET(req: NextRequest) {
           ? row.x_handle.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15)
           : '';
         if (tier) tierFromParam = tier;
+        heroArtSrc = unpacked.heroArtSrc;
       }
     } catch (err) {
       console.warn('[og] cid lookup failed, falling back to URL params:', err);
@@ -201,7 +207,8 @@ export async function GET(req: NextRequest) {
   const finalTier: TierKey = resolveTier(tierFromParam, seed);
   const palette = TIER_PALETTES[finalTier];
 
-  const fullBodyDataUri = await compositeFullBody(args);
+  // Skip the (slow) sharp sprite composite when AI hero art is present.
+  const fullBodyDataUri = heroArtSrc ? null : await compositeFullBody(args);
 
   const refUrlBase = process.env.NEXT_PUBLIC_REFERRAL_URL_BASE
     || 'https://verity.xyz/ref/';
@@ -356,8 +363,19 @@ export async function GET(req: NextRequest) {
             VERITY
           </div>
 
-          {/* Avatar */}
-          {fullBodyDataUri ? (
+          {/* Hero subject — AI art when present, otherwise LimeZu sprite */}
+          {heroArtSrc ? (
+            <img
+              src={heroArtSrc}
+              alt=""
+              width={Math.round((OG_W - 60 - 60 - 60) * 0.92)}
+              height={Math.round(700 * 0.92)}
+              style={{
+                objectFit: 'contain',
+                position: 'relative',
+              }}
+            />
+          ) : fullBodyDataUri ? (
             <img
               src={fullBodyDataUri}
               alt=""

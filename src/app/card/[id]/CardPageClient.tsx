@@ -17,10 +17,12 @@ interface CardPageClientProps {
   xHandle?: string;
   /** Tier rolled at signup. Falls back to deterministic seed roll if absent. */
   tier?: TierKey;
+  /** V5 — AI-generated hero art. Optional; falls back to LimeZu sprite. */
+  heroArtSrc?: string;
 }
 
 export default function CardPageClient({
-  id, config, personality, trainerName, xHandle, tier,
+  id, config, personality, trainerName, xHandle, tier, heroArtSrc,
 }: CardPageClientProps) {
   const [revealed, setRevealed] = useState(false);
   const [showCard, setShowCard] = useState(false);
@@ -59,6 +61,7 @@ export default function CardPageClient({
             trainerName={trainerName}
             cardId={id}
             xHandle={xHandle}
+            heroArtSrc={heroArtSrc}
           />
         </div>
 

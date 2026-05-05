@@ -25,11 +25,15 @@ interface Props {
   trainerName: string;
   cardId: string;
   xHandle?: string;
+  /** V5 — AI-generated hero art (base64 data URI or HTTPS URL).
+   *  When present, renders as the hero block image; LimeZu sprite is
+   *  the fallback when this is absent or the image fails to load. */
+  heroArtSrc?: string;
 }
 
 
 export default function TrainerCardV5({
-  tier, config, personality, trainerName, cardId, xHandle,
+  tier, config, personality, trainerName, cardId, xHandle, heroArtSrc,
 }: Props) {
   const palette = TIER_PALETTES[tier];
   const handle = (xHandle ?? '').replace(/[^a-zA-Z0-9_]/g, '');
@@ -262,12 +266,27 @@ export default function TrainerCardV5({
               }}
             />
 
-            {/* Avatar — bottom-anchored over the scene. Reduced from 580
-                to 520 so the character's feet don't clip the hero edge
-                (visible on near-mint + black-label scenes especially). */}
-            <div style={{ position: 'relative', zIndex: 4, marginBottom: 30 }}>
-              <TrainerSprite config={config} size={520} />
-            </div>
+            {/* Hero subject — AI-generated chibi art when heroArtSrc is
+                set, otherwise fall back to LimeZu paper-doll sprite. */}
+            {heroArtSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={heroArtSrc}
+                alt=""
+                style={{
+                  position: 'relative',
+                  zIndex: 4,
+                  width: '92%',
+                  height: '92%',
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+              />
+            ) : (
+              <div style={{ position: 'relative', zIndex: 4, marginBottom: 30 }}>
+                <TrainerSprite config={config} size={520} />
+              </div>
+            )}
           </div>
 
           {/* Metadata strip — '1080X1500PX | PNG | RGBA | <TIER>' */}

@@ -107,9 +107,7 @@ export default async function CardPage({ params }: PageProps) {
   const trainer = await getTrainer(id);
   if (!trainer) notFound();
 
-  const { config, personality, reasoning } = unpackTrainer(trainer);
-
-  const { tier } = unpackTrainer(trainer);
+  const { config, personality, reasoning, tier, heroArtSrc } = unpackTrainer(trainer);
 
   return (
     <CardPageClient
@@ -120,6 +118,7 @@ export default async function CardPage({ params }: PageProps) {
       xHandle={typeof trainer.x_handle === 'string' ? trainer.x_handle : undefined}
       reasoning={reasoning}
       tier={tier}
+      heroArtSrc={heroArtSrc}
     />
   );
 }

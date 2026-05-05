@@ -29,6 +29,8 @@ interface UnpackedTrainer {
   reasoning?: string;
   referredBy?: string;
   tier?: TierKey;
+  /** V5 — AI hero art. Data URI or HTTPS URL. */
+  heroArtSrc?: string;
 }
 
 const EMPTY_PERSONALITY: TrainerPersonality = {
@@ -55,6 +57,12 @@ export function unpackTrainer(row: { trainer_config: unknown }): UnpackedTrainer
     const tier = typeof obj.tier === 'string' && (TIER_KEYS as readonly string[]).includes(obj.tier)
       ? (obj.tier as TierKey)
       : undefined;
+    // heroArtSrc accepts both base64 data URIs and full HTTPS URLs.
+    // Anything else is treated as missing and the card falls back to LimeZu.
+    const heroArtSrc = typeof obj.heroArtSrc === 'string'
+      && (obj.heroArtSrc.startsWith('data:image/') || obj.heroArtSrc.startsWith('https://'))
+      ? obj.heroArtSrc
+      : undefined;
     return {
       config: normalizeConfig(obj.config as Record<string, unknown>),
       personality: normalizePersonality(obj.personality as Record<string, unknown>),
@@ -62,6 +70,7 @@ export function unpackTrainer(row: { trainer_config: unknown }): UnpackedTrainer
       reasoning,
       referredBy,
       tier,
+      heroArtSrc,
     };
   }
 
@@ -80,6 +89,7 @@ export function packTrainer(
   reasoning?: string,
   referredBy?: string,
   tier?: TierKey,
+  heroArtSrc?: string,
 ): StoredTrainer {
   const stored: StoredTrainer = { schemaVersion: 2, config, personality };
   if (source) stored.source = source;
@@ -90,6 +100,9 @@ export function packTrainer(
   }
   if (tier && (TIER_KEYS as readonly string[]).includes(tier)) {
     stored.tier = tier;
+  }
+  if (heroArtSrc && (heroArtSrc.startsWith('data:image/') || heroArtSrc.startsWith('https://'))) {
+    stored.heroArtSrc = heroArtSrc;
   }
   return stored;
 }
