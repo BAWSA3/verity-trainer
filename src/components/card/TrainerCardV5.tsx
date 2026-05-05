@@ -144,49 +144,94 @@ export default function TrainerCardV5({
             }}
           />
 
-          {/* PSA/CGC-style graded slab strip — top label band reading
-              "VERITY · GRADED · NEAR MINT 9.0 · #00076 · 2026.05".
-              Always uses a near-black bg so the strip reads regardless of
-              tier (founder's pink/yellow gradient was washing out the
-              text). Tier color shows through the bottom border accent. */}
+          {/* PSA/CGC-style graded slab strip — 3-col layout with the
+              grade label as the dominant visual element (bigger Bebas,
+              foil treatment for rare tiers). Brand + serial flank it as
+              smaller supporting meta. */}
           <div
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               width: W - 60,
-              height: 64,
+              height: 88,
               background: 'linear-gradient(180deg, #0f0f0f 0%, #1a1a1a 100%)',
               borderBottom: `2px solid ${palette.trainerText}`,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: 14,
-              fontFamily: 'var(--font-moderniz), Impact, sans-serif',
-              fontSize: 14,
-              letterSpacing: '4px',
-              color: '#ffffff',
-              textTransform: 'uppercase',
+              justifyContent: 'space-between',
+              padding: '0 32px',
             }}
           >
-            <span style={{ fontWeight: 700 }}>VERITY</span>
-            <Bullet color="#ffffff" />
-            <span style={{ color: 'rgba(255,255,255,0.7)' }}>GRADED</span>
-            <Bullet color="#ffffff" />
-            <span style={{ color: palette.trainerText, fontWeight: 700 }}>
-              {TIER_DISPLAY[tier]} {TIER_GRADES[tier]}
-            </span>
-            <Bullet color="#ffffff" />
-            <span style={{ color: 'rgba(255,255,255,0.7)' }}>{memberNo}</span>
-            <Bullet color="#ffffff" />
-            <span style={{ color: 'rgba(255,255,255,0.5)' }}>2026.05</span>
+            {/* LEFT — VERITY · GRADED brand stack */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+              fontSize: 11,
+              letterSpacing: '4px',
+              color: 'rgba(255,255,255,0.95)',
+              minWidth: 140,
+            }}>
+              <span style={{ fontWeight: 700 }}>VERITY</span>
+              <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, letterSpacing: '5px' }}>
+                CERTIFIED · GRADED
+              </span>
+            </div>
+
+            {/* CENTER — the grade label, dominant element */}
+            <div
+              className={holoAnimating ? 'card-v5-grade card-v5-grade--foil' : 'card-v5-grade'}
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 14,
+                fontFamily: 'var(--font-bebas), Impact, sans-serif',
+                lineHeight: 1,
+              }}
+            >
+              <span style={{
+                fontSize: 36,
+                color: palette.trainerText,
+                letterSpacing: '4px',
+              }}>
+                {TIER_DISPLAY[tier]}
+              </span>
+              <span style={{
+                fontSize: 44,
+                color: palette.trainerText,
+                fontWeight: 400,
+                letterSpacing: '1px',
+              }}>
+                {TIER_GRADES[tier]}
+              </span>
+            </div>
+
+            {/* RIGHT — serial + date stack */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              alignItems: 'flex-end',
+              fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+              fontSize: 11,
+              letterSpacing: '4px',
+              color: 'rgba(255,255,255,0.95)',
+              minWidth: 140,
+            }}>
+              <span style={{ fontWeight: 700 }}>{memberNo}</span>
+              <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, letterSpacing: '5px' }}>
+                2026.05
+              </span>
+            </div>
           </div>
 
           {/* Display title — auto-scaled to fit, Bebas Neue */}
           <div
             style={{
               position: 'absolute',
-              top: 96,
+              top: 108,
               left: 60,
               width: W - 60 - 60 - 60,
               height: 180,
@@ -217,11 +262,12 @@ export default function TrainerCardV5({
 
           {/* Hero image area — solid tier color with radial spotlight,
               VERITY wordmark watermark behind avatar. Bust-cropped sprite
-              (head + chest only) centered vertically. */}
+              (head + chest only) centered vertically. Inner glow on the
+              edges adds depth (recessed window feel). */}
           <div
             style={{
               position: 'absolute',
-              top: 296,
+              top: 308,
               left: 60,
               width: W - 60 - 60 - 60,
               height: 700,
@@ -232,6 +278,15 @@ export default function TrainerCardV5({
               alignItems: 'center',
               justifyContent: 'center',
               border: `2px solid ${palette.innerBorder}`,
+              boxShadow: tier === 'black-label'
+                ? 'inset 0 0 80px rgba(0,0,0,0.65), inset 0 0 120px rgba(255, 222, 89, 0.18)'
+                : tier === 'founder'
+                  ? 'inset 0 0 80px rgba(217, 132, 211, 0.5), inset 0 0 140px rgba(255, 247, 173, 0.3)'
+                  : tier === 'gem'
+                    ? 'inset 0 0 100px rgba(31, 84, 140, 0.6), inset 0 0 160px rgba(255, 222, 89, 0.12)'
+                    : tier === 'mint'
+                      ? 'inset 0 0 100px rgba(45, 80, 67, 0.55)'
+                      : 'inset 0 0 100px rgba(184, 24, 24, 0.55), inset 0 0 160px rgba(255, 49, 49, 0.15)', // near-mint
             }}
           >
 
@@ -275,6 +330,52 @@ export default function TrainerCardV5({
                 background: 'radial-gradient(ellipse 80% 70% at 50% 45%, transparent 30%, rgba(0,0,0,0.55) 100%)',
                 pointerEvents: 'none',
                 zIndex: 3,
+              }}
+            />
+
+            {/* Corner mint badge — top-right of hero. Marks the card as a
+                Genesis Drop edition, gives rare cards a "limited" feel
+                without claiming a fixed supply count. */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                zIndex: 5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: 2,
+                padding: '8px 12px',
+                background: 'rgba(0,0,0,0.55)',
+                border: `1px solid ${palette.trainerText}`,
+                borderRadius: 6,
+                fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+                color: palette.trainerText,
+                letterSpacing: '3px',
+                fontSize: 10,
+                lineHeight: 1.2,
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              <span style={{ opacity: 0.7, fontSize: 9 }}>GENESIS DROP</span>
+              <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: '2px' }}>
+                {TIER_CODES[tier]}
+              </span>
+            </div>
+
+            {/* Tier accent stripe — bottom of hero, visually underlines
+                the bust portrait and ties the hero to the tier palette. */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 6,
+                background: `linear-gradient(90deg, transparent 0%, ${palette.trainerText} 18%, ${palette.trainerText} 82%, transparent 100%)`,
+                zIndex: 5,
               }}
             />
 
@@ -496,29 +597,12 @@ export default function TrainerCardV5({
             <span>VRT{tierCode}{memberShort}{cardId.slice(0, 4).toUpperCase()}</span>
           </div>
 
-          {/* Holo foil shimmer — diagonal rainbow overlay across the whole
-              card. Static for common tiers; loops for rare tiers (matches
-              spec §8.3 "rare cards feel alive"). Mix-blend overlay so it
-              tints content rather than obscuring it. */}
-          <div
-            aria-hidden
-            className={holoAnimating ? 'card-v5-holo card-v5-holo--animated' : 'card-v5-holo'}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'none',
-              borderRadius: 32,
-              overflow: 'hidden',
-              mixBlendMode: 'overlay',
-              opacity: holoAnimating ? 0.28 : 0.12,
-              zIndex: 51,
-            }}
-          />
-
           {/* Card-edge highlight — subtle inset glow that simulates a
               beveled physical card edge. Top edge catches a faint white
               gloss; bottom catches a darker shadow. Sells "this is an
-              object you could pick up." */}
+              object you could pick up." Holo treatment moved from the
+              whole card surface to just the grade label in the slab strip
+              — cleaner, more legit-feeling. */}
           <div
             aria-hidden
             style={{
@@ -549,29 +633,33 @@ export default function TrainerCardV5({
           background-color: #000000;
           transform-origin: top left;
         }
-        /* Holo foil — diagonal rainbow gradient. Wider than the card so
-           the animated variant can pan it across without clipping. */
-        :global(.card-v5-holo) {
+        /* Grade label — sits in the slab strip. .--foil adds the
+           animated rainbow shimmer overlay (rare tiers only). */
+        :global(.card-v5-grade) {
+          position: relative;
+        }
+        :global(.card-v5-grade--foil) {
           background: linear-gradient(
             115deg,
-            transparent 0%,
-            rgba(255, 97, 171, 0.6) 18%,
-            rgba(109, 255, 226, 0.6) 32%,
-            rgba(255, 236, 97, 0.6) 46%,
-            rgba(97, 193, 255, 0.6) 60%,
-            rgba(209, 97, 255, 0.6) 74%,
-            transparent 92%
+            #ff61ab 0%,
+            #6dffe2 18%,
+            #ffec61 36%,
+            #61c1ff 54%,
+            #d161ff 72%,
+            #ff61ab 90%
           );
-          background-size: 220% 220%;
-          background-position: 0% 0%;
+          background-size: 300% 100%;
+          background-clip: text;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+          animation: cardV5GradeFoil 5s ease-in-out infinite;
+          filter: drop-shadow(0 0 12px rgba(255,255,255,0.25));
         }
-        :global(.card-v5-holo--animated) {
-          animation: cardV5HoloShimmer 6s ease-in-out infinite;
-        }
-        @keyframes cardV5HoloShimmer {
-          0%   { background-position: 0% 0%; }
-          50%  { background-position: 100% 100%; }
-          100% { background-position: 0% 0%; }
+        @keyframes cardV5GradeFoil {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
       `}</style>
     </div>
