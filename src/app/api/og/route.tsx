@@ -10,7 +10,7 @@ import { TIER_KEYS } from '@/types/trainer';
 import { unpackTrainer } from '@/lib/trainer-data';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { TIER_PALETTES, resolveTier } from '@/lib/cards/v4-tokens';
-import { barcodePattern, deriveMemberNo, formatList } from '@/lib/cards/v4-render';
+import { deriveMemberNo, formatList } from '@/lib/cards/v4-render';
 
 export const runtime = 'nodejs';
 
@@ -251,7 +251,20 @@ export async function GET(req: NextRequest) {
   const displayHandle = refHandle.toUpperCase().slice(0, 12);
   const bottomHandle = (displayHandle || 'TRAINER').slice(0, 18);
 
-  const barPattern = barcodePattern(seed, 60);
+  // Static barcode asset, picked by tier. Loaded as a data URI so satori
+  // can embed it directly without network fetch.
+  const barcodePath = path.join(
+    process.cwd(),
+    'public', 'brand',
+    finalTier === 'black-label' ? 'barcode-dark.png' : 'barcode-light.png',
+  );
+  let barcodeDataUri = '';
+  try {
+    const buf = await readFile(barcodePath);
+    barcodeDataUri = `data:image/png;base64,${buf.toString('base64')}`;
+  } catch (err) {
+    console.warn('[og] barcode load failed:', err);
+  }
 
   return new ImageResponse(
     (
@@ -339,8 +352,21 @@ export async function GET(req: NextRequest) {
             )}
           </div>
 
-          {/* Decorative barcode (below avatar) */}
-          <BarcodeSvg pattern={barPattern} />
+          {/* Decorative barcode (below avatar) — width matches avatar
+              frame, aspect ratio preserved. */}
+          {barcodeDataUri ? (
+            <img
+              src={barcodeDataUri}
+              alt=""
+              style={{
+                position: 'absolute',
+                top: 770,
+                left: 110,
+                width: 380,
+                height: 'auto',
+              }}
+            />
+          ) : null}
 
           {/* Name */}
           <div
@@ -607,43 +633,6 @@ function VerityMarkSvg({ color }: { color: string }) {
       alt=""
       width={48}
       height={48}
-    />
-  );
-}
-
-function BarcodeSvg({ pattern }: { pattern: number[] }) {
-  // Code-128-ish module-based bar pattern. Pairs of seed bits give widths
-  // 1–4; even-index runs are black bars, odd-index are gaps. Total module
-  // count derived from the pattern, scaled to fill the SVG viewBox.
-  const runs: number[] = [];
-  let totalModules = 0;
-  for (let i = 0; i + 1 < pattern.length; i += 2) {
-    const w = (pattern[i] << 1 | pattern[i + 1]) + 1;
-    runs.push(w);
-    totalModules += w;
-  }
-  const VBW = 380;
-  const VBH = 70;
-  const moduleW = VBW / totalModules;
-  let cursor = 0;
-  const rects: string[] = [];
-  runs.forEach((run, i) => {
-    if (i % 2 === 0) {
-      rects.push(`<rect x="${cursor.toFixed(2)}" y="0" width="${(run * moduleW).toFixed(2)}" height="${VBH}" fill="#000000"/>`);
-    }
-    cursor += run * moduleW;
-  });
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VBW} ${VBH}" width="${VBW}" height="${VBH}" preserveAspectRatio="none">
-    <rect x="0" y="0" width="${VBW}" height="${VBH}" fill="#ffffff"/>
-    ${rects.join('')}
-  </svg>`;
-  return (
-    <img
-      src={`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`}
-      alt=""
-      width={VBW}
-      height={VBH}
-      style={{ position: 'absolute', top: 780, left: 110 }}
     />
   );
 }

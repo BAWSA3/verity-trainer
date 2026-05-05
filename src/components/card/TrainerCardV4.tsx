@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TrainerConfig, TrainerPersonality, TierKey } from '@/types/trainer';
 import TrainerSprite from '../TrainerSprite';
 import { TIER_PALETTES } from '@/lib/cards/v4-tokens';
-import { barcodePattern, deriveMemberNo, formatList } from '@/lib/cards/v4-render';
+import { deriveMemberNo, formatList } from '@/lib/cards/v4-render';
 
 // Verity Trainer Card — V4 chassis. 1920×1080 master canvas with two columns:
 // LEFT — avatar frame on top, decorative barcode below. RIGHT — name + handle
@@ -90,7 +90,13 @@ export default function TrainerCardV4({
     return () => { cancelled = true; };
   }, [qrTarget]);
 
-  const barPattern = useMemo(() => barcodePattern(cardId, 60), [cardId]);
+  // Static barcode asset chosen by tier — black-label uses white bars on
+  // its dark surface; every other tier uses the black-bars variant on its
+  // lighter surface. Both PNGs are pre-cropped to their bar bbox in
+  // public/brand/.
+  const barcodeSrc = tier === 'black-label'
+    ? '/brand/barcode-dark.png'
+    : '/brand/barcode-light.png';
   const bottomHandle = (handle.toUpperCase() || 'TRAINER').slice(0, 18);
 
   // ResizeObserver-based scale to fit. CSS container queries with `cqw`
@@ -179,13 +185,21 @@ export default function TrainerCardV4({
             <TrainerSprite config={config} size={520} />
           </div>
 
-          {/* Decorative barcode (below avatar) */}
-          <Barcode
-            x={LEFT_X}
-            y={780}
-            w={LEFT_W}
-            h={70}
-            pattern={barPattern}
+          {/* Decorative barcode (below avatar). Width matches avatar frame
+              and aspect ratio is preserved per the source PNG so the bars
+              stay proportional to the design. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={barcodeSrc}
+            alt=""
+            style={{
+              position: 'absolute',
+              top: 770,
+              left: LEFT_X,
+              width: LEFT_W,
+              height: 'auto',
+              display: 'block',
+            }}
           />
 
           {/* Name + handle block (right column, top). Width capped to the
@@ -463,53 +477,6 @@ function AbilitiesWeaknesses({ abilities, weaknesses }: { abilities: string; wea
       <div style={{ letterSpacing: '0.5px' }}>{weaknesses}</div>
     </div>
   );
-}
-
-function Barcode({
-  x, y, w, h, pattern,
-}: {
-  x: number; y: number; w: number; h: number; pattern: number[];
-}) {
-  // Code-128 visual style — uniform module width with bars of 1–4 modules.
-  // Pattern bits are interpreted as alternating bar/space starting from black,
-  // each section 1–4 modules. Total modules computed from pattern length.
-  const moduleData = patternToModules(pattern);
-  const totalModules = moduleData.totalModules;
-  const moduleW = w / totalModules;
-  let cursor = 0;
-  const rects: { x: number; w: number; key: number }[] = [];
-  moduleData.runs.forEach((run, i) => {
-    if (i % 2 === 0) {
-      // black bar
-      rects.push({ x: cursor, w: run * moduleW, key: i });
-    }
-    cursor += run * moduleW;
-  });
-  return (
-    <svg
-      style={{ position: 'absolute', top: y, left: x, width: w, height: h }}
-      viewBox={`0 0 ${w} ${h}`}
-      preserveAspectRatio="none"
-    >
-      <rect x={0} y={0} width={w} height={h} fill="#ffffff" />
-      {rects.map((r) => (
-        <rect key={r.key} x={r.x} y={0} width={r.w} height={h} fill="#000000" />
-      ))}
-    </svg>
-  );
-}
-
-function patternToModules(pattern: number[]): { runs: number[]; totalModules: number } {
-  // Convert seed-derived bits into widths 1–4. Two consecutive bits give a
-  // value 0–3, +1 = width 1–4. This produces realistic Code-128-ish density.
-  const runs: number[] = [];
-  let total = 0;
-  for (let i = 0; i + 1 < pattern.length; i += 2) {
-    const w = (pattern[i] << 1 | pattern[i + 1]) + 1;
-    runs.push(w);
-    total += w;
-  }
-  return { runs, totalModules: total };
 }
 
 function AtGlyph({ color, size }: { color: string; size: number }) {

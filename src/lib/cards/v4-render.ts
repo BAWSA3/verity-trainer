@@ -34,21 +34,3 @@ export function deriveMemberNo(seed: string): string {
   return `#${String(n).padStart(5, '0')}`;
 }
 
-/**
- * Deterministic ~80-bar Code-128-ish bit pattern. Purely decorative
- * (spec §4.9 — does not encode anything functional). Same seed → same bars.
- */
-export function barcodePattern(seed: string, bars = 80): number[] {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash |= 0;
-  }
-  let h = Math.abs(hash) || 1;
-  const out: number[] = [];
-  for (let i = 0; i < bars; i++) {
-    h = (h * 1664525 + 1013904223) >>> 0;
-    out.push(h & 1);
-  }
-  return out;
-}
