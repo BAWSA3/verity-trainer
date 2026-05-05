@@ -5,6 +5,7 @@ import type { TrainerConfig, TrainerPersonality, TierKey } from '@/types/trainer
 import TrainerSprite from '../TrainerSprite';
 import { TIER_PALETTES } from '@/lib/cards/v4-tokens';
 import { deriveMemberNo } from '@/lib/cards/v4-render';
+import { TIER_CODES, TIER_GRADES, TIER_DISPLAY, HERO_BG } from '@/lib/cards/v5-tokens';
 
 // V5 — Cardi/Amoxx-inspired prototype. Vertical 3:4 portrait.
 // Concept: dominant hero image, minimal data, premium dark aesthetic.
@@ -26,42 +27,6 @@ interface Props {
   xHandle?: string;
 }
 
-const TIER_CODES: Record<TierKey, string> = {
-  'near-mint':   'NM01',
-  'mint':        'MT02',
-  'gem':         'GM03',
-  'black-label': 'BL04',
-  'founder':     'F1/1',
-};
-
-// PSA-style numeric grades — communicates rarity in a TCG-native way.
-const TIER_GRADES: Record<TierKey, string> = {
-  'near-mint':   '8.0',
-  'mint':        '8.5',
-  'gem':         '9.0',
-  'black-label': '9.5',
-  'founder':     '10.0',
-};
-
-// Full tier display names for the slab strip.
-const TIER_DISPLAY: Record<TierKey, string> = {
-  'near-mint':   'NEAR MINT',
-  'mint':        'MINT',
-  'gem':         'GEM',
-  'black-label': 'BLACK LABEL',
-  'founder':     'FOUNDER 1/1',
-};
-
-// Hero block bg per tier — solid tier color with a radial spotlight
-// behind the character so the avatar pops without a busy scene fighting
-// for attention. Pixel-art scenes were tried but felt too cluttered.
-const HERO_BG: Record<TierKey, string> = {
-  'near-mint':   'radial-gradient(ellipse 75% 70% at 50% 55%, #ff5454 0%, #ff3131 45%, #b81818 100%)',
-  'mint':        'radial-gradient(ellipse 75% 70% at 50% 55%, #c5d8c8 0%, #6b9583 50%, #2d5043 100%)',
-  'gem':         'radial-gradient(ellipse 75% 70% at 50% 55%, #6ba6e0 0%, #468bd5 50%, #1f548c 100%)',
-  'black-label': 'radial-gradient(ellipse 75% 70% at 50% 55%, #2a2a2a 0%, #141414 50%, #000000 100%)',
-  'founder':     'radial-gradient(ellipse 75% 70% at 50% 55%, #ffe989 0%, #f0a8e0 50%, #b35aa5 100%)',
-};
 
 export default function TrainerCardV5({
   tier, config, personality, trainerName, cardId, xHandle,

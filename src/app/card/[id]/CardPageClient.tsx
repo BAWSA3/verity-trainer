@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { TrainerConfig, TrainerPersonality, TierKey } from '@/types/trainer';
 import { playSuccess } from '@/lib/sounds';
-import TrainerCardV4 from '@/components/card/TrainerCardV4';
+import TrainerCardV5 from '@/components/card/TrainerCardV5';
 import ShareButtons from '@/components/ShareButtons';
 import { Button } from '@/components/ui';
 import { resolveTier } from '@/lib/cards/v4-tokens';
@@ -35,7 +35,7 @@ export default function CardPageClient({
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 py-10">
-      <div className="relative z-10 flex flex-col items-center w-full max-w-[1280px]">
+      <div className="relative z-10 flex flex-col items-center w-full max-w-[640px]">
         <div className="text-center mb-6">
           <h1 className="text-[10px] sm:text-[11px] tracking-[0.3em] uppercase font-bold text-[color:var(--accent-coral)] mb-1.5">
             verity
@@ -52,7 +52,7 @@ export default function CardPageClient({
           className={'w-full transition-all duration-700 ' +
             (showCard ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95')}
         >
-          <TrainerCardV4
+          <TrainerCardV5
             tier={resolvedTier}
             config={config}
             personality={personality}

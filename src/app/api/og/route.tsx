@@ -10,31 +10,32 @@ import { TIER_KEYS } from '@/types/trainer';
 import { unpackTrainer } from '@/lib/trainer-data';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { TIER_PALETTES, resolveTier } from '@/lib/cards/v4-tokens';
-import { deriveMemberNo, formatList } from '@/lib/cards/v4-render';
+import { deriveMemberNo } from '@/lib/cards/v4-render';
+import { TIER_GRADES, TIER_DISPLAY, TIER_CODES, HERO_BG } from '@/lib/cards/v5-tokens';
 
 export const runtime = 'nodejs';
 
-// V4 OG card — renders the full Verity Trainer Card V4 chassis at 1920×1080.
-// Tier theming, sprite composition, and content all match the React/DOM
-// renderer in TrainerCardV4.tsx (driven by shared TIER_PALETTES + helpers).
+// V5 OG card — vertical 1080×1500 portrait matching the live /card/[id]
+// V5 chassis. Twitter Card displays portrait images natively, no need
+// to letterbox. Tier theming + sprite composition mirror the React/DOM
+// renderer in TrainerCardV5.tsx via shared v5-tokens + v4-tokens.
 //
-// V3.2 anti-forgery (cid → DB lookup) is preserved: when `cid` resolves to
-// a real row, all text/sprite/tier data comes from the DB, not URL params.
+// V3.2 anti-forgery (cid → DB lookup) is preserved: when `cid` resolves
+// to a real row, all data comes from the DB, not URL params.
 
-// LimeZu source frames are 48x96. Composite at 16x for crispness.
 const CELL_W = 48;
 const CELL_H = 96;
 const SCALE = 16;
 const SPRITE_W = CELL_W * SCALE;
 const SPRITE_H = CELL_H * SCALE;
-// V4 avatar frame is 360×540 in master pixels — sprite renders at the same
-// resolution so it composites crisply inside that frame.
-const FULLBODY_W = 360;
-const FULLBODY_H = 540;
+// V5 avatar in hero block is ~520 wide; render the sharp composite at
+// a generous 540×1080 so the embed stays crisp at the OG size.
+const FULLBODY_W = 540;
+const FULLBODY_H = 1080;
 const SHARE_DIR = 's';
 
-const OG_W = 1920;
-const OG_H = 1080;
+const OG_W = 1080;
+const OG_H = 1500;
 
 const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=31536000, immutable',
@@ -49,11 +50,12 @@ async function loadOgFonts(): Promise<OgFont[]> {
   try {
     const agencyPath = path.join(process.cwd(), ...FONT_DIR, 'Agency.ttf');
     const modernizPath = path.join(process.cwd(), ...FONT_DIR, 'Moderniz.otf');
-    const [agency, moderniz, inter400, inter600] = await Promise.all([
+    const [agency, moderniz, inter400, inter600, bebas] = await Promise.all([
       readFile(agencyPath),
       readFile(modernizPath),
       fetch('https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Regular.ttf').then((r) => r.ok ? r.arrayBuffer() : null).then((b) => b ? Buffer.from(b) : null).catch(() => null),
       fetch('https://github.com/rsms/inter/raw/master/docs/font-files/Inter-SemiBold.ttf').then((r) => r.ok ? r.arrayBuffer() : null).then((b) => b ? Buffer.from(b) : null).catch(() => null),
+      fetch('https://github.com/google/fonts/raw/main/ofl/bebasneue/BebasNeue-Regular.ttf').then((r) => r.ok ? r.arrayBuffer() : null).then((b) => b ? Buffer.from(b) : null).catch(() => null),
     ]);
     const fonts: OgFont[] = [
       { name: 'Agency', data: agency, weight: 700, style: 'normal' },
@@ -61,6 +63,7 @@ async function loadOgFonts(): Promise<OgFont[]> {
     ];
     if (inter400) fonts.push({ name: 'Inter', data: inter400, weight: 400, style: 'normal' });
     if (inter600) fonts.push({ name: 'Inter', data: inter600, weight: 600, style: 'normal' });
+    if (bebas) fonts.push({ name: 'Bebas Neue', data: bebas, weight: 400, style: 'normal' });
     cachedFonts = fonts;
     return cachedFonts;
   } catch (err) {
@@ -93,8 +96,7 @@ function splitVariant(compoundId: string): [string, string] | null {
   return [compoundId.slice(0, idx), compoundId.slice(idx + 1)];
 }
 
-// Full-body sprite for the V4 card. Layered per LimeZu paper-doll order:
-// body → outfit → eyes → hair → accessory.
+// Full-body sprite for the V5 card hero. Layered per LimeZu paper-doll order.
 async function compositeFullBody(args: CompositeArgs): Promise<string | null> {
   const layerSegments: string[][] = [];
 
@@ -143,14 +145,8 @@ async function compositeFullBody(args: CompositeArgs): Promise<string | null> {
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
-  const cleanText = (raw: string, max: number) =>
-    raw.replace(/[\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
-
-  // V3.2 — if `cid` is present, fetch authoritative card data from the DB
-  // and ignore tampered text URL params. This blocks forged share images
-  // (e.g. crafting a URL with offensive copy attributed to a real handle).
-  // For back-compat, the GET still falls back to URL params when cid is
-  // absent or the row isn't found, so old shared v3 URLs still render.
+  // V3.2 anti-forgery: when cid is a valid UUID, fetch authoritative card
+  // data from the DB and ignore tampered URL params.
   const cidRaw = (searchParams.get('cid') || '').trim();
   const cid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cidRaw)
     ? cidRaw
@@ -167,23 +163,12 @@ export async function GET(req: NextRequest) {
     accessory: safeId(searchParams.get('ac'), 'none'),
   };
 
-  let quote = cleanText(searchParams.get('kf') || '', 200);
-  let ability1Name = cleanText(searchParams.get('a1n') || '', 32);
-  let ability2Name = cleanText(searchParams.get('a2n') || '', 32);
-  let weakness1Name = cleanText(searchParams.get('w1n') || '', 32);
-  let weakness2Name = cleanText(searchParams.get('w2n') || '', 32);
-
   let refHandle = (searchParams.get('ref') || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
 
-  // Tier param `t` — accepts both URL form and DB form. Trusted only when
-  // no cid is present (cid path overrides via the row's own tier field).
   const tParam = (searchParams.get('t') || '').toLowerCase().trim();
   let tierFromParam: TierKey | undefined =
     (TIER_KEYS as readonly string[]).includes(tParam) ? (tParam as TierKey) : undefined;
 
-  // DB-backed render path — only when cid is a valid UUID. Errors fall
-  // back to URL params silently so the OG never returns a hard error
-  // for a valid in-app share URL when Supabase has a transient failure.
   if (cid) {
     try {
       const { data: row } = await getSupabaseAdmin()
@@ -192,7 +177,7 @@ export async function GET(req: NextRequest) {
         .eq('id', cid)
         .maybeSingle();
       if (row) {
-        const { config, personality, tier } = unpackTrainer(row);
+        const { config, tier } = unpackTrainer(row);
         name = sanitizeNameForDisplay(row.trainer_name);
         args = {
           body: config.body,
@@ -202,11 +187,6 @@ export async function GET(req: NextRequest) {
           eyes: config.eyes,
           accessory: config.accessory,
         };
-        quote = cleanText(personality.quote ?? personality.knownFor ?? '', 200);
-        ability1Name = cleanText(personality.abilities?.[0]?.name ?? '', 32);
-        ability2Name = cleanText(personality.abilities?.[1]?.name ?? '', 32);
-        weakness1Name = cleanText(personality.weaknesses?.[0]?.name ?? '', 32);
-        weakness2Name = cleanText(personality.weaknesses?.[1]?.name ?? '', 32);
         refHandle = typeof row.x_handle === 'string'
           ? row.x_handle.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15)
           : '';
@@ -221,15 +201,11 @@ export async function GET(req: NextRequest) {
   const finalTier: TierKey = resolveTier(tierFromParam, seed);
   const palette = TIER_PALETTES[finalTier];
 
-  const abilitiesText = formatList([ability1Name, ability2Name]);
-  const weaknessesText = formatList([weakness1Name, weakness2Name]);
-
   const fullBodyDataUri = await compositeFullBody(args);
 
-  // QR — referral entry point. Encodes <appUrl>/create?ref=<xHandle>.
   const refUrlBase = process.env.NEXT_PUBLIC_REFERRAL_URL_BASE
-    || (process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg') + '/create?ref=';
-  const qrTarget = refHandle ? `${refUrlBase}${refHandle}` : refUrlBase;
+    || 'https://verity.xyz/ref/';
+  const qrTarget = refHandle ? `${refUrlBase}${refHandle.toUpperCase()}` : refUrlBase;
   let qrDataUri = '';
   try {
     qrDataUri = await QRCode.toDataURL(qrTarget, {
@@ -243,31 +219,17 @@ export async function GET(req: NextRequest) {
   }
 
   const memberNo = deriveMemberNo(seed);
-  const typeText = finalTier === 'founder' ? 'FOUNDER' : 'WAITLIST';
-  const sexText = 'N/A';
-  const statusText = 'GENESIS';
+  const memberShort = memberNo.replace('#', '').padStart(3, '0').slice(-3);
 
-  const displayName = (name || 'TRAINER').toUpperCase().slice(0, 14);
+  const rawName = (name || 'TRAINER').toUpperCase();
+  const displayName = rawName.length > 18 ? rawName.slice(0, 17) + '…' : rawName;
+  const titleFontSize = displayName.length <= 7 ? 180
+    : displayName.length <= 10 ? 150
+    : displayName.length <= 13 ? 125
+    : displayName.length <= 16 ? 105
+    : 90;
   const displayHandle = refHandle.toUpperCase().slice(0, 12);
-  const bottomHandle = (displayHandle || 'TRAINER').slice(0, 18);
 
-  // Static barcode asset, picked by tier. Loaded as a data URI so satori
-  // can embed it directly without network fetch.
-  const barcodePath = path.join(
-    process.cwd(),
-    'public', 'brand',
-    finalTier === 'black-label' ? 'barcode-dark.png' : 'barcode-light.png',
-  );
-  let barcodeDataUri = '';
-  try {
-    const buf = await readFile(barcodePath);
-    barcodeDataUri = `data:image/png;base64,${buf.toString('base64')}`;
-  } catch (err) {
-    console.warn('[og] barcode load failed:', err);
-  }
-
-  // All children of the canvas use canvas-absolute coordinates per the
-  // exact spec measurements in design-templates/verity-trainer-card-spec.md.
   return new ImageResponse(
     (
       <div
@@ -276,68 +238,91 @@ export async function GET(req: NextRequest) {
           height: OG_H,
           backgroundColor: '#000000',
           display: 'flex',
-          fontFamily: 'Moderniz',
+          fontFamily: 'Bebas Neue',
         }}
       >
-        {/* Outer card surface — spec §2.3: x=268.8, y=108, w=1412.3, h=864 */}
+        {/* Outer card surface */}
         <div
           style={{
             position: 'absolute',
-            top: 108,
-            left: 268.8,
-            width: 1412.3,
-            height: 864,
-            background: palette.outerBg,
-            borderRadius: 35,
+            top: 30,
+            left: 30,
+            width: OG_W - 60,
+            height: OG_H - 60,
+            background: '#0a0a0a',
+            borderRadius: 32,
             display: 'flex',
             overflow: 'hidden',
+            border: `1px solid rgba(255,255,255,0.08)`,
           }}
-        >
-          {/* Inner panel — same X/W as outer; covers top 720.7 only. */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: 1412.3,
-              height: 720.7,
-              background: palette.innerBg,
-              border: `1px solid ${palette.innerBorder}`,
-              display: 'flex',
-            }}
-          />
-        </div>
+        />
 
-        {/* §4.1 VERITY CARD header — x=730.9, y=116.8, w=458.2, h=63.3 */}
+        {/* PSA-style graded slab strip — top of card */}
         <div
           style={{
             position: 'absolute',
-            top: 116.8,
-            left: 730.9,
-            width: 458.2,
-            height: 63.3,
-            color: palette.headerText,
-            fontFamily: 'Agency',
-            fontSize: 40,
-            letterSpacing: '0.162em',
-            fontWeight: 700,
+            top: 30,
+            left: 30,
+            width: OG_W - 60,
+            height: 64,
+            background: 'linear-gradient(180deg, #0f0f0f 0%, #1a1a1a 100%)',
+            borderBottom: `2px solid ${palette.trainerText}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            gap: 14,
+            fontFamily: 'Moderniz',
+            fontSize: 14,
+            letterSpacing: '4px',
+            color: '#ffffff',
           }}
         >
-          VERITY CARD
+          <span style={{ fontWeight: 700 }}>VERITY</span>
+          <Bullet color="#ffffff" />
+          <span style={{ color: 'rgba(255,255,255,0.7)' }}>GRADED</span>
+          <Bullet color="#ffffff" />
+          <span style={{ color: palette.trainerText, fontWeight: 700 }}>
+            {TIER_DISPLAY[finalTier]} {TIER_GRADES[finalTier]}
+          </span>
+          <Bullet color="#ffffff" />
+          <span style={{ color: 'rgba(255,255,255,0.7)' }}>{memberNo}</span>
+          <Bullet color="#ffffff" />
+          <span style={{ color: 'rgba(255,255,255,0.5)' }}>2026.05</span>
         </div>
 
-        {/* §4.2 Avatar frame */}
+        {/* Display title — auto-scaled */}
         <div
           style={{
             position: 'absolute',
-            top: 216.3,
-            left: 305.8,
-            width: 418.9,
-            height: 538,
-            backgroundColor: '#f5e6c8',
+            top: 126,
+            left: 90,
+            width: OG_W - 60 - 60 - 60,
+            height: 180,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'Bebas Neue',
+            fontSize: titleFontSize,
+            letterSpacing: '2px',
+            color: '#ffffff',
+            fontWeight: 400,
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {displayName}
+        </div>
+
+        {/* Hero block — solid tier color radial spotlight */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 326,
+            left: 90,
+            width: OG_W - 60 - 60 - 60,
+            height: 700,
+            background: HERO_BG[finalTier],
+            borderRadius: 16,
             border: `2px solid ${palette.innerBorder}`,
             display: 'flex',
             alignItems: 'flex-end',
@@ -345,330 +330,229 @@ export async function GET(req: NextRequest) {
             overflow: 'hidden',
           }}
         >
+          {/* VERITY watermark behind avatar */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 80,
+              left: 0,
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: 'Bebas Neue',
+              fontSize: 280,
+              lineHeight: 0.85,
+              color: finalTier === 'founder' || finalTier === 'mint' ? '#000000' : '#ffffff',
+              opacity: finalTier === 'black-label' ? 0.18
+                : finalTier === 'gem' ? 0.16
+                : finalTier === 'near-mint' ? 0.14
+                : finalTier === 'founder' ? 0.13
+                : 0.12,
+              letterSpacing: '12px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            VERITY
+          </div>
+
+          {/* Avatar */}
           {fullBodyDataUri ? (
             <img
               src={fullBodyDataUri}
               alt=""
-              width={418}
-              height={538}
-              style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
+              width={520}
+              height={1040}
+              style={{
+                imageRendering: 'pixelated',
+                objectFit: 'contain',
+                marginBottom: 30,
+                position: 'relative',
+              }}
             />
           ) : (
             <div style={{ color: palette.headerText, fontSize: 200, display: 'flex' }}>V</div>
           )}
         </div>
 
-        {/* §4.12 Decorative barcode */}
-        {barcodeDataUri ? (
-          <img
-            src={barcodeDataUri}
-            alt=""
-            style={{
-              position: 'absolute',
-              top: 772.2,
-              left: 305.8,
-              width: 418.9,
-              height: 84.1,
-              display: 'flex',
-            }}
-          />
-        ) : null}
-
-        {/* §4.3 Name */}
+        {/* Metadata strip — size · format · tier code */}
         <div
           style={{
             position: 'absolute',
-            top: 216.3,
-            left: 744.7,
-            width: 690.4,
-            height: 55.6,
-            color: palette.nameText,
-            fontFamily: 'Moderniz',
-            fontSize: 35,
+            top: 1048,
+            left: 90,
+            width: OG_W - 60 - 60 - 60,
+            height: 36,
             display: 'flex',
             alignItems: 'center',
-          }}
-        >
-          {displayName}
-        </div>
-
-        {/* §4.5 @ glyph (separate, sized larger than handle) */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 266.6,
-            left: 737.5,
-            width: 50.6,
-            height: 61.3,
-            display: 'flex',
-          }}
-        >
-          <AtGlyphSvg color={palette.nameText} />
-        </div>
-
-        {/* §4.4 Handle text (without @) */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 292.7,
-            left: 790.7,
-            width: 260.7,
-            height: 35.1,
-            color: palette.nameText,
+            gap: 14,
             fontFamily: 'Moderniz',
-            fontSize: 22,
-            display: 'flex',
-            alignItems: 'center',
+            fontSize: 14,
+            letterSpacing: '2px',
           }}
         >
-          {displayHandle}
+          <MetaPill>1080X1500PX</MetaPill>
+          <MetaPill>PNG</MetaPill>
+          <MetaPill>RGBA</MetaPill>
+          <MetaPill accent={palette.trainerText}>{TIER_CODES[finalTier]}</MetaPill>
         </div>
 
-        {/* §4.6 Quote */}
-        {quote ? (
+        {/* 3-col footer: holo sticker | member# + name | yellow QR pill */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 1120,
+            left: 90,
+            width: OG_W - 60 - 60 - 60,
+            height: 230,
+            display: 'flex',
+            gap: 12,
+          }}
+        >
+          {/* Holo sticker */}
           <div
             style={{
-              position: 'absolute',
-              top: 367.3,
-              left: 788.1,
-              width: 734.5,
-              height: 73.7,
-              color: palette.quoteText,
-              fontFamily: 'Agency',
-              fontSize: 23,
-              lineHeight: 1.3,
-              textAlign: 'center',
+              width: 230,
+              height: 230,
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, #ff61ab 0%, #6dffe2 25%, #ffec61 50%, #61c1ff 75%, #d161ff 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              border: '1px solid rgba(255,255,255,0.2)',
+              fontFamily: 'Moderniz',
+              fontSize: 32,
+              color: 'rgba(0,0,0,0.55)',
+              letterSpacing: '2px',
+              textAlign: 'center',
+              lineHeight: 1.1,
             }}
           >
-            “{quote}”
+            VERITY{'\n'}HOLO
           </div>
-        ) : null}
 
-        {/* White sub-panel — visible in all reference PNGs, contains the
-            identity table on top and abilities/weaknesses/QR below it on a
-            white backdrop. Width capped to end before the TRAINER column. */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 478,
-            left: 763,
-            width: 790,
-            height: 360,
-            backgroundColor: '#ffffff',
-            border: '1px solid #222226',
-            display: 'flex',
-          }}
-        />
-
-        {/* §4.7 + §4.8 Identity table — cream background covering all 4 cells
-            with internal borders. Text positioned per spec within each cell. */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 480,
-            left: 768.4,
-            width: 719.3,
-            height: 120,
-            backgroundColor: '#f5e6c8',
-            border: '1px solid #222226',
-            display: 'flex',
-          }}
-        />
-        {/* Vertical column dividers — 3 lines between 4 cells */}
-        {[1006.3, 1166.2, 1325.95].map((x, i) => (
+          {/* Member # + name */}
           <div
-            key={`vd-${i}`}
             style={{
-              position: 'absolute',
-              top: 480,
-              left: x - 0.5,
-              width: 1,
-              height: 120,
-              backgroundColor: '#222226',
+              flex: 1,
+              background: '#ffffff',
+              borderRadius: 14,
               display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 16px',
             }}
-          />
-        ))}
-        {/* Horizontal row divider */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 539.5,
-            left: 768.4,
-            width: 719.3,
-            height: 1,
-            backgroundColor: '#222226',
-            display: 'flex',
-          }}
-        />
-        {/* Header text cells */}
-        {[
-          { text: 'MEMBER', x: 768.4, y: 489.9, w: 219.3, h: 28.3 },
-          { text: 'TYPE',   x: 1024.9, y: 489.9, w: 107.8, h: 28.3 },
-          { text: 'SEX',    x: 1199.7, y: 488.9, w: 107.8, h: 28.3 },
-          { text: 'STATUS', x: 1344.4, y: 489.9, w: 143.3, h: 28.3 },
-        ].map((cell) => (
-          <div
-            key={`h-${cell.text}`}
-            style={{
-              position: 'absolute',
-              top: cell.y,
-              left: cell.x,
-              width: cell.w,
-              height: cell.h,
-              color: '#000000',
+          >
+            <div style={{
+              fontFamily: 'Bebas Neue',
+              fontSize: 100,
+              color: '#0a0a0a',
+              lineHeight: 1,
+              letterSpacing: '2px',
+              display: 'flex',
+            }}>
+              {memberShort}
+            </div>
+            <div style={{
               fontFamily: 'Moderniz',
               fontSize: 18,
+              color: '#0a0a0a',
+              letterSpacing: '2px',
+              marginTop: 8,
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {cell.text}
+            }}>
+              &ldquo;{displayName}&rdquo;
+            </div>
           </div>
-        ))}
-        {/* Value text cells */}
-        {[
-          { text: memberNo,   x: 778.2, y: 561.3, w: 199.7, h: 31.7 },
-          { text: typeText,   x: 977.9, y: 560.3, w: 207,   h: 31.7 },
-          { text: sexText,    x: 1197,  y: 561.3, w: 113.2, h: 31.7 },
-          { text: statusText, x: 1343,  y: 561.6, w: 146,   h: 31.7 },
-        ].map((cell, i) => (
+
+          {/* QR pill */}
           <div
-            key={`v-${i}`}
             style={{
-              position: 'absolute',
-              top: cell.y,
-              left: cell.x,
-              width: cell.w,
-              height: cell.h,
-              color: '#000000',
-              fontFamily: 'Agency',
-              fontSize: 20,
+              width: 230,
+              background: '#ffde59',
+              borderRadius: 14,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
+              padding: 18,
             }}
           >
-            {cell.text}
+            <div style={{
+              fontFamily: 'Moderniz',
+              fontSize: 13,
+              color: '#0a0a0a',
+              letterSpacing: '2px',
+              marginBottom: 8,
+              display: 'flex',
+            }}>
+              SCAN TO CLAIM
+            </div>
+            <div style={{
+              width: 160,
+              height: 160,
+              background: '#ffffff',
+              borderRadius: 6,
+              padding: 4,
+              display: 'flex',
+            }}>
+              {qrDataUri ? (
+                <img src={qrDataUri} alt="" width={152} height={152} style={{ display: 'block' }} />
+              ) : null}
+            </div>
           </div>
-        ))}
-
-        {/* §4.9 Special Abilities */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 642.3,
-            left: 781.9,
-            width: 477.3,
-            height: 82.7,
-            color: '#000000',
-            fontFamily: 'Agency',
-            fontSize: 16,
-            lineHeight: 1.3,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <div style={{
-            fontFamily: 'Moderniz',
-            fontSize: 16,
-            color: '#2a760a',
-            display: 'flex',
-            marginBottom: 4,
-          }}>
-            SPECIAL ABILITIES
-          </div>
-          <div style={{ display: 'flex' }}>{abilitiesText}</div>
         </div>
 
-        {/* §4.10 Weaknesses */}
+        {/* Disclaimer */}
         <div
           style={{
             position: 'absolute',
-            top: 744,
-            left: 783.4,
-            width: 474.2,
-            height: 82.7,
-            color: '#000000',
-            fontFamily: 'Agency',
-            fontSize: 16,
-            lineHeight: 1.3,
+            top: 1370,
+            left: 30,
+            width: OG_W - 60,
             display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <div style={{
-            fontFamily: 'Moderniz',
-            fontSize: 16,
-            color: '#920404',
-            display: 'flex',
-            marginBottom: 4,
-          }}>
-            WEAKNESSES
-          </div>
-          <div style={{ display: 'flex' }}>{weaknessesText}</div>
-        </div>
-
-        {/* §4.11 QR — positioned to fit inside the white sub-panel, right
-            of the abilities/weaknesses block. */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 648,
-            left: 1352,
-            width: 185,
-            height: 185,
-            backgroundColor: '#ffffff',
-            padding: 4,
-            display: 'flex',
-          }}
-        >
-          {qrDataUri ? (
-            <img src={qrDataUri} alt="" width={177} height={177} style={{ display: 'block' }} />
-          ) : null}
-        </div>
-
-        {/* §4.13 TRAINER vertical text — DEFERRED for OG renderer.
-            Satori doesn't reliably support transform: rotate(90deg) with
-            text children. DOM card renders it correctly. Re-enable here
-            once satori updates or we move OG to a sharp-text pipeline. */}
-
-        {/* §4.14 Bottom URL — Inter 600 28px */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 912.7,
-            left: 706.7,
-            width: 506.6,
-            height: 43.7,
-            color: palette.urlText,
-            fontFamily: 'Inter',
-            fontSize: 28,
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
             justifyContent: 'center',
+            fontFamily: 'Moderniz',
+            fontSize: 11,
+            letterSpacing: '3px',
+            color: 'rgba(255,255,255,0.35)',
           }}
         >
-          VERITY.XYZ/REF/{bottomHandle}
+          UNAUTHORISED COPYING OF CARD IS PROHIBITED
         </div>
 
-        {/* §4.15 Verity logo mark */}
+        {/* Bottom serial */}
         <div
           style={{
             position: 'absolute',
-            top: 909.5,
-            left: 1568.7,
-            width: 50.1,
-            height: 50.1,
+            top: 1400,
+            left: 60,
+            right: 60,
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontFamily: 'Inter',
+            fontSize: 10,
+            letterSpacing: '1px',
+            color: 'rgba(255,255,255,0.5)',
+          }}
+        >
+          <span>prototype#01</span>
+          <span>VRT{TIER_CODES[finalTier]}{memberShort}{(cid || 'TEST').slice(0, 4).toUpperCase()}</span>
+        </div>
+
+        {/* Verity logo mark — small, bottom-right of slab strip area for brand presence */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 38,
+            right: 50,
+            width: 48,
+            height: 48,
             display: 'flex',
           }}
         >
-          <VerityMarkSvg color={palette.markColor} />
+          <VerityMarkSvg color={palette.trainerText} />
         </div>
       </div>
     ),
@@ -681,26 +565,42 @@ export async function GET(req: NextRequest) {
   );
 }
 
-function AtGlyphSvg({ color }: { color: string }) {
-  // Spec §4.5: blocky / squared @ glyph at 50.6×61.3 (sized larger than the
-  // surrounding handle text). Parent positions and sizes the wrapper.
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" preserveAspectRatio="none">
-    <path d="M3 3 H29 V37 H3 Z M7 7 V33 H25 V7 Z" fill="${color}" fill-rule="evenodd"/>
-    <path d="M11 11 H21 V29 H17 V18 H15 V29 H11 Z" fill="${color}"/>
-  </svg>`;
+function MetaPill({ children, accent }: { children: React.ReactNode; accent?: string }) {
   return (
-    <img
-      src={`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`}
-      alt=""
-      style={{ width: '100%', height: '100%' }}
+    <span
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '6px 12px',
+        border: `1px solid ${accent ?? 'rgba(255,255,255,0.18)'}`,
+        borderRadius: 4,
+        color: accent ?? 'rgba(255,255,255,0.7)',
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Bullet({ color }: { color: string }) {
+  return (
+    <span
+      style={{
+        width: 4,
+        height: 4,
+        borderRadius: '50%',
+        background: color,
+        opacity: 0.6,
+        display: 'flex',
+      }}
     />
   );
 }
 
 function VerityMarkSvg({ color }: { color: string }) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-    <circle cx="24" cy="24" r="23" fill="none" stroke="${color}" stroke-width="2"/>
-    <path d="M14 32 L24 12 L34 32 L24 26 Z" fill="${color}"/>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="48" height="48">
+    <circle cx="25" cy="25" r="23" fill="none" stroke="${color}" stroke-width="2"/>
+    <path d="M14 33 L25 12 L36 33 L25 26 Z" fill="${color}"/>
   </svg>`;
   return (
     <img
