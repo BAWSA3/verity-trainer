@@ -251,7 +251,7 @@ export async function GET(req: NextRequest) {
   const displayHandle = refHandle.toUpperCase().slice(0, 12);
   const bottomHandle = (displayHandle || 'TRAINER').slice(0, 18);
 
-  const barPattern = barcodePattern(seed);
+  const barPattern = barcodePattern(seed, 60);
 
   return new ImageResponse(
     (
@@ -273,7 +273,7 @@ export async function GET(req: NextRequest) {
             width: OG_W - 60,
             height: OG_H - 60,
             background: palette.outerBg,
-            borderRadius: 35,
+            borderRadius: 60,
             display: 'flex',
             overflow: 'hidden',
           }}
@@ -282,14 +282,14 @@ export async function GET(req: NextRequest) {
           <div
             style={{
               position: 'absolute',
-              top: 50,
+              top: 65,
               left: 0,
               width: OG_W - 60,
               display: 'flex',
               justifyContent: 'center',
               fontFamily: 'Agency',
-              fontSize: 64,
-              letterSpacing: '12px',
+              fontSize: 80,
+              letterSpacing: '14px',
               color: palette.headerText,
               fontWeight: 700,
             }}
@@ -297,28 +297,26 @@ export async function GET(req: NextRequest) {
             VERITY CARD
           </div>
 
-          {/* Inner content panel */}
+          {/* Header divider line */}
           <div
             style={{
               position: 'absolute',
-              top: 145,
+              top: 175,
               left: 30,
               width: OG_W - 60 - 60,
-              height: OG_H - 60 - 145 - 145,
-              border: `1px solid ${palette.innerBorder}`,
-              borderRadius: 6,
-              background: palette.innerBg,
+              height: 2,
+              background: palette.innerBorder,
               display: 'flex',
             }}
           />
 
-          {/* Avatar frame */}
+          {/* Avatar frame (left column) */}
           <div
             style={{
               position: 'absolute',
-              top: 230,
-              left: 135,
-              width: 360,
+              top: 215,
+              left: 110,
+              width: 380,
               height: 540,
               backgroundColor: '#f5e6c8',
               border: `2px solid ${palette.innerBorder}`,
@@ -329,12 +327,11 @@ export async function GET(req: NextRequest) {
             }}
           >
             {fullBodyDataUri ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={fullBodyDataUri}
                 alt=""
-                width={320}
-                height={480}
+                width={360}
+                height={540}
                 style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
               />
             ) : (
@@ -342,12 +339,15 @@ export async function GET(req: NextRequest) {
             )}
           </div>
 
+          {/* Decorative barcode (below avatar) */}
+          <BarcodeSvg pattern={barPattern} />
+
           {/* Name */}
           <div
             style={{
               position: 'absolute',
-              top: 235,
-              left: 575,
+              top: 220,
+              left: 600,
               fontFamily: 'Moderniz',
               color: palette.nameText,
               fontSize: 64,
@@ -362,8 +362,8 @@ export async function GET(req: NextRequest) {
           <div
             style={{
               position: 'absolute',
-              top: 320,
-              left: 575,
+              top: 305,
+              left: 600,
               fontFamily: 'Moderniz',
               color: palette.nameText,
               fontSize: 38,
@@ -382,46 +382,51 @@ export async function GET(req: NextRequest) {
             <div
               style={{
                 position: 'absolute',
-                top: 410,
-                left: 770,
-                width: 700,
+                top: 405,
+                left: 630,
+                width: 830,
                 fontFamily: 'Agency',
-                fontSize: 30,
+                fontSize: 34,
                 color: palette.quoteText,
                 textAlign: 'center',
                 display: 'flex',
                 justifyContent: 'center',
                 lineHeight: 1.3,
+                letterSpacing: '1px',
               }}
             >
               &ldquo;{quote.toUpperCase()}&rdquo;
             </div>
           ) : null}
 
-          {/* Identity table */}
+          {/* Inner content panel — single block on the right.
+              Holds the identity table + abilities/weaknesses + QR. */}
           <div
             style={{
               position: 'absolute',
               top: 530,
-              left: 575,
-              width: 920,
+              left: 600,
+              width: 890,
+              height: 360,
+              background: palette.innerBg,
+              border: `1px solid ${palette.innerBorder}`,
               display: 'flex',
               flexDirection: 'column',
-              border: '1px solid #222226',
-              background: '#f5e6c8',
             }}
           >
+            {/* Identity table — fills top 140px of inner panel */}
             <div style={{ display: 'flex', borderBottom: '1px solid #222226' }}>
               {['MEMBER', 'TYPE', 'SEX', 'STATUS'].map((h, i) => (
                 <div
                   key={`h-${i}`}
                   style={{
                     flex: 1,
-                    padding: '14px 0',
+                    height: 70,
                     display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     fontFamily: 'Moderniz',
-                    fontSize: 30,
+                    fontSize: 32,
                     color: '#000000',
                     borderRight: i < 3 ? '1px solid #222226' : 'none',
                   }}
@@ -430,17 +435,18 @@ export async function GET(req: NextRequest) {
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid #222226' }}>
               {[memberNo, typeText, sexText, statusText].map((v, i) => (
                 <div
                   key={`v-${i}`}
                   style={{
                     flex: 1,
-                    padding: '12px 0',
+                    height: 70,
                     display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     fontFamily: 'Agency',
-                    fontSize: 32,
+                    fontSize: 36,
                     color: '#000000',
                     borderRight: i < 3 ? '1px solid #222226' : 'none',
                     letterSpacing: '1px',
@@ -450,95 +456,83 @@ export async function GET(req: NextRequest) {
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Abilities + weaknesses */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 670,
-              left: 575,
-              width: 620,
-              display: 'flex',
-              flexDirection: 'column',
-              color: '#000000',
-            }}
-          >
+            {/* Abilities + weaknesses (bottom-left of panel) */}
             <div
               style={{
+                position: 'absolute',
+                top: 155,
+                left: 30,
+                right: 240,
+                display: 'flex',
+                flexDirection: 'column',
+                color: '#000000',
+              }}
+            >
+              <div style={{
                 fontFamily: 'Moderniz',
                 fontSize: 28,
                 color: '#2a760a',
-                marginBottom: 6,
+                marginBottom: 4,
                 display: 'flex',
-              }}
-            >
-              SPECIAL ABILITIES
-            </div>
-            <div
-              style={{
+              }}>
+                SPECIAL ABILITIES
+              </div>
+              <div style={{
                 fontFamily: 'Agency',
                 fontSize: 26,
-                marginBottom: 24,
+                marginBottom: 14,
                 display: 'flex',
                 lineHeight: 1.3,
-              }}
-            >
-              {abilitiesText}
-            </div>
-            <div
-              style={{
+                letterSpacing: '0.5px',
+              }}>
+                {abilitiesText}
+              </div>
+              <div style={{
                 fontFamily: 'Moderniz',
                 fontSize: 28,
                 color: '#920404',
-                marginBottom: 6,
+                marginBottom: 4,
                 display: 'flex',
-              }}
-            >
-              WEAKNESSES
-            </div>
-            <div
-              style={{
+              }}>
+                WEAKNESSES
+              </div>
+              <div style={{
                 fontFamily: 'Agency',
                 fontSize: 26,
                 display: 'flex',
                 lineHeight: 1.3,
+                letterSpacing: '0.5px',
+              }}>
+                {weaknessesText}
+              </div>
+            </div>
+
+            {/* QR (bottom-right of panel) */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 150,
+                right: 30,
+                width: 180,
+                height: 180,
+                backgroundColor: '#ffffff',
+                padding: 4,
+                display: 'flex',
               }}
             >
-              {weaknessesText}
+              {qrDataUri ? (
+                <img src={qrDataUri} alt="" width={172} height={172} style={{ display: 'block' }} />
+              ) : null}
             </div>
           </div>
-
-          {/* QR */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 660,
-              left: 1235,
-              width: 220,
-              height: 220,
-              backgroundColor: '#ffffff',
-              padding: 4,
-              display: 'flex',
-            }}
-          >
-            {qrDataUri ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={qrDataUri} alt="" width={212} height={212} style={{ display: 'block' }} />
-            ) : null}
-          </div>
-
-          {/* Decorative barcode */}
-          <BarcodeSvg pattern={barPattern} />
 
           {/* TRAINER vertical text — DEFERRED for OG renderer.
               Satori (next/og) doesn't reliably support writing-mode,
               transform-rotate-with-flex-children, or flex-column with
-              intrinsic-height text children. Tried all three; each
-              variant collapsed to a single visible letter. The DOM card
-              at /card/[id] renders TRAINER correctly via writing-mode.
-              Re-enable here once satori updates or we move OG to a
-              sharp-text pipeline. */}
+              intrinsic-height text children. The DOM card at /card/[id]
+              renders TRAINER correctly via writing-mode. Re-enable here
+              once satori updates or we move OG to a sharp-text pipeline. */}
 
           {/* Bottom URL — using Agency over Inter because the Inter github
               fetch occasionally fails in OG, and Agency renders the slash
@@ -616,24 +610,38 @@ function VerityMarkSvg({ color }: { color: string }) {
 }
 
 function BarcodeSvg({ pattern }: { pattern: number[] }) {
-  let x = 0;
+  // Code-128-ish module-based bar pattern. Pairs of seed bits give widths
+  // 1–4; even-index runs are black bars, odd-index are gaps. Total module
+  // count derived from the pattern, scaled to fill the SVG viewBox.
+  const runs: number[] = [];
+  let totalModules = 0;
+  for (let i = 0; i + 1 < pattern.length; i += 2) {
+    const w = (pattern[i] << 1 | pattern[i + 1]) + 1;
+    runs.push(w);
+    totalModules += w;
+  }
+  const VBW = 380;
+  const VBH = 70;
+  const moduleW = VBW / totalModules;
+  let cursor = 0;
   const rects: string[] = [];
-  pattern.forEach((bit, i) => {
-    const w = 2 + (i % 3);
-    if (bit) rects.push(`<rect x="${x}" y="0" width="${w}" height="50" fill="#000000"/>`);
-    x += w;
+  runs.forEach((run, i) => {
+    if (i % 2 === 0) {
+      rects.push(`<rect x="${cursor.toFixed(2)}" y="0" width="${(run * moduleW).toFixed(2)}" height="${VBH}" fill="#000000"/>`);
+    }
+    cursor += run * moduleW;
   });
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 50" width="360" height="50" preserveAspectRatio="none">
-    <rect x="0" y="0" width="360" height="50" fill="#ffffff"/>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VBW} ${VBH}" width="${VBW}" height="${VBH}" preserveAspectRatio="none">
+    <rect x="0" y="0" width="${VBW}" height="${VBH}" fill="#ffffff"/>
     ${rects.join('')}
   </svg>`;
   return (
     <img
       src={`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`}
       alt=""
-      width={360}
-      height={50}
-      style={{ position: 'absolute', top: 850, left: 135 }}
+      width={VBW}
+      height={VBH}
+      style={{ position: 'absolute', top: 780, left: 110 }}
     />
   );
 }
