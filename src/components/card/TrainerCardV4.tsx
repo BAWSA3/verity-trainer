@@ -6,36 +6,37 @@ import TrainerSprite from '../TrainerSprite';
 import { TIER_PALETTES } from '@/lib/cards/v4-tokens';
 import { deriveMemberNo, formatList } from '@/lib/cards/v4-render';
 
-// Verity Trainer Card — V4 chassis. 1920×1080 master canvas with two columns:
-// LEFT — avatar frame on top, decorative barcode below. RIGHT — name + handle
-// + quote, then a single large white "inner panel" containing the identity
-// table (top half) and SPECIAL ABILITIES + WEAKNESSES + QR (bottom half).
-// TRAINER vertical text runs along the card's right edge. Bottom URL +
-// Verity mark sit on the card background below the inner panel.
+// Verity Trainer Card — V4 chassis. Master canvas 1920×1080.
+// All measurements come from `design-templates/verity-trainer-card-spec.md`
+// — they're exact pixel values extracted from the source Canva design.
+// Do not approximate. If the rendered card looks off, fix the cell-vs-text
+// alignment or font loading first; ratios in the spec are authoritative.
 //
-// Tier theming (red / mint / gem / black-label / founder) is driven entirely
-// by `TIER_PALETTES`; the layout is identical across all 5 tiers.
+// The "inner panel" is structurally subtle: it shares the outer card's
+// X position and width, and only differs in HEIGHT — covering the top
+// 720.7px of the card. The bottom 143.3px strip (where the URL + Verity
+// mark sit) is "outer card background only".
 //
-// `id="trainer-card"` preserved so ShareButtons html2canvas keeps working.
+// `id="trainer-card"` preserved for ShareButtons html2canvas.
 
 const W = 1920;
 const H = 1080;
 
-// All inner positions are relative to the OUTER CARD origin (which itself
-// sits at (CARD_X, CARD_Y) inside the canvas). Keeps the math readable.
-const CARD_X = 30;
-const CARD_Y = 30;
-const CARD_W = W - 2 * CARD_X;
-const CARD_H = H - 2 * CARD_Y;
+// Card outer geometry (spec §2.3).
+const CARD_X = 268.8;
+const CARD_Y = 108;
+const CARD_W = 1412.3;
+const CARD_H = 864;
+const CARD_RADIUS = 35;
 
-// Horizontal split: left column = avatar + barcode; right column = identity.
-const LEFT_X = 110;
-const LEFT_W = 380;
+// Inner panel — same X/W as outer card; ends 143.3px above the card bottom.
+const PANEL_H = 720.7;
 
-// Right column starts where the inner panel does, so the name/quote line up.
-const RIGHT_X = 600;
-const RIGHT_RIGHT = 1490;
-const RIGHT_W = RIGHT_RIGHT - RIGHT_X;
+// Constants from spec §5 ("Constants across all tiers").
+const CREAM = '#f5e6c8';
+const TABLE_BORDER = '#222226';
+const ABILITIES_GREEN = '#2a760a';
+const WEAKNESSES_RED = '#920404';
 
 interface Props {
   tier: TierKey;
@@ -43,7 +44,6 @@ interface Props {
   personality: TrainerPersonality;
   trainerName: string;
   cardId: string;
-  /** X handle drives MEMBER # derivation, QR target, and bottom URL. */
   xHandle?: string;
   memberNumber?: string;
   type?: 'WAITLIST' | 'EARLY' | 'MEMBER' | 'FOUNDER';
@@ -60,7 +60,8 @@ export default function TrainerCardV4({
   const handle = (xHandle ?? '').replace(/[^a-zA-Z0-9_]/g, '');
   const displayName = (trainerName || 'TRAINER').toUpperCase().slice(0, 14);
   const displayHandle = handle.toUpperCase().slice(0, 12);
-  const quote = (personality.quote ?? personality.knownFor)?.trim() ?? '';
+  const quoteRaw = (personality.quote ?? personality.knownFor)?.trim() ?? '';
+  const quote = quoteRaw ? `“${quoteRaw}”` : '';
 
   const abilitiesText = formatList(personality.abilities?.map((a) => a.name));
   const weaknessesText = formatList(personality.weaknesses?.map((w) => w.name));
@@ -71,8 +72,8 @@ export default function TrainerCardV4({
   const statusText = (status ?? 'GENESIS').toUpperCase();
 
   const refUrlBase = process.env.NEXT_PUBLIC_REFERRAL_URL_BASE
-    || (process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg') + '/create?ref=';
-  const qrTarget = handle ? `${refUrlBase}${handle}` : refUrlBase;
+    || 'https://verity.xyz/ref/';
+  const qrTarget = handle ? `${refUrlBase}${handle.toUpperCase()}` : refUrlBase;
 
   const [qrDataUri, setQrDataUri] = useState<string>('');
   useEffect(() => {
@@ -90,17 +91,15 @@ export default function TrainerCardV4({
     return () => { cancelled = true; };
   }, [qrTarget]);
 
-  // Static barcode asset chosen by tier — black-label uses white bars on
-  // its dark surface; every other tier uses the black-bars variant on its
-  // lighter surface. Both PNGs are pre-cropped to their bar bbox in
-  // public/brand/.
+  // Tier-specific barcode asset; both pre-cropped to bar bbox.
   const barcodeSrc = tier === 'black-label'
     ? '/brand/barcode-dark.png'
     : '/brand/barcode-light.png';
+
   const bottomHandle = (handle.toUpperCase() || 'TRAINER').slice(0, 18);
 
-  // ResizeObserver-based scale to fit. CSS container queries with `cqw`
-  // don't compile reliably through styled-jsx — verified empirically.
+  // ResizeObserver-based scale-to-fit (CSS container queries with `cqw`
+  // don't compile reliably through styled-jsx — verified empirically).
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(1);
   useEffect(() => {
@@ -119,7 +118,7 @@ export default function TrainerCardV4({
   return (
     <div id="trainer-card" className="card-v4-wrapper" ref={wrapperRef}>
       <div className="card-v4-canvas" style={{ transform: `scale(${scale})` }}>
-        {/* Outer card surface */}
+        {/* Outer card surface (spec §2.3) */}
         <div
           style={{
             position: 'absolute',
@@ -128,238 +127,45 @@ export default function TrainerCardV4({
             width: CARD_W,
             height: CARD_H,
             background: palette.outerBg,
-            borderRadius: 60,
+            borderRadius: CARD_RADIUS,
             overflow: 'hidden',
           }}
         >
-          {/* VERITY CARD header */}
+          {/* Inner panel — same X/W as outer card; covers top portion only.
+              Background and border per tier. The bottom strip below remains
+              "outer card background only" for the URL + Verity mark. */}
           <div
             style={{
               position: 'absolute',
-              top: 65,
+              top: 0,
               left: 0,
               width: CARD_W,
-              textAlign: 'center',
-              fontFamily: 'var(--font-agency), Impact, sans-serif',
-              fontSize: 80,
-              letterSpacing: '14px',
-              color: palette.headerText,
-              fontWeight: 700,
-              lineHeight: 1.0,
-            }}
-          >
-            VERITY CARD
-          </div>
-
-          {/* Header divider line — runs full card width below VERITY CARD */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 175,
-              left: 30,
-              right: 30,
-              height: 2,
-              background: palette.innerBorder,
-            }}
-          />
-
-          {/* Avatar frame (left column) */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 215,
-              left: LEFT_X,
-              width: LEFT_W,
-              height: 540,
-              backgroundColor: '#f5e6c8',
-              border: `2px solid ${palette.innerBorder}`,
-              display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'center',
-              overflow: 'hidden',
-            }}
-          >
-            {/* LimeZu sprites are 48×96 with transparent padding around the
-                character; oversize the sprite + bottom-align so the visible
-                character fills the frame nicely. */}
-            <TrainerSprite config={config} size={520} />
-          </div>
-
-          {/* Decorative barcode (below avatar). Width matches avatar frame
-              and aspect ratio is preserved per the source PNG so the bars
-              stay proportional to the design. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={barcodeSrc}
-            alt=""
-            style={{
-              position: 'absolute',
-              top: 770,
-              left: LEFT_X,
-              width: LEFT_W,
-              height: 'auto',
-              display: 'block',
-            }}
-          />
-
-          {/* Name + handle block (right column, top). Width capped to the
-              inner-panel width so long handles never overlap the TRAINER
-              column on the right. */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 220,
-              left: RIGHT_X,
-              width: RIGHT_W,
-              fontFamily: 'var(--font-moderniz), Impact, sans-serif',
-              color: palette.nameText,
-              lineHeight: 1.0,
-            }}
-          >
-            <div style={{ fontSize: 64, letterSpacing: '0px' }}>
-              {displayName}
-            </div>
-            <div style={{ fontSize: 38, marginTop: 18, letterSpacing: '0px', display: 'flex', alignItems: 'baseline' }}>
-              <AtGlyph color={palette.nameText} size={38} />
-              {displayHandle}
-            </div>
-          </div>
-
-          {/* Quote — centered between avatar right edge and TRAINER column */}
-          {quote ? (
-            <div
-              style={{
-                position: 'absolute',
-                top: 360,
-                left: RIGHT_X + 30,
-                width: RIGHT_W - 60,
-                fontFamily: 'var(--font-agency), Impact, sans-serif',
-                fontSize: 34,
-                lineHeight: 1.3,
-                color: palette.quoteText,
-                textAlign: 'center',
-                letterSpacing: '1px',
-              }}
-            >
-              &ldquo;{quote.toUpperCase()}&rdquo;
-            </div>
-          ) : null}
-
-          {/* Inner content panel — single solid white/cream block on the right.
-              Bottom edge aligns with the avatar+barcode column's bottom (~855)
-              so the right-half mass matches the left-half mass per the
-              reference PNGs. Contains identity table on top + abilities /
-              weaknesses on bottom-left + QR on bottom-right. */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 470,
-              left: RIGHT_X,
-              width: RIGHT_W,
-              height: 390,
+              height: PANEL_H,
               background: palette.innerBg,
               border: `1px solid ${palette.innerBorder}`,
               boxSizing: 'border-box',
-              overflow: 'hidden',
             }}
-          >
-            {/* Identity table — top portion */}
-            <IdTable
-              memberNo={memberNo}
-              typeText={typeText}
-              sexText={sexText}
-              statusText={statusText}
-            />
+          />
 
-            {/* SPECIAL ABILITIES + WEAKNESSES — bottom-left of inner panel */}
-            <AbilitiesWeaknesses
-              abilities={abilitiesText}
-              weaknesses={weaknessesText}
-            />
-
-            {/* QR code — bottom-right of inner panel */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 150,
-                right: 30,
-                width: 180,
-                height: 180,
-                backgroundColor: '#ffffff',
-                padding: 4,
-                boxSizing: 'border-box',
-              }}
-            >
-              {qrDataUri ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={qrDataUri}
-                  alt=""
-                  style={{ width: '100%', height: '100%', display: 'block', imageRendering: 'pixelated' }}
-                />
-              ) : null}
-            </div>
-          </div>
-
-          {/* TRAINER vertical text — letters stacked along card right edge */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 200,
-              left: 1530,
-              width: 110,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            {'TRAINER'.split('').map((letter, i) => (
-              <span
-                key={i}
-                style={{
-                  fontFamily: 'var(--font-moderniz), Impact, sans-serif',
-                  fontSize: 95,
-                  lineHeight: 0.95,
-                  color: palette.trainerText,
-                  fontWeight: 700,
-                  letterSpacing: '0px',
-                }}
-              >
-                {letter}
-              </span>
-            ))}
-          </div>
-
-          {/* Bottom URL */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 925,
-              left: 0,
-              width: CARD_W,
-              textAlign: 'center',
-              fontFamily: 'var(--font-agency), Impact, sans-serif',
-              fontSize: 50,
-              fontWeight: 700,
-              color: palette.urlText,
-              letterSpacing: '4px',
-            }}
-          >
-            VERITY.XYZ/REF/{bottomHandle}
-          </div>
-
-          {/* Verity logo mark — bottom-right, inline with URL */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 935,
-              right: 80,
-              width: 50,
-              height: 50,
-            }}
-          >
-            <VerityMark color={palette.markColor} />
-          </div>
+          {/* All children below are positioned in CANVAS coordinates and
+              translated into card-local coords via offsetting CARD_X/CARD_Y. */}
+          <CardContent
+            palette={palette}
+            tier={tier}
+            config={config}
+            displayName={displayName}
+            displayHandle={displayHandle}
+            quote={quote}
+            memberNo={memberNo}
+            typeText={typeText}
+            sexText={sexText}
+            statusText={statusText}
+            abilitiesText={abilitiesText}
+            weaknessesText={weaknessesText}
+            qrDataUri={qrDataUri}
+            barcodeSrc={barcodeSrc}
+            bottomHandle={bottomHandle}
+          />
         </div>
       </div>
 
@@ -384,135 +190,505 @@ export default function TrainerCardV4({
   );
 }
 
+// All children of the outer card; positions are CANVAS-relative per spec,
+// then offset back into card-local coords (-CARD_X, -CARD_Y).
+function CardContent({
+  palette, tier, config, displayName, displayHandle, quote,
+  memberNo, typeText, sexText, statusText,
+  abilitiesText, weaknessesText, qrDataUri, barcodeSrc, bottomHandle,
+}: {
+  palette: typeof TIER_PALETTES[TierKey];
+  tier: TierKey;
+  config: TrainerConfig;
+  displayName: string;
+  displayHandle: string;
+  quote: string;
+  memberNo: string;
+  typeText: string;
+  sexText: string;
+  statusText: string;
+  abilitiesText: string;
+  weaknessesText: string;
+  qrDataUri: string;
+  barcodeSrc: string;
+  bottomHandle: string;
+}) {
+  // Helper to convert canvas-relative coords to card-local.
+  const cx = (canvasX: number) => canvasX - CARD_X;
+  const cy = (canvasY: number) => canvasY - CARD_Y;
+  void tier;
+
+  return (
+    <>
+      {/* §4.1 VERITY CARD header */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(116.8),
+          left: cx(730.9),
+          width: 458.2,
+          height: 63.3,
+          color: palette.headerText,
+          fontFamily: 'var(--font-agency), Impact, sans-serif',
+          fontSize: 40,
+          letterSpacing: '0.162em',
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        VERITY CARD
+      </div>
+
+      {/* §4.2 Avatar frame */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(216.3),
+          left: cx(305.8),
+          width: 418.9,
+          height: 538,
+          backgroundColor: CREAM,
+          border: `2px solid ${palette.innerBorder}`,
+          boxSizing: 'border-box',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {/* LimeZu sprites are 48×96 with transparent padding; oversize +
+            bottom-align so the visible character fills the frame. */}
+        <TrainerSprite config={config} size={500} />
+      </div>
+
+      {/* §4.3 Name */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(216.3),
+          left: cx(744.7),
+          width: 690.4,
+          height: 55.6,
+          color: palette.nameText,
+          fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+          fontSize: 35,
+          lineHeight: 1.0,
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        {displayName}
+      </div>
+
+      {/* §4.5 @ glyph (separate, sized larger than handle) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(266.6),
+          left: cx(737.5),
+          width: 50.6,
+          height: 61.3,
+        }}
+      >
+        <AtGlyph color={palette.nameText} />
+      </div>
+
+      {/* §4.4 Handle text (without @) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(292.7),
+          left: cx(790.7),
+          width: 260.7,
+          height: 35.1,
+          color: palette.nameText,
+          fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+          fontSize: 22,
+          lineHeight: 1.0,
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        {displayHandle}
+      </div>
+
+      {/* §4.6 Quote */}
+      {quote ? (
+        <div
+          style={{
+            position: 'absolute',
+            top: cy(367.3),
+            left: cx(788.1),
+            width: 734.5,
+            height: 73.7,
+            color: palette.quoteText,
+            fontFamily: 'var(--font-agency), Impact, sans-serif',
+            fontSize: 23,
+            lineHeight: 1.3,
+            textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {quote}
+        </div>
+      ) : null}
+
+      {/* White sub-panel — visible in all reference PNGs, contains the
+          identity table on top and abilities/weaknesses/QR below it on a
+          white backdrop. Spec doesn't explicitly call this out but it's
+          required for the references to match. Width capped so it ends
+          just before the TRAINER column at x=1554.6. */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(478),
+          left: cx(763),
+          width: 790,
+          height: 360,
+          backgroundColor: '#ffffff',
+          border: `1px solid ${TABLE_BORDER}`,
+          boxSizing: 'border-box',
+        }}
+      />
+
+      {/* §4.7 + §4.8 Identity table — 4 columns × 2 rows on cream background
+          with 1px black borders between cells. Cells extend slightly above /
+          below the text bboxes given by spec so the visual cell padding
+          matches the references. */}
+      <IdTable
+        memberNo={memberNo}
+        typeText={typeText}
+        sexText={sexText}
+        statusText={statusText}
+        cx={cx}
+        cy={cy}
+      />
+
+      {/* §4.9 Special Abilities — text directly on card background */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(642.3),
+          left: cx(781.9),
+          width: 477.3,
+          height: 82.7,
+          color: '#000000',
+          fontFamily: 'var(--font-agency), Impact, sans-serif',
+          fontSize: 16,
+          lineHeight: 1.3,
+        }}
+      >
+        <div style={{
+          fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+          fontSize: 16,
+          color: ABILITIES_GREEN,
+          lineHeight: 1.0,
+          marginBottom: 4,
+        }}>
+          SPECIAL ABILITIES
+        </div>
+        <div>{abilitiesText}</div>
+      </div>
+
+      {/* §4.10 Weaknesses */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(744),
+          left: cx(783.4),
+          width: 474.2,
+          height: 82.7,
+          color: '#000000',
+          fontFamily: 'var(--font-agency), Impact, sans-serif',
+          fontSize: 16,
+          lineHeight: 1.3,
+        }}
+      >
+        <div style={{
+          fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+          fontSize: 16,
+          color: WEAKNESSES_RED,
+          lineHeight: 1.0,
+          marginBottom: 4,
+        }}>
+          WEAKNESSES
+        </div>
+        <div>{weaknessesText}</div>
+      </div>
+
+      {/* §4.11 QR — visual estimate per spec; positioned to fit inside the
+          white sub-panel, right of the abilities/weaknesses block. */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(648),
+          left: cx(1352),
+          width: 185,
+          height: 185,
+          backgroundColor: '#ffffff',
+          padding: 4,
+          boxSizing: 'border-box',
+        }}
+      >
+        {qrDataUri ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={qrDataUri}
+            alt=""
+            style={{ width: '100%', height: '100%', display: 'block', imageRendering: 'pixelated' }}
+          />
+        ) : null}
+      </div>
+
+      {/* §4.12 Decorative barcode */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={barcodeSrc}
+        alt=""
+        style={{
+          position: 'absolute',
+          top: cy(772.2),
+          left: cx(305.8),
+          width: 418.9,
+          height: 84.1,
+          display: 'block',
+        }}
+      />
+
+      {/* §4.13 TRAINER vertical text — rotated 90° CW. Using CSS
+          writing-mode: vertical-rl + text-orientation: mixed renders
+          characters rotated sideways and flowing top-to-bottom, which
+          matches the reference. The rotated bbox is 118.1 × 648 at
+          (1554.6, 211.5) per spec. */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(211.5),
+          left: cx(1554.6),
+          width: 118.1,
+          height: 648,
+          writingMode: 'vertical-rl',
+          textOrientation: 'mixed',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: palette.trainerText,
+          fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+          fontSize: 75,
+          lineHeight: 1.0,
+          fontWeight: 700,
+          letterSpacing: '0px',
+        }}
+      >
+        TRAINER
+      </div>
+
+      {/* §4.14 Bottom URL */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(912.7),
+          left: cx(706.7),
+          width: 506.6,
+          height: 43.7,
+          color: palette.urlText,
+          fontFamily: 'var(--font-body), Inter, sans-serif',
+          fontSize: 28,
+          fontWeight: 600,
+          lineHeight: 1.0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        VERITY.XYZ/REF/{bottomHandle}
+      </div>
+
+      {/* §4.15 Verity logo mark */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(909.5),
+          left: cx(1568.7),
+          width: 50.1,
+          height: 50.1,
+        }}
+      >
+        <VerityMark color={palette.markColor} />
+      </div>
+    </>
+  );
+}
+
 // ─── Subcomponents ──────────────────────────────────────────────────────
 
 function IdTable({
-  memberNo, typeText, sexText, statusText,
-}: { memberNo: string; typeText: string; sexText: string; statusText: string }) {
-  const headers = ['MEMBER', 'TYPE', 'SEX', 'STATUS'];
-  const values = [memberNo, typeText, sexText, statusText];
+  memberNo, typeText, sexText, statusText, cx, cy,
+}: {
+  memberNo: string;
+  typeText: string;
+  sexText: string;
+  statusText: string;
+  cx: (n: number) => number;
+  cy: (n: number) => number;
+}) {
+  // Per spec §4.7 / §4.8 — text bboxes are given for each cell. The actual
+  // CELLS have cream background with 1px borders. We lay the cells out as
+  // a single row spanning headers' Y to values' Y+H, split into 4 cols by
+  // mid-points between the spec'd text bboxes.
+
+  // Header text bboxes
+  const memberH = { x: 768.4, w: 219.3 };
+  const typeH   = { x: 1024.9, w: 107.8 };
+  const sexH    = { x: 1199.7, w: 107.8 };
+  const statusH = { x: 1344.4, w: 143.3 };
+
+  // Compute column boundaries — midpoints between adjacent text bboxes
+  const c1 = memberH.x;                                        // left of MEMBER
+  const c2 = (memberH.x + memberH.w + typeH.x) / 2;            // MEMBER↔TYPE
+  const c3 = (typeH.x + typeH.w + sexH.x) / 2;                 // TYPE↔SEX
+  const c4 = (sexH.x + sexH.w + statusH.x) / 2;                // SEX↔STATUS
+  const c5 = statusH.x + statusH.w;                            // right of STATUS
+
+  // Cell vertical extents
+  const headerY = 480;       // a few px above 489.9 text top
+  const dividerY = 540;      // mid-gap between header bottom (518.2) and value top (561.3)
+  const tableBottomY = 600;  // a few px below value bottom (593)
+
+  const tableLeft = c1;
+  const tableTop = headerY;
+  const tableW = c5 - c1;
+  const tableH = tableBottomY - headerY;
+
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: 140,
-        display: 'grid',
-        gridTemplateRows: '70px 70px',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        boxSizing: 'border-box',
-      }}
-    >
-      {headers.map((h, i) => (
+    <>
+      {/* Cream background rectangle for the entire table */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(tableTop),
+          left: cx(tableLeft),
+          width: tableW,
+          height: tableH,
+          backgroundColor: CREAM,
+          border: `1px solid ${TABLE_BORDER}`,
+          boxSizing: 'border-box',
+        }}
+      />
+
+      {/* Vertical column dividers (3 lines between 4 cells) */}
+      {[c2, c3, c4].map((boundary, i) => (
         <div
-          key={`h-${i}`}
+          key={`vd-${i}`}
           style={{
+            position: 'absolute',
+            top: cy(tableTop),
+            left: cx(boundary) - 0.5,
+            width: 1,
+            height: tableH,
+            backgroundColor: TABLE_BORDER,
+          }}
+        />
+      ))}
+
+      {/* Horizontal divider between header and value rows */}
+      <div
+        style={{
+          position: 'absolute',
+          top: cy(dividerY) - 0.5,
+          left: cx(tableLeft),
+          width: tableW,
+          height: 1,
+          backgroundColor: TABLE_BORDER,
+        }}
+      />
+
+      {/* Header text — exact spec positions */}
+      {[
+        { text: 'MEMBER', x: 768.4, y: 489.9, w: 219.3, h: 28.3 },
+        { text: 'TYPE',   x: 1024.9, y: 489.9, w: 107.8, h: 28.3 },
+        { text: 'SEX',    x: 1199.7, y: 488.9, w: 107.8, h: 28.3 },
+        { text: 'STATUS', x: 1344.4, y: 489.9, w: 143.3, h: 28.3 },
+      ].map((cell) => (
+        <div
+          key={`h-${cell.text}`}
+          style={{
+            position: 'absolute',
+            top: cy(cell.y),
+            left: cx(cell.x),
+            width: cell.w,
+            height: cell.h,
+            color: '#000000',
+            fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+            fontSize: 18,
+            lineHeight: 1.0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: 'var(--font-moderniz), Impact, sans-serif',
-            fontSize: 32,
-            color: '#000000',
-            borderRight: i < headers.length - 1 ? '1px solid #222226' : 'none',
-            borderBottom: '1px solid #222226',
           }}
         >
-          {h}
+          {cell.text}
         </div>
       ))}
-      {values.map((v, i) => (
+
+      {/* Value text — exact spec positions */}
+      {[
+        { text: memberNo, x: 778.2,  y: 561.3, w: 199.7, h: 31.7 },
+        { text: typeText, x: 977.9,  y: 560.3, w: 207,   h: 31.7 },
+        { text: sexText,  x: 1197,   y: 561.3, w: 113.2, h: 31.7 },
+        { text: statusText, x: 1343, y: 561.6, w: 146,   h: 31.7 },
+      ].map((cell, i) => (
         <div
           key={`v-${i}`}
           style={{
+            position: 'absolute',
+            top: cy(cell.y),
+            left: cx(cell.x),
+            width: cell.w,
+            height: cell.h,
+            color: '#000000',
+            fontFamily: 'var(--font-agency), Impact, sans-serif',
+            fontSize: 20,
+            lineHeight: 1.0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: 'var(--font-agency), Impact, sans-serif',
-            fontSize: 36,
-            color: '#000000',
-            borderRight: i < values.length - 1 ? '1px solid #222226' : 'none',
-            letterSpacing: '1px',
           }}
         >
-          {v}
+          {cell.text}
         </div>
       ))}
-    </div>
+    </>
   );
 }
 
-function AbilitiesWeaknesses({ abilities, weaknesses }: { abilities: string; weaknesses: string }) {
+function AtGlyph({ color }: { color: string }) {
+  // Blocky / squared @ glyph approximating Moderniz aesthetic. Sized 100% of
+  // its container per spec §4.5. Outer square ring + inner spiral form.
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 155,
-        left: 30,
-        right: 240, // leave room for QR
-        color: '#000000',
-        fontFamily: 'var(--font-agency), Impact, sans-serif',
-        fontSize: 26,
-        lineHeight: 1.3,
-      }}
-    >
-      <div style={{
-        fontFamily: 'var(--font-moderniz), Impact, sans-serif',
-        fontSize: 28,
-        color: '#2a760a',
-        marginBottom: 4,
-      }}>
-        SPECIAL ABILITIES
-      </div>
-      <div style={{ marginBottom: 14, letterSpacing: '0.5px' }}>{abilities}</div>
-      <div style={{
-        fontFamily: 'var(--font-moderniz), Impact, sans-serif',
-        fontSize: 28,
-        color: '#920404',
-        marginBottom: 4,
-      }}>
-        WEAKNESSES
-      </div>
-      <div style={{ letterSpacing: '0.5px' }}>{weaknesses}</div>
-    </div>
-  );
-}
-
-function AtGlyph({ color, size }: { color: string; size: number }) {
-  return (
-    <span
-      aria-hidden
-      style={{
-        display: 'inline-block',
-        width: size,
-        height: size,
-        marginRight: 6,
-        verticalAlign: 'baseline',
-        position: 'relative',
-        top: -size * 0.05,
-      }}
-    >
-      <svg viewBox="0 0 32 32" width={size} height={size}>
-        <path
-          d="M3 3 H29 V29 H3 Z M7 7 V25 H25 V7 Z"
-          fill={color}
-          fillRule="evenodd"
-        />
-        <path
-          d="M11 11 H21 V21 H17 V15 H15 V21 H11 Z"
-          fill={color}
-        />
-      </svg>
-    </span>
+    <svg viewBox="0 0 32 40" width="100%" height="100%" aria-hidden>
+      <path
+        d="M3 3 H29 V37 H3 Z M7 7 V33 H25 V7 Z"
+        fill={color}
+        fillRule="evenodd"
+      />
+      <path
+        d="M11 11 H21 V29 H17 V18 H15 V29 H11 Z"
+        fill={color}
+      />
+    </svg>
   );
 }
 
 function VerityMark({ color }: { color: string }) {
   return (
-    <svg viewBox="0 0 48 48" width="100%" height="100%" aria-hidden>
-      <circle cx={24} cy={24} r={22} fill="none" stroke={color} strokeWidth={2} />
-      <path d="M14 32 L24 12 L34 32 L24 26 Z" fill={color} />
+    <svg viewBox="0 0 50 50" width="100%" height="100%" aria-hidden>
+      <circle cx={25} cy={25} r={23} fill="none" stroke={color} strokeWidth={2} />
+      <path d="M14 33 L25 12 L36 33 L25 26 Z" fill={color} />
     </svg>
   );
 }

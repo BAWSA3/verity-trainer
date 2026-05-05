@@ -31,10 +31,14 @@ export interface CardPalette {
   markColor: string;
 }
 
+// Spec §5 — values are the source of truth. The inner panel and outer card
+// share the same background on most tiers (only the inner panel BORDER
+// distinguishes them visually); the spec calls this out explicitly.
+
 const NEAR_MINT: CardPalette = {
   outerBg: '#ff3131',
-  innerBg: '#ffffff',
-  innerBorder: '#222226',
+  innerBg: '#ff3131',
+  innerBorder: '#ffffff',
   headerText: '#ffffff',
   nameText: '#000000',
   quoteText: '#000000',
@@ -57,8 +61,8 @@ const MINT: CardPalette = {
 
 const GEM: CardPalette = {
   outerBg: '#468bd5',
-  innerBg: '#ffffff',
-  innerBorder: '#222226',
+  innerBg: '#468bd5',
+  innerBorder: '#ffffff',
   headerText: '#ffde59',
   nameText: '#e7ded7',
   quoteText: '#e7ded7',
@@ -69,7 +73,7 @@ const GEM: CardPalette = {
 
 const BLACK_LABEL: CardPalette = {
   outerBg: '#000000',
-  innerBg: '#f5e6c8',
+  innerBg: '#000000',
   innerBorder: '#ffde59',
   headerText: '#ffde59',
   nameText: '#ffde59',
@@ -81,7 +85,7 @@ const BLACK_LABEL: CardPalette = {
 
 const FOUNDER: CardPalette = {
   outerBg: 'linear-gradient(90deg, #fff7ad 0%, #d984d3 100%)',
-  innerBg: '#fff3d6',
+  innerBg: 'linear-gradient(90deg, #fff7ad 0%, #d984d3 100%)',
   innerBorder: '#000000',
   headerText: '#000000',
   nameText: '#000000',

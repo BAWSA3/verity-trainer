@@ -266,6 +266,8 @@ export async function GET(req: NextRequest) {
     console.warn('[og] barcode load failed:', err);
   }
 
+  // All children of the canvas use canvas-absolute coordinates per the
+  // exact spec measurements in design-templates/verity-trainer-card-spec.md.
   return new ImageResponse(
     (
       <div
@@ -277,324 +279,396 @@ export async function GET(req: NextRequest) {
           fontFamily: 'Moderniz',
         }}
       >
-        {/* Outer card surface */}
+        {/* Outer card surface — spec §2.3: x=268.8, y=108, w=1412.3, h=864 */}
         <div
           style={{
             position: 'absolute',
-            top: 30,
-            left: 30,
-            width: OG_W - 60,
-            height: OG_H - 60,
+            top: 108,
+            left: 268.8,
+            width: 1412.3,
+            height: 864,
             background: palette.outerBg,
-            borderRadius: 60,
+            borderRadius: 35,
             display: 'flex',
             overflow: 'hidden',
           }}
         >
-          {/* VERITY CARD header */}
+          {/* Inner panel — same X/W as outer; covers top 720.7 only. */}
           <div
             style={{
               position: 'absolute',
-              top: 65,
+              top: 0,
               left: 0,
-              width: OG_W - 60,
-              display: 'flex',
-              justifyContent: 'center',
-              fontFamily: 'Agency',
-              fontSize: 80,
-              letterSpacing: '14px',
-              color: palette.headerText,
-              fontWeight: 700,
-            }}
-          >
-            VERITY CARD
-          </div>
-
-          {/* Header divider line */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 175,
-              left: 30,
-              width: OG_W - 60 - 60,
-              height: 2,
-              background: palette.innerBorder,
-              display: 'flex',
-            }}
-          />
-
-          {/* Avatar frame (left column) */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 215,
-              left: 110,
-              width: 380,
-              height: 540,
-              backgroundColor: '#f5e6c8',
-              border: `2px solid ${palette.innerBorder}`,
-              display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'center',
-              overflow: 'hidden',
-            }}
-          >
-            {fullBodyDataUri ? (
-              <img
-                src={fullBodyDataUri}
-                alt=""
-                width={360}
-                height={540}
-                style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
-              />
-            ) : (
-              <div style={{ color: palette.headerText, fontSize: 200, display: 'flex' }}>V</div>
-            )}
-          </div>
-
-          {/* Decorative barcode (below avatar) — width matches avatar
-              frame, aspect ratio preserved. */}
-          {barcodeDataUri ? (
-            <img
-              src={barcodeDataUri}
-              alt=""
-              style={{
-                position: 'absolute',
-                top: 770,
-                left: 110,
-                width: 380,
-                height: 'auto',
-              }}
-            />
-          ) : null}
-
-          {/* Name */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 220,
-              left: 600,
-              fontFamily: 'Moderniz',
-              color: palette.nameText,
-              fontSize: 64,
-              letterSpacing: '0px',
-              display: 'flex',
-            }}
-          >
-            {displayName}
-          </div>
-
-          {/* Handle */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 305,
-              left: 600,
-              fontFamily: 'Moderniz',
-              color: palette.nameText,
-              fontSize: 38,
-              letterSpacing: '0px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <AtGlyphSvg color={palette.nameText} size={38} />
-            {displayHandle}
-          </div>
-
-          {/* Quote */}
-          {quote ? (
-            <div
-              style={{
-                position: 'absolute',
-                top: 360,
-                left: 630,
-                width: 830,
-                fontFamily: 'Agency',
-                fontSize: 34,
-                color: palette.quoteText,
-                textAlign: 'center',
-                display: 'flex',
-                justifyContent: 'center',
-                lineHeight: 1.3,
-                letterSpacing: '1px',
-              }}
-            >
-              &ldquo;{quote.toUpperCase()}&rdquo;
-            </div>
-          ) : null}
-
-          {/* Inner content panel — single block on the right.
-              Bottom aligns with avatar+barcode column. Holds identity
-              table + abilities/weaknesses + QR. */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 470,
-              left: 600,
-              width: 890,
-              height: 390,
+              width: 1412.3,
+              height: 720.7,
               background: palette.innerBg,
               border: `1px solid ${palette.innerBorder}`,
               display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
             }}
-          >
-            {/* Identity table — fills top 140px of inner panel */}
-            <div style={{ display: 'flex', borderBottom: '1px solid #222226' }}>
-              {['MEMBER', 'TYPE', 'SEX', 'STATUS'].map((h, i) => (
-                <div
-                  key={`h-${i}`}
-                  style={{
-                    flex: 1,
-                    height: 70,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: 'Moderniz',
-                    fontSize: 32,
-                    color: '#000000',
-                    borderRight: i < 3 ? '1px solid #222226' : 'none',
-                  }}
-                >
-                  {h}
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', borderBottom: '1px solid #222226' }}>
-              {[memberNo, typeText, sexText, statusText].map((v, i) => (
-                <div
-                  key={`v-${i}`}
-                  style={{
-                    flex: 1,
-                    height: 70,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: 'Agency',
-                    fontSize: 36,
-                    color: '#000000',
-                    borderRight: i < 3 ? '1px solid #222226' : 'none',
-                    letterSpacing: '1px',
-                  }}
-                >
-                  {v}
-                </div>
-              ))}
-            </div>
+          />
+        </div>
 
-            {/* Abilities + weaknesses (bottom-left of panel) */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 155,
-                left: 30,
-                right: 240,
-                display: 'flex',
-                flexDirection: 'column',
-                color: '#000000',
-              }}
-            >
-              <div style={{
-                fontFamily: 'Moderniz',
-                fontSize: 28,
-                color: '#2a760a',
-                marginBottom: 4,
-                display: 'flex',
-              }}>
-                SPECIAL ABILITIES
-              </div>
-              <div style={{
-                fontFamily: 'Agency',
-                fontSize: 26,
-                marginBottom: 14,
-                display: 'flex',
-                lineHeight: 1.3,
-                letterSpacing: '0.5px',
-              }}>
-                {abilitiesText}
-              </div>
-              <div style={{
-                fontFamily: 'Moderniz',
-                fontSize: 28,
-                color: '#920404',
-                marginBottom: 4,
-                display: 'flex',
-              }}>
-                WEAKNESSES
-              </div>
-              <div style={{
-                fontFamily: 'Agency',
-                fontSize: 26,
-                display: 'flex',
-                lineHeight: 1.3,
-                letterSpacing: '0.5px',
-              }}>
-                {weaknessesText}
-              </div>
-            </div>
+        {/* §4.1 VERITY CARD header — x=730.9, y=116.8, w=458.2, h=63.3 */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 116.8,
+            left: 730.9,
+            width: 458.2,
+            height: 63.3,
+            color: palette.headerText,
+            fontFamily: 'Agency',
+            fontSize: 40,
+            letterSpacing: '0.162em',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          VERITY CARD
+        </div>
 
-            {/* QR (bottom-right of panel) */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 150,
-                right: 30,
-                width: 180,
-                height: 180,
-                backgroundColor: '#ffffff',
-                padding: 4,
-                display: 'flex',
-              }}
-            >
-              {qrDataUri ? (
-                <img src={qrDataUri} alt="" width={172} height={172} style={{ display: 'block' }} />
-              ) : null}
-            </div>
-          </div>
+        {/* §4.2 Avatar frame */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 216.3,
+            left: 305.8,
+            width: 418.9,
+            height: 538,
+            backgroundColor: '#f5e6c8',
+            border: `2px solid ${palette.innerBorder}`,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          {fullBodyDataUri ? (
+            <img
+              src={fullBodyDataUri}
+              alt=""
+              width={418}
+              height={538}
+              style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
+            />
+          ) : (
+            <div style={{ color: palette.headerText, fontSize: 200, display: 'flex' }}>V</div>
+          )}
+        </div>
 
-          {/* TRAINER vertical text — DEFERRED for OG renderer.
-              Satori (next/og) doesn't reliably support writing-mode,
-              transform-rotate-with-flex-children, or flex-column with
-              intrinsic-height text children. The DOM card at /card/[id]
-              renders TRAINER correctly via writing-mode. Re-enable here
-              once satori updates or we move OG to a sharp-text pipeline. */}
+        {/* §4.12 Decorative barcode */}
+        {barcodeDataUri ? (
+          <img
+            src={barcodeDataUri}
+            alt=""
+            style={{
+              position: 'absolute',
+              top: 772.2,
+              left: 305.8,
+              width: 418.9,
+              height: 84.1,
+              display: 'flex',
+            }}
+          />
+        ) : null}
 
-          {/* Bottom URL — using Agency over Inter because the Inter github
-              fetch occasionally fails in OG, and Agency renders the slash
-              cleanly where the fallback font does not. */}
+        {/* §4.3 Name */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 216.3,
+            left: 744.7,
+            width: 690.4,
+            height: 55.6,
+            color: palette.nameText,
+            fontFamily: 'Moderniz',
+            fontSize: 35,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {displayName}
+        </div>
+
+        {/* §4.5 @ glyph (separate, sized larger than handle) */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 266.6,
+            left: 737.5,
+            width: 50.6,
+            height: 61.3,
+            display: 'flex',
+          }}
+        >
+          <AtGlyphSvg color={palette.nameText} />
+        </div>
+
+        {/* §4.4 Handle text (without @) */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 292.7,
+            left: 790.7,
+            width: 260.7,
+            height: 35.1,
+            color: palette.nameText,
+            fontFamily: 'Moderniz',
+            fontSize: 22,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {displayHandle}
+        </div>
+
+        {/* §4.6 Quote */}
+        {quote ? (
           <div
             style={{
               position: 'absolute',
-              top: 955,
-              left: 0,
-              width: OG_W - 60,
-              display: 'flex',
-              justifyContent: 'center',
+              top: 367.3,
+              left: 788.1,
+              width: 734.5,
+              height: 73.7,
+              color: palette.quoteText,
               fontFamily: 'Agency',
-              fontSize: 44,
-              color: palette.urlText,
-              letterSpacing: '2px',
+              fontSize: 23,
+              lineHeight: 1.3,
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            VERITY.XYZ/REF/{bottomHandle}
+            “{quote}”
           </div>
+        ) : null}
 
-          {/* Verity logo mark */}
+        {/* White sub-panel — visible in all reference PNGs, contains the
+            identity table on top and abilities/weaknesses/QR below it on a
+            white backdrop. Width capped to end before the TRAINER column. */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 478,
+            left: 763,
+            width: 790,
+            height: 360,
+            backgroundColor: '#ffffff',
+            border: '1px solid #222226',
+            display: 'flex',
+          }}
+        />
+
+        {/* §4.7 + §4.8 Identity table — cream background covering all 4 cells
+            with internal borders. Text positioned per spec within each cell. */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 480,
+            left: 768.4,
+            width: 719.3,
+            height: 120,
+            backgroundColor: '#f5e6c8',
+            border: '1px solid #222226',
+            display: 'flex',
+          }}
+        />
+        {/* Vertical column dividers — 3 lines between 4 cells */}
+        {[1006.3, 1166.2, 1325.95].map((x, i) => (
           <div
+            key={`vd-${i}`}
             style={{
               position: 'absolute',
-              top: 962,
-              right: 115,
-              width: 48,
-              height: 48,
+              top: 480,
+              left: x - 0.5,
+              width: 1,
+              height: 120,
+              backgroundColor: '#222226',
               display: 'flex',
             }}
+          />
+        ))}
+        {/* Horizontal row divider */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 539.5,
+            left: 768.4,
+            width: 719.3,
+            height: 1,
+            backgroundColor: '#222226',
+            display: 'flex',
+          }}
+        />
+        {/* Header text cells */}
+        {[
+          { text: 'MEMBER', x: 768.4, y: 489.9, w: 219.3, h: 28.3 },
+          { text: 'TYPE',   x: 1024.9, y: 489.9, w: 107.8, h: 28.3 },
+          { text: 'SEX',    x: 1199.7, y: 488.9, w: 107.8, h: 28.3 },
+          { text: 'STATUS', x: 1344.4, y: 489.9, w: 143.3, h: 28.3 },
+        ].map((cell) => (
+          <div
+            key={`h-${cell.text}`}
+            style={{
+              position: 'absolute',
+              top: cell.y,
+              left: cell.x,
+              width: cell.w,
+              height: cell.h,
+              color: '#000000',
+              fontFamily: 'Moderniz',
+              fontSize: 18,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <VerityMarkSvg color={palette.markColor} />
+            {cell.text}
           </div>
+        ))}
+        {/* Value text cells */}
+        {[
+          { text: memberNo,   x: 778.2, y: 561.3, w: 199.7, h: 31.7 },
+          { text: typeText,   x: 977.9, y: 560.3, w: 207,   h: 31.7 },
+          { text: sexText,    x: 1197,  y: 561.3, w: 113.2, h: 31.7 },
+          { text: statusText, x: 1343,  y: 561.6, w: 146,   h: 31.7 },
+        ].map((cell, i) => (
+          <div
+            key={`v-${i}`}
+            style={{
+              position: 'absolute',
+              top: cell.y,
+              left: cell.x,
+              width: cell.w,
+              height: cell.h,
+              color: '#000000',
+              fontFamily: 'Agency',
+              fontSize: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {cell.text}
+          </div>
+        ))}
+
+        {/* §4.9 Special Abilities */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 642.3,
+            left: 781.9,
+            width: 477.3,
+            height: 82.7,
+            color: '#000000',
+            fontFamily: 'Agency',
+            fontSize: 16,
+            lineHeight: 1.3,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div style={{
+            fontFamily: 'Moderniz',
+            fontSize: 16,
+            color: '#2a760a',
+            display: 'flex',
+            marginBottom: 4,
+          }}>
+            SPECIAL ABILITIES
+          </div>
+          <div style={{ display: 'flex' }}>{abilitiesText}</div>
+        </div>
+
+        {/* §4.10 Weaknesses */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 744,
+            left: 783.4,
+            width: 474.2,
+            height: 82.7,
+            color: '#000000',
+            fontFamily: 'Agency',
+            fontSize: 16,
+            lineHeight: 1.3,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div style={{
+            fontFamily: 'Moderniz',
+            fontSize: 16,
+            color: '#920404',
+            display: 'flex',
+            marginBottom: 4,
+          }}>
+            WEAKNESSES
+          </div>
+          <div style={{ display: 'flex' }}>{weaknessesText}</div>
+        </div>
+
+        {/* §4.11 QR — positioned to fit inside the white sub-panel, right
+            of the abilities/weaknesses block. */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 648,
+            left: 1352,
+            width: 185,
+            height: 185,
+            backgroundColor: '#ffffff',
+            padding: 4,
+            display: 'flex',
+          }}
+        >
+          {qrDataUri ? (
+            <img src={qrDataUri} alt="" width={177} height={177} style={{ display: 'block' }} />
+          ) : null}
+        </div>
+
+        {/* §4.13 TRAINER vertical text — DEFERRED for OG renderer.
+            Satori doesn't reliably support transform: rotate(90deg) with
+            text children. DOM card renders it correctly. Re-enable here
+            once satori updates or we move OG to a sharp-text pipeline. */}
+
+        {/* §4.14 Bottom URL — Inter 600 28px */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 912.7,
+            left: 706.7,
+            width: 506.6,
+            height: 43.7,
+            color: palette.urlText,
+            fontFamily: 'Inter',
+            fontSize: 28,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          VERITY.XYZ/REF/{bottomHandle}
+        </div>
+
+        {/* §4.15 Verity logo mark */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 909.5,
+            left: 1568.7,
+            width: 50.1,
+            height: 50.1,
+            display: 'flex',
+          }}
+        >
+          <VerityMarkSvg color={palette.markColor} />
         </div>
       </div>
     ),
@@ -607,17 +681,18 @@ export async function GET(req: NextRequest) {
   );
 }
 
-function AtGlyphSvg({ color, size }: { color: string; size: number }) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="${size}" height="${size}">
-    <path d="M3 3 H29 V29 H3 Z M7 7 V25 H25 V7 Z" fill="${color}" fill-rule="evenodd"/>
-    <path d="M11 11 H21 V21 H17 V15 H15 V21 H11 Z" fill="${color}"/>
+function AtGlyphSvg({ color }: { color: string }) {
+  // Spec §4.5: blocky / squared @ glyph at 50.6×61.3 (sized larger than the
+  // surrounding handle text). Parent positions and sizes the wrapper.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" preserveAspectRatio="none">
+    <path d="M3 3 H29 V37 H3 Z M7 7 V33 H25 V7 Z" fill="${color}" fill-rule="evenodd"/>
+    <path d="M11 11 H21 V29 H17 V18 H15 V29 H11 Z" fill="${color}"/>
   </svg>`;
   return (
     <img
       src={`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`}
       alt=""
-      width={size}
-      height={size}
+      style={{ width: '100%', height: '100%' }}
     />
   );
 }
