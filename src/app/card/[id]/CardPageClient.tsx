@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
+import type { TrainerConfig, TrainerPersonality, TierKey } from '@/types/trainer';
 import { playSuccess } from '@/lib/sounds';
-import TrainerCard from '@/components/TrainerCard';
+import TrainerCardV4 from '@/components/card/TrainerCardV4';
 import ShareButtons from '@/components/ShareButtons';
 import { Button } from '@/components/ui';
+import { resolveTier } from '@/lib/cards/v4-tokens';
 
 interface CardPageClientProps {
   id: string;
@@ -14,10 +15,12 @@ interface CardPageClientProps {
   trainerName: string;
   reasoning?: string;
   xHandle?: string;
+  /** Tier rolled at signup. Falls back to deterministic seed roll if absent. */
+  tier?: TierKey;
 }
 
 export default function CardPageClient({
-  id, config, personality, trainerName, reasoning, xHandle,
+  id, config, personality, trainerName, xHandle, tier,
 }: CardPageClientProps) {
   const [revealed, setRevealed] = useState(false);
   const [showCard, setShowCard] = useState(false);
@@ -28,9 +31,11 @@ export default function CardPageClient({
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
+  const resolvedTier = resolveTier(tier, id);
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 py-10">
-      <div className="relative z-10 flex flex-col items-center w-full max-w-[640px]">
+      <div className="relative z-10 flex flex-col items-center w-full max-w-[1280px]">
         <div className="text-center mb-6">
           <h1 className="text-[10px] sm:text-[11px] tracking-[0.3em] uppercase font-bold text-[color:var(--accent-coral)] mb-1.5">
             verity
@@ -47,13 +52,13 @@ export default function CardPageClient({
           className={'w-full transition-all duration-700 ' +
             (showCard ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95')}
         >
-          <TrainerCard
+          <TrainerCardV4
+            tier={resolvedTier}
             config={config}
             personality={personality}
             trainerName={trainerName}
             cardId={id}
             xHandle={xHandle}
-            reasoning={reasoning}
           />
         </div>
 

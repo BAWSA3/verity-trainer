@@ -4,14 +4,22 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import QRCode from 'qrcode';
-import { sanitizeNameForDisplay, sanitizeChipsForDisplay } from '@/lib/moderation/sanitize';
-import { ZODIAC_GLYPHS, VALID_ZODIACS } from '@/lib/personality';
-import type { Zodiac } from '@/types/trainer';
-import { generateStats } from '@/lib/card-utils';
+import { sanitizeNameForDisplay } from '@/lib/moderation/sanitize';
+import type { TierKey } from '@/types/trainer';
+import { TIER_KEYS } from '@/types/trainer';
 import { unpackTrainer } from '@/lib/trainer-data';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { TIER_PALETTES, resolveTier } from '@/lib/cards/v4-tokens';
+import { barcodePattern, deriveMemberNo, formatList } from '@/lib/cards/v4-render';
 
 export const runtime = 'nodejs';
+
+// V4 OG card — renders the full Verity Trainer Card V4 chassis at 1920×1080.
+// Tier theming, sprite composition, and content all match the React/DOM
+// renderer in TrainerCardV4.tsx (driven by shared TIER_PALETTES + helpers).
+//
+// V3.2 anti-forgery (cid → DB lookup) is preserved: when `cid` resolves to
+// a real row, all text/sprite/tier data comes from the DB, not URL params.
 
 // LimeZu source frames are 48x96. Composite at 16x for crispness.
 const CELL_W = 48;
@@ -19,11 +27,14 @@ const CELL_H = 96;
 const SCALE = 16;
 const SPRITE_W = CELL_W * SCALE;
 const SPRITE_H = CELL_H * SCALE;
-// V3 — full body in a tall sprite cell. Render at 240x480 so it composites
-// crisply at the OG card sprite frame size (~240x480px in the layout).
-const FULLBODY_W = 240;
-const FULLBODY_H = 480;
+// V4 avatar frame is 360×540 in master pixels — sprite renders at the same
+// resolution so it composites crisply inside that frame.
+const FULLBODY_W = 360;
+const FULLBODY_H = 540;
 const SHARE_DIR = 's';
+
+const OG_W = 1920;
+const OG_H = 1080;
 
 const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=31536000, immutable',
@@ -82,8 +93,8 @@ function splitVariant(compoundId: string): [string, string] | null {
   return [compoundId.slice(0, idx), compoundId.slice(idx + 1)];
 }
 
-// V3 — full body sprite for the share card (no bust crop). Layers per LimeZu
-// paper-doll: body → outfit → eyes → hair → accessory.
+// Full-body sprite for the V4 card. Layered per LimeZu paper-doll order:
+// body → outfit → eyes → hair → accessory.
 async function compositeFullBody(args: CompositeArgs): Promise<string | null> {
   const layerSegments: string[][] = [];
 
@@ -129,12 +140,6 @@ async function compositeFullBody(args: CompositeArgs): Promise<string | null> {
   }
 }
 
-function applyMask(items: string[], mask: string | null): string[] {
-  if (!mask) return items;
-  if (mask.length !== items.length) return items; // length mismatch = ignore mask
-  return items.filter((_, i) => mask[i] === '1');
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
@@ -147,16 +152,11 @@ export async function GET(req: NextRequest) {
   // For back-compat, the GET still falls back to URL params when cid is
   // absent or the row isn't found, so old shared v3 URLs still render.
   const cidRaw = (searchParams.get('cid') || '').trim();
-  // UUID v4 shape: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx, lower-case hex.
   const cid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cidRaw)
     ? cidRaw
     : null;
 
   let name = sanitizeNameForDisplay(searchParams.get('n'));
-  let presence = clamp(parseInt(searchParams.get('s')    || '70'));
-  let wit      = clamp(parseInt(searchParams.get('c')    || '70'));
-  let taste    = clamp(parseInt(searchParams.get('st')   || '70'));
-  let resolve  = clamp(parseInt(searchParams.get('lk_v') || '70'));
 
   let args: CompositeArgs = {
     body:      safeId(searchParams.get('b'),  ''),
@@ -167,20 +167,19 @@ export async function GET(req: NextRequest) {
     accessory: safeId(searchParams.get('ac'), 'none'),
   };
 
-  let zodiacRaw = searchParams.get('z') || '';
-  let zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
-
   let quote = cleanText(searchParams.get('kf') || '', 200);
   let ability1Name = cleanText(searchParams.get('a1n') || '', 32);
-  let ability1Desc = cleanText(searchParams.get('a1d') || '', 140);
   let ability2Name = cleanText(searchParams.get('a2n') || '', 32);
-  let ability2Desc = cleanText(searchParams.get('a2d') || '', 140);
   let weakness1Name = cleanText(searchParams.get('w1n') || '', 32);
-  let weakness1Desc = cleanText(searchParams.get('w1d') || '', 140);
   let weakness2Name = cleanText(searchParams.get('w2n') || '', 32);
-  let weakness2Desc = cleanText(searchParams.get('w2d') || '', 140);
 
   let refHandle = (searchParams.get('ref') || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
+
+  // Tier param `t` — accepts both URL form and DB form. Trusted only when
+  // no cid is present (cid path overrides via the row's own tier field).
+  const tParam = (searchParams.get('t') || '').toLowerCase().trim();
+  let tierFromParam: TierKey | undefined =
+    (TIER_KEYS as readonly string[]).includes(tParam) ? (tParam as TierKey) : undefined;
 
   // DB-backed render path — only when cid is a valid UUID. Errors fall
   // back to URL params silently so the OG never returns a hard error
@@ -193,13 +192,8 @@ export async function GET(req: NextRequest) {
         .eq('id', cid)
         .maybeSingle();
       if (row) {
-        const { config, personality } = unpackTrainer(row);
-        const stats = generateStats(config, personality);
+        const { config, personality, tier } = unpackTrainer(row);
         name = sanitizeNameForDisplay(row.trainer_name);
-        presence = clamp(stats.presence);
-        wit      = clamp(stats.wit);
-        taste    = clamp(stats.taste);
-        resolve  = clamp(stats.resolve);
         args = {
           body: config.body,
           hair: config.hair,
@@ -208,459 +202,444 @@ export async function GET(req: NextRequest) {
           eyes: config.eyes,
           accessory: config.accessory,
         };
-        zodiacRaw = personality.zodiac;
-        zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
         quote = cleanText(personality.quote ?? personality.knownFor ?? '', 200);
-        const a1 = personality.abilities?.[0];
-        const a2 = personality.abilities?.[1];
-        ability1Name = a1 ? cleanText(a1.name, 32) : '';
-        ability1Desc = a1 ? cleanText(a1.description, 140) : '';
-        ability2Name = a2 ? cleanText(a2.name, 32) : '';
-        ability2Desc = a2 ? cleanText(a2.description, 140) : '';
-        const w1 = personality.weaknesses?.[0];
-        const w2 = personality.weaknesses?.[1];
-        weakness1Name = w1 ? cleanText(w1.name, 32) : '';
-        weakness1Desc = w1 ? cleanText(w1.description, 140) : '';
-        weakness2Name = w2 ? cleanText(w2.name, 32) : '';
-        weakness2Desc = w2 ? cleanText(w2.description, 140) : '';
+        ability1Name = cleanText(personality.abilities?.[0]?.name ?? '', 32);
+        ability2Name = cleanText(personality.abilities?.[1]?.name ?? '', 32);
+        weakness1Name = cleanText(personality.weaknesses?.[0]?.name ?? '', 32);
+        weakness2Name = cleanText(personality.weaknesses?.[1]?.name ?? '', 32);
         refHandle = typeof row.x_handle === 'string'
           ? row.x_handle.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15)
           : '';
+        if (tier) tierFromParam = tier;
       }
     } catch (err) {
       console.warn('[og] cid lookup failed, falling back to URL params:', err);
     }
   }
 
-  const abilities = [
-    ability1Name && ability1Desc ? { name: ability1Name, description: ability1Desc } : null,
-    ability2Name && ability2Desc ? { name: ability2Name, description: ability2Desc } : null,
-  ].filter((a): a is { name: string; description: string } => a !== null);
+  const seed = cid || refHandle || name || 'unknown';
+  const finalTier: TierKey = resolveTier(tierFromParam, seed);
+  const palette = TIER_PALETTES[finalTier];
 
-  const weaknesses = [
-    weakness1Name && weakness1Desc ? { name: weakness1Name, description: weakness1Desc } : null,
-    weakness2Name && weakness2Desc ? { name: weakness2Name, description: weakness2Desc } : null,
-  ].filter((a): a is { name: string; description: string } => a !== null);
+  const abilitiesText = formatList([ability1Name, ability2Name]);
+  const weaknessesText = formatList([weakness1Name, weakness2Name]);
 
   const fullBodyDataUri = await compositeFullBody(args);
 
   // QR — referral entry point. Encodes <appUrl>/create?ref=<xHandle>.
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://verity-trainer.vercel.app';
-  const qrTarget = refHandle
-    ? `${appUrl}/create?ref=${refHandle}`
-    : `${appUrl}/create`;
+  const refUrlBase = process.env.NEXT_PUBLIC_REFERRAL_URL_BASE
+    || (process.env.NEXT_PUBLIC_APP_URL || 'https://trainer.verity.gg') + '/create?ref=';
+  const qrTarget = refHandle ? `${refUrlBase}${refHandle}` : refUrlBase;
   let qrDataUri = '';
   try {
     qrDataUri = await QRCode.toDataURL(qrTarget, {
       margin: 1,
-      width: 280,
-      color: { dark: '#16272C', light: '#00000000' },
+      width: 360,
+      color: { dark: '#000000', light: '#ffffff' },
       errorCorrectionLevel: 'M',
     });
   } catch (err) {
     console.warn('[og] QR generation failed:', err);
   }
 
+  const memberNo = deriveMemberNo(seed);
+  const typeText = finalTier === 'founder' ? 'FOUNDER' : 'WAITLIST';
+  const sexText = 'N/A';
+  const statusText = 'GENESIS';
+
+  const displayName = (name || 'TRAINER').toUpperCase().slice(0, 14);
+  const displayHandle = refHandle.toUpperCase().slice(0, 12);
+  const bottomHandle = (displayHandle || 'TRAINER').slice(0, 18);
+
+  const barPattern = barcodePattern(seed);
+
   return new ImageResponse(
     (
       <div
         style={{
-          width: 1200,
-          height: 630,
+          width: OG_W,
+          height: OG_H,
+          backgroundColor: '#000000',
           display: 'flex',
-          flexDirection: 'column',
-          backgroundImage: 'linear-gradient(135deg, #FFFDF3 0%, #F1ECDA 100%)',
           fontFamily: 'Moderniz',
-          padding: 24,
         }}
       >
-        {/* Card container */}
+        {/* Outer card surface */}
         <div
           style={{
+            position: 'absolute',
+            top: 30,
+            left: 30,
+            width: OG_W - 60,
+            height: OG_H - 60,
+            background: palette.outerBg,
+            borderRadius: 35,
             display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            backgroundColor: '#FFFDF3',
-            borderRadius: 22,
             overflow: 'hidden',
-            border: '1px solid rgba(22, 39, 44, 0.14)',
-            boxShadow: '0 24px 48px -16px rgba(22, 39, 44, 0.22)',
           }}
         >
-          {/* Header band — deep teal */}
+          {/* VERITY CARD header */}
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 28px',
-              backgroundColor: '#16272C',
-              color: '#FFFDF3',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <svg width="14" height="14" viewBox="0 0 16 16">
-                <path d="M2 13 L8 3 L14 13 Z" fill="#FFFDF3" />
-              </svg>
-              <span style={{ fontSize: 14, letterSpacing: '6px', fontWeight: 700 }}>VERITY</span>
-              <span style={{ fontSize: 14, opacity: 0.45 }}>·</span>
-              <span style={{ fontSize: 12, letterSpacing: '5px', fontWeight: 500, color: 'rgba(255,253,243,0.7)' }}>TRAINER CARD</span>
-            </div>
-            {zodiac ? (
-              <span
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '5px 14px',
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(255,253,243,0.06)',
-                  border: '1px solid rgba(255,253,243,0.22)',
-                  fontSize: 11,
-                  letterSpacing: '4px',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,253,243,0.85)',
-                }}
-              >
-                <span style={{ fontSize: 14 }}>{ZODIAC_GLYPHS[zodiac]}</span>
-                <span>{capitalize(zodiac)}</span>
-              </span>
-            ) : (
-              <span style={{ fontSize: 11, letterSpacing: '4px', color: 'rgba(255,253,243,0.4)' }}>EARLY ACCESS</span>
-            )}
-          </div>
-
-          {/* Body row: full sprite | identity */}
-          <div style={{ display: 'flex', flex: 1, padding: 28, gap: 28 }}>
-            {/* Sprite — full body */}
-            <div
-              style={{
-                width: 240,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-                flexShrink: 0,
-              }}
-            >
-              <div
-                style={{
-                  width: 240,
-                  height: 480,
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  justifyContent: 'center',
-                  backgroundImage: 'linear-gradient(180deg, rgba(54,125,149,0.06) 0%, rgba(144,179,77,0.10) 100%)',
-                  border: '1px solid rgba(22,39,44,0.16)',
-                  borderRadius: 14,
-                  overflow: 'hidden',
-                  padding: '14px 0',
-                }}
-              >
-                {fullBodyDataUri ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={fullBodyDataUri}
-                    alt=""
-                    width={210}
-                    height={420}
-                    style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
-                  />
-                ) : (
-                  <div style={{ color: '#90b34d', fontSize: 100, display: 'flex' }}>V</div>
-                )}
-              </div>
-            </div>
-
-            {/* Identity column */}
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 14, minWidth: 0 }}>
-              <div
-                style={{
-                  color: '#16272C',
-                  fontSize: 96,
-                  fontFamily: 'Agency',
-                  display: 'flex',
-                  letterSpacing: '2px',
-                  lineHeight: 0.95,
-                }}
-              >
-                {name}
-              </div>
-
-              {quote ? (
-                <div
-                  style={{
-                    color: 'rgba(22, 39, 44, 0.82)',
-                    fontSize: 22,
-                    display: 'flex',
-                    lineHeight: 1.4,
-                    maxWidth: 720,
-                    fontFamily: 'Inter',
-                    fontStyle: 'italic',
-                  }}
-                >
-                  &ldquo;{quote}&rdquo;
-                </div>
-              ) : null}
-
-              {/* Stats — PRESENCE / WIT / TASTE / RESOLVE */}
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <StatCell label="PRESENCE" value={presence} />
-                <StatCell label="WIT"      value={wit} />
-                <StatCell label="TASTE"    value={taste} />
-                <StatCell label="RESOLVE"  value={resolve} />
-              </div>
-
-              {/* Special Abilities + Weaknesses + QR */}
-              <div style={{ display: 'flex', gap: 14, marginTop: 4, alignItems: 'flex-end' }}>
-                {abilities.length > 0 || weaknesses.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
-                    {abilities.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-                        <span style={{ display: 'flex', fontSize: 11, letterSpacing: '5px', fontWeight: 700, color: '#367D95' }}>
-                          SPECIAL ABILITIES
-                        </span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {abilities.map((a, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                display: 'flex',
-                                gap: 14,
-                                padding: '8px 12px',
-                                backgroundColor: 'rgba(144, 179, 77, 0.08)',
-                                border: '1px solid rgba(144, 179, 77, 0.30)',
-                                borderRadius: 10,
-                                alignItems: 'baseline',
-                              }}
-                            >
-                              <span
-                                style={{
-                                  display: 'flex',
-                                  fontSize: 12,
-                                  letterSpacing: '2px',
-                                  textTransform: 'uppercase',
-                                  fontWeight: 700,
-                                  color: '#3F5520',
-                                  width: 170,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {a.name}
-                              </span>
-                              <span style={{ display: 'flex', fontSize: 14, lineHeight: 1.4, color: '#16272C', flex: 1, fontFamily: 'Inter' }}>
-                                {a.description}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {weaknesses.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-                        <span style={{ display: 'flex', fontSize: 11, letterSpacing: '5px', fontWeight: 700, color: '#A53A2E' }}>
-                          WEAKNESSES
-                        </span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {weaknesses.map((w, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                display: 'flex',
-                                gap: 14,
-                                padding: '8px 12px',
-                                backgroundColor: 'rgba(232, 85, 68, 0.07)',
-                                border: '1px solid rgba(232, 85, 68, 0.30)',
-                                borderRadius: 10,
-                                alignItems: 'baseline',
-                              }}
-                            >
-                              <span
-                                style={{
-                                  display: 'flex',
-                                  fontSize: 12,
-                                  letterSpacing: '2px',
-                                  textTransform: 'uppercase',
-                                  fontWeight: 700,
-                                  color: '#A53A2E',
-                                  width: 170,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {w.name}
-                              </span>
-                              <span style={{ display: 'flex', fontSize: 14, lineHeight: 1.4, color: '#16272C', flex: 1, fontFamily: 'Inter' }}>
-                                {w.description}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : <div style={{ flex: 1 }} />}
-
-                {/* QR — referral entry point */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                  <div
-                    style={{
-                      width: 124,
-                      height: 124,
-                      display: 'flex',
-                      padding: 8,
-                      backgroundColor: '#FFFDF3',
-                      border: '1px solid rgba(22, 39, 44, 0.14)',
-                      borderRadius: 10,
-                    }}
-                  >
-                    {qrDataUri ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={qrDataUri} alt="" width={108} height={108} style={{ display: 'block' }} />
-                    ) : null}
-                  </div>
-                  <span style={{ display: 'flex', fontSize: 9, letterSpacing: '4px', fontWeight: 700, color: 'rgba(22,39,44,0.55)' }}>
-                    SCAN · MAKE YOURS
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div
-            style={{
+              position: 'absolute',
+              top: 50,
+              left: 0,
+              width: OG_W - 60,
               display: 'flex',
               justifyContent: 'center',
-              alignItems: 'center',
-              gap: 14,
-              padding: '12px 28px',
-              borderTop: '1px solid rgba(22, 39, 44, 0.10)',
-              color: 'rgba(22, 39, 44, 0.55)',
-              fontSize: 11,
-              letterSpacing: '5px',
+              fontFamily: 'Agency',
+              fontSize: 64,
+              letterSpacing: '12px',
+              color: palette.headerText,
               fontWeight: 700,
             }}
           >
-            <span>VERITY</span>
-            <span style={{ opacity: 0.4 }}>·</span>
-            <span>EARLY ACCESS</span>
-            <span style={{ opacity: 0.4 }}>·</span>
-            <span>MAY 2026</span>
+            VERITY CARD
+          </div>
+
+          {/* Inner content panel */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 145,
+              left: 30,
+              width: OG_W - 60 - 60,
+              height: OG_H - 60 - 145 - 145,
+              border: `1px solid ${palette.innerBorder}`,
+              borderRadius: 6,
+              background: palette.innerBg,
+              display: 'flex',
+            }}
+          />
+
+          {/* Avatar frame */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 230,
+              left: 135,
+              width: 360,
+              height: 540,
+              backgroundColor: '#f5e6c8',
+              border: `2px solid ${palette.innerBorder}`,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
+            {fullBodyDataUri ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={fullBodyDataUri}
+                alt=""
+                width={320}
+                height={480}
+                style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
+              />
+            ) : (
+              <div style={{ color: palette.headerText, fontSize: 200, display: 'flex' }}>V</div>
+            )}
+          </div>
+
+          {/* Name */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 235,
+              left: 575,
+              fontFamily: 'Moderniz',
+              color: palette.nameText,
+              fontSize: 64,
+              letterSpacing: '0px',
+              display: 'flex',
+            }}
+          >
+            {displayName}
+          </div>
+
+          {/* Handle */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 320,
+              left: 575,
+              fontFamily: 'Moderniz',
+              color: palette.nameText,
+              fontSize: 38,
+              letterSpacing: '0px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <AtGlyphSvg color={palette.nameText} size={38} />
+            {displayHandle}
+          </div>
+
+          {/* Quote */}
+          {quote ? (
+            <div
+              style={{
+                position: 'absolute',
+                top: 410,
+                left: 770,
+                width: 700,
+                fontFamily: 'Agency',
+                fontSize: 30,
+                color: palette.quoteText,
+                textAlign: 'center',
+                display: 'flex',
+                justifyContent: 'center',
+                lineHeight: 1.3,
+              }}
+            >
+              &ldquo;{quote.toUpperCase()}&rdquo;
+            </div>
+          ) : null}
+
+          {/* Identity table */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 530,
+              left: 575,
+              width: 920,
+              display: 'flex',
+              flexDirection: 'column',
+              border: '1px solid #222226',
+              background: '#f5e6c8',
+            }}
+          >
+            <div style={{ display: 'flex', borderBottom: '1px solid #222226' }}>
+              {['MEMBER', 'TYPE', 'SEX', 'STATUS'].map((h, i) => (
+                <div
+                  key={`h-${i}`}
+                  style={{
+                    flex: 1,
+                    padding: '14px 0',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    fontFamily: 'Moderniz',
+                    fontSize: 30,
+                    color: '#000000',
+                    borderRight: i < 3 ? '1px solid #222226' : 'none',
+                  }}
+                >
+                  {h}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex' }}>
+              {[memberNo, typeText, sexText, statusText].map((v, i) => (
+                <div
+                  key={`v-${i}`}
+                  style={{
+                    flex: 1,
+                    padding: '12px 0',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    fontFamily: 'Agency',
+                    fontSize: 32,
+                    color: '#000000',
+                    borderRight: i < 3 ? '1px solid #222226' : 'none',
+                    letterSpacing: '1px',
+                  }}
+                >
+                  {v}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Abilities + weaknesses */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 670,
+              left: 575,
+              width: 620,
+              display: 'flex',
+              flexDirection: 'column',
+              color: '#000000',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: 'Moderniz',
+                fontSize: 28,
+                color: '#2a760a',
+                marginBottom: 6,
+                display: 'flex',
+              }}
+            >
+              SPECIAL ABILITIES
+            </div>
+            <div
+              style={{
+                fontFamily: 'Agency',
+                fontSize: 26,
+                marginBottom: 24,
+                display: 'flex',
+                lineHeight: 1.3,
+              }}
+            >
+              {abilitiesText}
+            </div>
+            <div
+              style={{
+                fontFamily: 'Moderniz',
+                fontSize: 28,
+                color: '#920404',
+                marginBottom: 6,
+                display: 'flex',
+              }}
+            >
+              WEAKNESSES
+            </div>
+            <div
+              style={{
+                fontFamily: 'Agency',
+                fontSize: 26,
+                display: 'flex',
+                lineHeight: 1.3,
+              }}
+            >
+              {weaknessesText}
+            </div>
+          </div>
+
+          {/* QR */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 660,
+              left: 1235,
+              width: 220,
+              height: 220,
+              backgroundColor: '#ffffff',
+              padding: 4,
+              display: 'flex',
+            }}
+          >
+            {qrDataUri ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrDataUri} alt="" width={212} height={212} style={{ display: 'block' }} />
+            ) : null}
+          </div>
+
+          {/* Decorative barcode */}
+          <BarcodeSvg pattern={barPattern} />
+
+          {/* TRAINER vertical text — DEFERRED for OG renderer.
+              Satori (next/og) doesn't reliably support writing-mode,
+              transform-rotate-with-flex-children, or flex-column with
+              intrinsic-height text children. Tried all three; each
+              variant collapsed to a single visible letter. The DOM card
+              at /card/[id] renders TRAINER correctly via writing-mode.
+              Re-enable here once satori updates or we move OG to a
+              sharp-text pipeline. */}
+
+          {/* Bottom URL — using Agency over Inter because the Inter github
+              fetch occasionally fails in OG, and Agency renders the slash
+              cleanly where the fallback font does not. */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 955,
+              left: 0,
+              width: OG_W - 60,
+              display: 'flex',
+              justifyContent: 'center',
+              fontFamily: 'Agency',
+              fontSize: 44,
+              color: palette.urlText,
+              letterSpacing: '2px',
+            }}
+          >
+            VERITY.XYZ/REF/{bottomHandle}
+          </div>
+
+          {/* Verity logo mark */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 962,
+              right: 115,
+              width: 48,
+              height: 48,
+              display: 'flex',
+            }}
+          >
+            <VerityMarkSvg color={palette.markColor} />
           </div>
         </div>
       </div>
     ),
     {
-      width: 1200,
-      height: 630,
+      width: OG_W,
+      height: OG_H,
       headers: CACHE_HEADERS,
       fonts: await loadOgFonts(),
     },
   );
 }
 
-function StatCell({ label, value }: { label: string; value: number }) {
-  const pct = clamp(value);
+function AtGlyphSvg({ color, size }: { color: string; size: number }) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="${size}" height="${size}">
+    <path d="M3 3 H29 V29 H3 Z M7 7 V25 H25 V7 Z" fill="${color}" fill-rule="evenodd"/>
+    <path d="M11 11 H21 V21 H17 V15 H15 V21 H11 Z" fill="${color}"/>
+  </svg>`;
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        padding: '10px 14px',
-        backgroundColor: '#FFFDF3',
-        border: '1px solid rgba(22, 39, 44, 0.10)',
-        borderRadius: 10,
-        flex: 1,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ color: 'rgba(22,39,44,0.55)', fontSize: 11, letterSpacing: '3px', fontWeight: 700 }}>{label}</span>
-        <span style={{ color: '#16272C', fontSize: 22, fontWeight: 900, fontFamily: 'Moderniz' }}>{value}</span>
-      </div>
-      <div style={{ display: 'flex', height: 4, borderRadius: 999, backgroundColor: 'rgba(22, 39, 44, 0.08)', overflow: 'hidden' }}>
-        <div
-          style={{
-            display: 'flex',
-            width: `${pct}%`,
-            height: '100%',
-            backgroundImage: 'linear-gradient(90deg, #367D95 0%, #90B34D 100%)',
-            borderRadius: 999,
-          }}
-        />
-      </div>
-    </div>
+    <img
+      src={`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`}
+      alt=""
+      width={size}
+      height={size}
+    />
   );
 }
 
-const chipRowLabelStyle: Record<string, string | number> = {
-  display: 'flex',
-  fontSize: 12,
-  letterSpacing: '3px',
-  fontWeight: 700,
-  width: 84,
-  flexShrink: 0,
-};
-
-function chipRowStyle(bg: string, border: string): Record<string, string | number> {
-  return {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    padding: '8px 12px',
-    backgroundColor: bg,
-    border: '1px solid ' + border,
-    borderRadius: 12,
-    marginTop: 4,
-  };
+function VerityMarkSvg({ color }: { color: string }) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+    <circle cx="24" cy="24" r="23" fill="none" stroke="${color}" stroke-width="2"/>
+    <path d="M14 32 L24 12 L34 32 L24 26 Z" fill="${color}"/>
+  </svg>`;
+  return (
+    <img
+      src={`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`}
+      alt=""
+      width={48}
+      height={48}
+    />
+  );
 }
 
-function tagStyle(bg: string, border: string, color: string): Record<string, string | number> {
-  return {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '4px 12px',
-    fontSize: 14,
-    fontWeight: 600,
-    backgroundColor: bg,
-    border: '1px solid ' + border,
-    color,
-    borderRadius: 999,
-  };
+function BarcodeSvg({ pattern }: { pattern: number[] }) {
+  let x = 0;
+  const rects: string[] = [];
+  pattern.forEach((bit, i) => {
+    const w = 2 + (i % 3);
+    if (bit) rects.push(`<rect x="${x}" y="0" width="${w}" height="50" fill="#000000"/>`);
+    x += w;
+  });
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 50" width="360" height="50" preserveAspectRatio="none">
+    <rect x="0" y="0" width="360" height="50" fill="#ffffff"/>
+    ${rects.join('')}
+  </svg>`;
+  return (
+    <img
+      src={`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`}
+      alt=""
+      width={360}
+      height={50}
+      style={{ position: 'absolute', top: 850, left: 135 }}
+    />
+  );
 }
 
-function chipStyle(bg: string, border: string, color: string): Record<string, string | number> {
-  return {
-    display: 'flex',
-    padding: '3px 10px',
-    fontSize: 12,
-    fontWeight: 600,
-    backgroundColor: bg,
-    border: '1px solid ' + border,
-    color,
-    borderRadius: 999,
-  };
-}
-
-function clamp(n: number): number {
-  if (Number.isNaN(n)) return 70;
-  return Math.max(0, Math.min(100, n));
-}
 function safeId(raw: string | null, fallback: string): string {
   if (!raw) return fallback;
   if (!/^[a-z0-9_-]+$/i.test(raw)) return fallback;
   return raw;
-}
-function splitPipe(raw: string | null): string[] {
-  if (!raw) return [];
-  return raw.split('|').filter(Boolean);
-}
-function sanitizeMask(raw: string | null): string | null {
-  if (!raw) return null;
-  if (!/^[01]+$/.test(raw)) return null;
-  if (raw.length > 10) return null;
-  return raw;
-}
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
