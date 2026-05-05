@@ -116,18 +116,31 @@ export default function TrainerCardV5({
             border: '1px solid rgba(255,255,255,0.08)',
           }}
         >
-          {/* Subtle paper-noise texture overlay (CSS-only) */}
+          {/* Film-grain noise overlay — SVG turbulence as a data URI. Sits
+              above all content so the texture reads on every layer of the
+              card (slab strip, hero block, footer). Subtle but adds tactile
+              depth that flat CSS gradients lack. zIndex high so it covers
+              everything except the holo (which uses mix-blend overlay too). */}
           <div
             aria-hidden
             style={{
               position: 'absolute',
               inset: 0,
-              backgroundImage: `radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), radial-gradient(rgba(255,255,255,0.018) 1px, transparent 1px)`,
-              backgroundSize: '6px 6px, 11px 11px',
-              backgroundPosition: '0 0, 3px 5px',
+              backgroundImage: `url("data:image/svg+xml;utf8,${encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">'
+                  + '<filter id="n">'
+                  + '<feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>'
+                  + '<feColorMatrix values="0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 0.6 0"/>'
+                  + '</filter>'
+                  + '<rect width="100%" height="100%" filter="url(%23n)"/>'
+                  + '</svg>'
+              )}")`,
+              backgroundSize: '240px 240px',
               pointerEvents: 'none',
               mixBlendMode: 'overlay',
-              opacity: 0.6,
+              opacity: 0.35,
+              zIndex: 50,
+              borderRadius: 32,
             }}
           />
 
@@ -203,9 +216,8 @@ export default function TrainerCardV5({
           </div>
 
           {/* Hero image area — solid tier color with radial spotlight,
-              VERITY wordmark watermark behind avatar. Clean and minimal
-              so the character dominates. Pixel-art scenes were tried but
-              felt too busy. */}
+              VERITY wordmark watermark behind avatar. Bust-cropped sprite
+              (head + chest only) centered vertically. */}
           <div
             style={{
               position: 'absolute',
@@ -217,7 +229,7 @@ export default function TrainerCardV5({
               borderRadius: 16,
               overflow: 'hidden',
               display: 'flex',
-              alignItems: 'flex-end',
+              alignItems: 'center',
               justifyContent: 'center',
               border: `2px solid ${palette.innerBorder}`,
             }}
@@ -267,7 +279,10 @@ export default function TrainerCardV5({
             />
 
             {/* Hero subject — AI-generated chibi art when heroArtSrc is
-                set, otherwise fall back to LimeZu paper-doll sprite. */}
+                set, otherwise fall back to bust-cropped LimeZu sprite
+                (head + chest only, vertically centered). User pref:
+                fuller bust crop felt more like a "trainer card portrait"
+                than a tiny full-body figure floating in the hero block. */}
             {heroArtSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -283,8 +298,13 @@ export default function TrainerCardV5({
                 }}
               />
             ) : (
-              <div style={{ position: 'relative', zIndex: 4, marginBottom: 30 }}>
-                <TrainerSprite config={config} size={520} />
+              <div style={{ position: 'relative', zIndex: 4 }}>
+                {/* size=460 with bust crop renders ~460×575 — bust portrait
+                    centered in the 900×700 hero block with breathing room
+                    on all sides. Big enough to read, small enough to feel
+                    like a "portrait inside a frame" not "sprite jammed
+                    into a window". */}
+                <TrainerSprite config={config} size={460} crop="bust" />
               </div>
             )}
           </div>
@@ -491,6 +511,23 @@ export default function TrainerCardV5({
               overflow: 'hidden',
               mixBlendMode: 'overlay',
               opacity: holoAnimating ? 0.28 : 0.12,
+              zIndex: 51,
+            }}
+          />
+
+          {/* Card-edge highlight — subtle inset glow that simulates a
+              beveled physical card edge. Top edge catches a faint white
+              gloss; bottom catches a darker shadow. Sells "this is an
+              object you could pick up." */}
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              borderRadius: 32,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.04)`,
+              zIndex: 52,
             }}
           />
         </div>

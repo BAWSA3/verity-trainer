@@ -11,7 +11,7 @@ const MOCK_CONFIG: TrainerConfig = {
   hair: '01',
   hairColor: '01',
   outfit: '01',
-  eyes: 'none',
+  eyes: '01',           // bust crop reveals the face — needs eyes to read
   accessory: 'none',
 };
 
