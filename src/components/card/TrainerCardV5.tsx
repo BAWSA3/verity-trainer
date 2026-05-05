@@ -174,7 +174,9 @@ export default function TrainerCardV5({
 
           {/* PSA/CGC-style graded slab strip — top label band reading
               "VERITY · GRADED · NEAR MINT 9.0 · #00076 · 2026.05".
-              Visually frames the card like a serious collectible. */}
+              Always uses a near-black bg so the strip reads regardless of
+              tier (founder's pink/yellow gradient was washing out the
+              text). Tier color shows through the bottom border accent. */}
           <div
             style={{
               position: 'absolute',
@@ -182,8 +184,8 @@ export default function TrainerCardV5({
               left: 0,
               width: W - 60,
               height: 64,
-              background: `linear-gradient(180deg, ${palette.outerBg} 0%, ${palette.outerBg.startsWith('linear-gradient') ? '#1a1a1a' : '#1a1a1a'} 100%)`,
-              borderBottom: `2px solid ${palette.innerBorder}`,
+              background: 'linear-gradient(180deg, #0f0f0f 0%, #1a1a1a 100%)',
+              borderBottom: `2px solid ${palette.trainerText}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -191,21 +193,21 @@ export default function TrainerCardV5({
               fontFamily: 'var(--font-moderniz), Impact, sans-serif',
               fontSize: 14,
               letterSpacing: '4px',
-              color: palette.urlText,
+              color: '#ffffff',
               textTransform: 'uppercase',
             }}
           >
             <span style={{ fontWeight: 700 }}>VERITY</span>
-            <Bullet color={palette.urlText} />
-            <span>GRADED</span>
-            <Bullet color={palette.urlText} />
+            <Bullet color="#ffffff" />
+            <span style={{ color: 'rgba(255,255,255,0.7)' }}>GRADED</span>
+            <Bullet color="#ffffff" />
             <span style={{ color: palette.trainerText, fontWeight: 700 }}>
               {TIER_DISPLAY[tier]} {TIER_GRADES[tier]}
             </span>
-            <Bullet color={palette.urlText} />
-            <span>{memberNo}</span>
-            <Bullet color={palette.urlText} />
-            <span style={{ color: 'rgba(255,255,255,0.55)' }}>2026.05</span>
+            <Bullet color="#ffffff" />
+            <span style={{ color: 'rgba(255,255,255,0.7)' }}>{memberNo}</span>
+            <Bullet color="#ffffff" />
+            <span style={{ color: 'rgba(255,255,255,0.5)' }}>2026.05</span>
           </div>
 
           {/* Display title — auto-scaled to fit, Bebas Neue */}
@@ -288,7 +290,10 @@ export default function TrainerCardV5({
               }}
             />
 
-            {/* VERITY wordmark watermark — large, faint, behind avatar */}
+            {/* VERITY wordmark watermark — large, faint, behind avatar.
+                Per-tier opacity tuned so the watermark reads on darker
+                tiers (black-label, gem, near-mint) without being too
+                loud on lighter tiers (mint, founder). */}
             <div
               aria-hidden
               style={{
@@ -299,13 +304,17 @@ export default function TrainerCardV5({
                 fontFamily: 'var(--font-bebas), Impact, sans-serif',
                 fontSize: 280,
                 lineHeight: 0.85,
-                color: '#ffffff',
-                opacity: tier === 'founder' ? 0.18 : 0.13,
+                color: tier === 'founder' || tier === 'mint' ? '#000000' : '#ffffff',
+                opacity: tier === 'black-label' ? 0.22
+                  : tier === 'gem' ? 0.20
+                  : tier === 'near-mint' ? 0.18
+                  : tier === 'founder' ? 0.16
+                  : 0.14, // mint
                 letterSpacing: '12px',
                 whiteSpace: 'nowrap',
                 pointerEvents: 'none',
                 zIndex: 2,
-                mixBlendMode: 'overlay',
+                mixBlendMode: tier === 'founder' || tier === 'mint' ? 'multiply' : 'overlay',
                 textShadow: '0 4px 24px rgba(0,0,0,0.4)',
               }}
             >
@@ -324,9 +333,11 @@ export default function TrainerCardV5({
               }}
             />
 
-            {/* Avatar — oversized, bottom-anchored. zIndex above all bg layers. */}
-            <div style={{ position: 'relative', zIndex: 4, marginBottom: 10 }}>
-              <TrainerSprite config={config} size={580} />
+            {/* Avatar — bottom-anchored over the scene. Reduced from 580
+                to 520 so the character's feet don't clip the hero edge
+                (visible on near-mint + black-label scenes especially). */}
+            <div style={{ position: 'relative', zIndex: 4, marginBottom: 30 }}>
+              <TrainerSprite config={config} size={520} />
             </div>
           </div>
 
