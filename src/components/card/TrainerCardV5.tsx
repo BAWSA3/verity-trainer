@@ -39,7 +39,21 @@ export default function TrainerCardV5({
 }: Props) {
   const palette = TIER_PALETTES[tier];
   const handle = (xHandle ?? '').replace(/[^a-zA-Z0-9_]/g, '');
-  const displayName = (trainerName || 'TRAINER').toUpperCase().slice(0, 12);
+  // Cap at 18 chars now that title auto-scales (was 12). Names longer than
+  // 18 chars are truncated with ellipsis as a hard backstop.
+  const rawName = (trainerName || 'TRAINER').toUpperCase();
+  const displayName = rawName.length > 18 ? rawName.slice(0, 17) + '…' : rawName;
+  // Auto-scale title font so long names fit on one line. Numbers tuned for
+  // Bebas Neue's character widths inside the available 960px title bbox.
+  const titleFontSize = displayName.length <= 7
+    ? 180
+    : displayName.length <= 10
+      ? 150
+      : displayName.length <= 13
+        ? 125
+        : displayName.length <= 16
+          ? 105
+          : 90;
   const memberNo = deriveMemberNo(cardId);
   const memberShort = memberNo.replace('#', '').padStart(3, '0').slice(-3);
   const tierCode = TIER_CODES[tier];
@@ -96,7 +110,7 @@ export default function TrainerCardV5({
   return (
     <div id="trainer-card" className="card-v5-wrapper" ref={wrapperRef}>
       <div className="card-v5-canvas" style={{ transform: `scale(${scale})` }}>
-        {/* Outer card surface — black with rounded corners */}
+        {/* Outer card surface — black with rounded corners + paper texture */}
         <div
           style={{
             position: 'absolute',
@@ -110,27 +124,49 @@ export default function TrainerCardV5({
             border: '1px solid rgba(255,255,255,0.08)',
           }}
         >
-          {/* Display title */}
+          {/* Subtle paper-noise texture overlay (CSS-only) */}
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), radial-gradient(rgba(255,255,255,0.018) 1px, transparent 1px)`,
+              backgroundSize: '6px 6px, 11px 11px',
+              backgroundPosition: '0 0, 3px 5px',
+              pointerEvents: 'none',
+              mixBlendMode: 'overlay',
+              opacity: 0.6,
+            }}
+          />
+
+          {/* Display title — auto-scaled to fit, Bebas Neue */}
           <div
             style={{
               position: 'absolute',
-              top: 60,
-              left: 0,
-              width: W - 60,
+              top: 70,
+              left: 60,
+              width: W - 60 - 60 - 60,
+              height: 200,
               textAlign: 'center',
-              fontFamily: 'var(--font-agency), Impact, sans-serif',
-              fontSize: 110,
-              letterSpacing: '4px',
+              fontFamily: 'var(--font-bebas), Impact, sans-serif',
+              fontSize: titleFontSize,
+              letterSpacing: '2px',
               color: '#ffffff',
-              fontWeight: 900,
+              fontWeight: 400, // Bebas only ships 400
               lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              whiteSpace: 'nowrap',
               textShadow: tier === 'founder'
-                ? '0 0 40px rgba(255, 247, 173, 0.6)'
+                ? '0 0 50px rgba(255, 247, 173, 0.7), 0 0 24px rgba(217, 132, 211, 0.5)'
                 : tier === 'gem'
-                  ? '0 0 30px rgba(255, 222, 89, 0.4)'
+                  ? '0 0 36px rgba(255, 222, 89, 0.5)'
                   : tier === 'mint'
-                    ? '0 0 30px rgba(168, 191, 178, 0.3)'
-                    : '0 0 30px rgba(255, 255, 255, 0.15)',
+                    ? '0 0 32px rgba(168, 191, 178, 0.4)'
+                    : tier === 'near-mint'
+                      ? '0 0 36px rgba(255, 49, 49, 0.45)'
+                      : '0 0 30px rgba(255, 222, 89, 0.35)',
             }}
           >
             {displayName}
@@ -140,10 +176,10 @@ export default function TrainerCardV5({
           <div
             style={{
               position: 'absolute',
-              top: 220,
+              top: 280,
               left: 60,
               width: W - 60 - 60 - 60,
-              height: 820,
+              height: 760,
               background: heroBg,
               borderRadius: 16,
               overflow: 'hidden',
@@ -162,9 +198,15 @@ export default function TrainerCardV5({
                 pointerEvents: 'none',
               }}
             />
+
+            {/* Tantama-style doodle accents — hand-drawn lines, sparkles,
+                swooshes around the avatar. Color varies per tier so they
+                pop against the hero bg. */}
+            <DoodleAccents tier={tier} />
+
             {/* Avatar — oversized so it dominates the hero area */}
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <TrainerSprite config={config} size={680} />
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              <TrainerSprite config={config} size={620} />
             </div>
           </div>
 
@@ -393,5 +435,69 @@ function MetaPill({ children, accent }: { children: React.ReactNode; accent?: st
     >
       {children}
     </span>
+  );
+}
+
+// Tantama-style hand-drawn accents — sparkles, swooshes, lines, dots —
+// scattered around the avatar to give the card energy. Single SVG covering
+// the hero block; positioned absolutely. Color picks per tier so the
+// doodles read against the hero bg.
+function DoodleAccents({ tier }: { tier: TierKey }) {
+  const stroke = tier === 'black-label' ? '#ffde59'
+    : tier === 'founder' ? '#000000'
+    : tier === 'mint' ? '#fffdf3'
+    : tier === 'gem' ? '#ffde59'
+    : '#fffdf3'; // near-mint
+  const strokeAlpha = 0.85;
+
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 960 760"
+      preserveAspectRatio="xMidYMid slice"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 1,
+        opacity: strokeAlpha,
+      }}
+    >
+      <g stroke={stroke} strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        {/* Top-left sparkle */}
+        <path d="M 110 130 L 110 170 M 90 150 L 130 150" />
+        <circle cx="110" cy="150" r="3" fill={stroke} stroke="none" />
+        {/* Top-right squiggle */}
+        <path d="M 800 90 q 20 -15 40 0 t 40 0" strokeWidth="5" />
+        {/* Top-right star burst */}
+        <path d="M 870 200 L 870 230 M 855 215 L 885 215 M 860 205 L 880 225 M 880 205 L 860 225" strokeWidth="4" />
+        {/* Right-mid swoosh */}
+        <path d="M 880 380 q -30 -25 -60 0" strokeWidth="5" />
+        <path d="M 870 410 q -20 -18 -40 0" strokeWidth="5" />
+        {/* Bottom-right dots */}
+        <circle cx="850" cy="600" r="6" fill={stroke} stroke="none" />
+        <circle cx="880" cy="630" r="4" fill={stroke} stroke="none" />
+        <circle cx="820" cy="640" r="4" fill={stroke} stroke="none" />
+        {/* Bottom-left zigzag motion lines */}
+        <path d="M 60 580 l 24 -10 l -16 -10 l 28 -8" strokeWidth="5" />
+        <path d="M 90 620 l 30 -10 l -20 -12 l 35 -8" strokeWidth="5" />
+        {/* Mid-left small sparkle */}
+        <path d="M 70 340 L 70 370 M 55 355 L 85 355" strokeWidth="4" />
+        {/* Bottom-mid arc — under the character */}
+        <path d="M 340 720 q 140 30 280 0" strokeWidth="5" opacity="0.55" />
+        {/* Top-mid above character */}
+        <path d="M 420 60 q 60 -18 120 0" strokeWidth="4" opacity="0.6" />
+        {/* Asterisk top-far-right */}
+        <g transform="translate(720,60)" strokeWidth="4">
+          <path d="M -10 0 L 10 0 M 0 -10 L 0 10 M -7 -7 L 7 7 M -7 7 L 7 -7" />
+        </g>
+        {/* Asterisk bottom-left */}
+        <g transform="translate(170,470)" strokeWidth="4">
+          <path d="M -8 0 L 8 0 M 0 -8 L 0 8 M -6 -6 L 6 6 M -6 6 L 6 -6" />
+        </g>
+      </g>
+    </svg>
   );
 }

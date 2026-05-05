@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Sora, Space_Grotesk, DM_Serif_Display, Inter } from 'next/font/google';
+import { Sora, Space_Grotesk, DM_Serif_Display, Inter, Bebas_Neue } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
 
@@ -23,6 +23,10 @@ const body = Inter({
   weight: ['400', '500', '600', '700'],
   variable: '--font-body',
 });
+
+// Bebas Neue — chunky condensed display font for the V5 trainer card title.
+// Single weight 400 (the only weight Bebas ships).
+const bebas = Bebas_Neue({ subsets: ['latin'], weight: ['400'], variable: '--font-bebas' });
 
 // Legacy variables — kept while we migrate other surfaces. New components
 // should prefer --font-agency / --font-moderniz / --font-body.
@@ -53,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${agency.variable} ${moderniz.variable} ${body.variable} ${sora.variable} ${spaceGrotesk.variable} ${dmSerif.variable}`}
+      className={`${agency.variable} ${moderniz.variable} ${body.variable} ${bebas.variable} ${sora.variable} ${spaceGrotesk.variable} ${dmSerif.variable}`}
     >
       <body>{children}</body>
     </html>
