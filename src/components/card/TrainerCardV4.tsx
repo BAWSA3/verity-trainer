@@ -216,7 +216,7 @@ export default function TrainerCardV4({
             <div
               style={{
                 position: 'absolute',
-                top: 405,
+                top: 360,
                 left: RIGHT_X + 30,
                 width: RIGHT_W - 60,
                 fontFamily: 'var(--font-agency), Impact, sans-serif',
@@ -231,18 +231,22 @@ export default function TrainerCardV4({
             </div>
           ) : null}
 
-          {/* Inner content panel — single solid white/cream block on the right,
-              contains identity table on top + abilities/weaknesses/QR on bottom. */}
+          {/* Inner content panel — single solid white/cream block on the right.
+              Bottom edge aligns with the avatar+barcode column's bottom (~855)
+              so the right-half mass matches the left-half mass per the
+              reference PNGs. Contains identity table on top + abilities /
+              weaknesses on bottom-left + QR on bottom-right. */}
           <div
             style={{
               position: 'absolute',
-              top: 530,
+              top: 470,
               left: RIGHT_X,
               width: RIGHT_W,
-              height: 360,
+              height: 390,
               background: palette.innerBg,
               border: `1px solid ${palette.innerBorder}`,
               boxSizing: 'border-box',
+              overflow: 'hidden',
             }}
           >
             {/* Identity table — top portion */}

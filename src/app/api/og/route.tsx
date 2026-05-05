@@ -382,7 +382,7 @@ export async function GET(req: NextRequest) {
             <div
               style={{
                 position: 'absolute',
-                top: 405,
+                top: 360,
                 left: 630,
                 width: 830,
                 fontFamily: 'Agency',
@@ -400,18 +400,20 @@ export async function GET(req: NextRequest) {
           ) : null}
 
           {/* Inner content panel — single block on the right.
-              Holds the identity table + abilities/weaknesses + QR. */}
+              Bottom aligns with avatar+barcode column. Holds identity
+              table + abilities/weaknesses + QR. */}
           <div
             style={{
               position: 'absolute',
-              top: 530,
+              top: 470,
               left: 600,
               width: 890,
-              height: 360,
+              height: 390,
               background: palette.innerBg,
               border: `1px solid ${palette.innerBorder}`,
               display: 'flex',
               flexDirection: 'column',
+              overflow: 'hidden',
             }}
           >
             {/* Identity table — fills top 140px of inner panel */}
