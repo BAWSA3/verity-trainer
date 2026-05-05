@@ -373,6 +373,7 @@ export async function GET(req: NextRequest) {
               style={{
                 objectFit: 'contain',
                 position: 'relative',
+                imageRendering: 'pixelated',
               }}
             />
           ) : fullBodyDataUri ? (

@@ -398,6 +398,10 @@ export default function TrainerCardV5({
                   height: '92%',
                   objectFit: 'contain',
                   display: 'block',
+                  // 384×384 source upscaled to ~700px in the hero block —
+                  // pixelated rendering preserves the chunky pixel art
+                  // aesthetic instead of smoothing edges.
+                  imageRendering: 'pixelated',
                 }}
               />
             ) : (

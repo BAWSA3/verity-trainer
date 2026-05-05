@@ -41,9 +41,12 @@ const TIER_BG_HINTS: Record<TierKey, string> = {
 };
 
 /**
- * Build the prompt for OpenAI image generation. Tuned for chibi-style
- * character portraits with thick black outlines, bold flat colors,
- * Tantama-adjacent illustration aesthetic.
+ * Build the prompt for OpenAI image generation. Tuned for 16-bit
+ * JRPG-style chibi pixel art — chunky pixels, limited palette, thick
+ * outlines. The "best of both worlds" approach: AI generates at 1024×1024
+ * with pixel-art prompting, then sharp downscales to 384×384 with
+ * nearest-neighbor so the result genuinely reads as pixel art (not a
+ * photoreal image with a "pixelated" filter slapped on).
  *
  * Prompt scaffold is the IP of the pipeline — change it carefully and
  * regenerate samples after any tweak.
@@ -56,14 +59,18 @@ export function buildHeroArtPrompt(characterDescription: string, tier: TierKey):
     .slice(0, 240);
   const tierLabel = TIER_DISPLAY[tier];
   const tierBg = TIER_BG_HINTS[tier];
-  return `A chibi-style trainer character portrait, hand-drawn cartoon
-aesthetic with thick black outlines and bold flat colors. The character:
-${safeDesc}. Square 1:1 composition, character centered, ${tierBg}.
-Style reference: Angga Tantama, mid-2010s sticker pack, bright limited
-palette, clean vector look, thick consistent line weight. Card tier
-context: ${tierLabel}. Do NOT include any text, watermarks, logos,
-borders, or QR codes — those are added separately. Pure character
-portrait only.`.replace(/\s+/g, ' ').trim();
+  return `A 16-bit JRPG-style chibi pixel art portrait of a trainer
+character. CRITICAL: actual pixel art with visible chunky pixels, NOT
+a photo or a smooth illustration. The character: ${safeDesc}. Square
+1:1 composition, character centered upper-body framing (face + chest
+visible, cut at mid-torso). ${tierBg}. Style: late-90s Pokemon /
+Stardew Valley / Octopath Traveler chibi sprite aesthetic — thick
+1-2px black outlines, limited 8-12 color palette, bold flat colors,
+visible pixel grain, no anti-aliasing, no smooth gradients on the
+character itself. Card tier context: ${tierLabel}. Do NOT include
+any text, watermarks, logos, borders, QR codes, or backgrounds with
+text — those are added separately. Pure character portrait only,
+filling 70-80% of the frame.`.replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -108,18 +115,23 @@ export async function generateHeroArt(args: GenerateHeroArtArgs): Promise<HeroAr
     throw new Error('generateHeroArt: empty response from OpenAI');
   }
 
-  // Resize 1024×1024 PNG → 800×800 JPEG @ q80 to keep base64 row size
-  // manageable (~80-150KB vs ~500KB-2MB for the source PNG).
+  // Pixel-art pipeline: resize 1024×1024 → 384×384 PNG with
+  // nearest-neighbor kernel. The downscale enforces a chunky-pixel look
+  // even when the AI's output has subtle anti-aliasing the prompt
+  // couldn't suppress. PNG (not JPEG) keeps pixel edges crisp;
+  // imageRendering:'pixelated' on the <img> handles browser-side
+  // upscale at render time.
+  // Output size: ~150KB-300KB base64 — fits in trainer_config JSONB.
   const sourceBuf = Buffer.from(rawB64, 'base64');
   const compressedBuf = await sharp(sourceBuf)
-    .resize(800, 800, { fit: 'cover' })
-    .jpeg({ quality: 80, mozjpeg: true })
+    .resize(384, 384, { fit: 'cover', kernel: 'nearest' })
+    .png({ compressionLevel: 9, palette: true })
     .toBuffer();
 
   const compressedB64 = compressedBuf.toString('base64');
   return {
     b64: compressedB64,
-    dataUri: `data:image/jpeg;base64,${compressedB64}`,
+    dataUri: `data:image/png;base64,${compressedB64}`,
     bytes: compressedB64.length,
   };
 }
