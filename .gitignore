@@ -48,6 +48,7 @@ next-env.d.ts
 tmp-debug/
 tmp-migrations.sql
 blender/
+design-templates/
 public/console/console-iter*.png
 public/console/console-front-blockout*.png
 

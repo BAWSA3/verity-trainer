@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { TrainerConfig, TrainerPersonality } from '@/types/trainer';
+import type { TrainerConfig, TrainerPersonality, TierKey } from '@/types/trainer';
 import { playSuccess } from '@/lib/sounds';
-import TrainerCard from '@/components/TrainerCard';
+import TrainerCardV5 from '@/components/card/TrainerCardV5';
 import ShareButtons from '@/components/ShareButtons';
 import { Button } from '@/components/ui';
+import { resolveTier } from '@/lib/cards/v4-tokens';
 
 interface CardPageClientProps {
   id: string;
@@ -14,10 +15,14 @@ interface CardPageClientProps {
   trainerName: string;
   reasoning?: string;
   xHandle?: string;
+  /** Tier rolled at signup. Falls back to deterministic seed roll if absent. */
+  tier?: TierKey;
+  /** V5 — AI-generated hero art. Optional; falls back to LimeZu sprite. */
+  heroArtSrc?: string;
 }
 
 export default function CardPageClient({
-  id, config, personality, trainerName, reasoning, xHandle,
+  id, config, personality, trainerName, xHandle, tier, heroArtSrc,
 }: CardPageClientProps) {
   const [revealed, setRevealed] = useState(false);
   const [showCard, setShowCard] = useState(false);
@@ -27,6 +32,8 @@ export default function CardPageClient({
     const t2 = setTimeout(() => setShowCard(true), 1200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
+
+  const resolvedTier = resolveTier(tier, id);
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 py-10">
@@ -47,13 +54,14 @@ export default function CardPageClient({
           className={'w-full transition-all duration-700 ' +
             (showCard ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95')}
         >
-          <TrainerCard
+          <TrainerCardV5
+            tier={resolvedTier}
             config={config}
             personality={personality}
             trainerName={trainerName}
             cardId={id}
             xHandle={xHandle}
-            reasoning={reasoning}
+            heroArtSrc={heroArtSrc}
           />
         </div>
 

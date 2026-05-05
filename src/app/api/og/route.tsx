@@ -4,26 +4,38 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import QRCode from 'qrcode';
-import { sanitizeNameForDisplay, sanitizeChipsForDisplay } from '@/lib/moderation/sanitize';
-import { ZODIAC_GLYPHS, VALID_ZODIACS } from '@/lib/personality';
-import type { Zodiac } from '@/types/trainer';
-import { generateStats } from '@/lib/card-utils';
+import { sanitizeNameForDisplay } from '@/lib/moderation/sanitize';
+import type { TierKey } from '@/types/trainer';
+import { TIER_KEYS } from '@/types/trainer';
 import { unpackTrainer } from '@/lib/trainer-data';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { TIER_PALETTES, resolveTier } from '@/lib/cards/v4-tokens';
+import { deriveMemberNo } from '@/lib/cards/v4-render';
+import { TIER_GRADES, TIER_DISPLAY, TIER_CODES, HERO_BG } from '@/lib/cards/v5-tokens';
 
 export const runtime = 'nodejs';
 
-// LimeZu source frames are 48x96. Composite at 16x for crispness.
+// V5 OG card — vertical 1080×1500 portrait matching the live /card/[id]
+// V5 chassis. Twitter Card displays portrait images natively, no need
+// to letterbox. Tier theming + sprite composition mirror the React/DOM
+// renderer in TrainerCardV5.tsx via shared v5-tokens + v4-tokens.
+//
+// V3.2 anti-forgery (cid → DB lookup) is preserved: when `cid` resolves
+// to a real row, all data comes from the DB, not URL params.
+
 const CELL_W = 48;
 const CELL_H = 96;
 const SCALE = 16;
 const SPRITE_W = CELL_W * SCALE;
 const SPRITE_H = CELL_H * SCALE;
-// V3 — full body in a tall sprite cell. Render at 240x480 so it composites
-// crisply at the OG card sprite frame size (~240x480px in the layout).
-const FULLBODY_W = 240;
-const FULLBODY_H = 480;
+// V5 avatar in hero block is ~520 wide; render the sharp composite at
+// a generous 540×1080 so the embed stays crisp at the OG size.
+const FULLBODY_W = 540;
+const FULLBODY_H = 1080;
 const SHARE_DIR = 's';
+
+const OG_W = 1080;
+const OG_H = 1500;
 
 const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=31536000, immutable',
@@ -38,11 +50,12 @@ async function loadOgFonts(): Promise<OgFont[]> {
   try {
     const agencyPath = path.join(process.cwd(), ...FONT_DIR, 'Agency.ttf');
     const modernizPath = path.join(process.cwd(), ...FONT_DIR, 'Moderniz.otf');
-    const [agency, moderniz, inter400, inter600] = await Promise.all([
+    const [agency, moderniz, inter400, inter600, bebas] = await Promise.all([
       readFile(agencyPath),
       readFile(modernizPath),
       fetch('https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Regular.ttf').then((r) => r.ok ? r.arrayBuffer() : null).then((b) => b ? Buffer.from(b) : null).catch(() => null),
       fetch('https://github.com/rsms/inter/raw/master/docs/font-files/Inter-SemiBold.ttf').then((r) => r.ok ? r.arrayBuffer() : null).then((b) => b ? Buffer.from(b) : null).catch(() => null),
+      fetch('https://github.com/google/fonts/raw/main/ofl/bebasneue/BebasNeue-Regular.ttf').then((r) => r.ok ? r.arrayBuffer() : null).then((b) => b ? Buffer.from(b) : null).catch(() => null),
     ]);
     const fonts: OgFont[] = [
       { name: 'Agency', data: agency, weight: 700, style: 'normal' },
@@ -50,6 +63,7 @@ async function loadOgFonts(): Promise<OgFont[]> {
     ];
     if (inter400) fonts.push({ name: 'Inter', data: inter400, weight: 400, style: 'normal' });
     if (inter600) fonts.push({ name: 'Inter', data: inter600, weight: 600, style: 'normal' });
+    if (bebas) fonts.push({ name: 'Bebas Neue', data: bebas, weight: 400, style: 'normal' });
     cachedFonts = fonts;
     return cachedFonts;
   } catch (err) {
@@ -82,8 +96,7 @@ function splitVariant(compoundId: string): [string, string] | null {
   return [compoundId.slice(0, idx), compoundId.slice(idx + 1)];
 }
 
-// V3 — full body sprite for the share card (no bust crop). Layers per LimeZu
-// paper-doll: body → outfit → eyes → hair → accessory.
+// Full-body sprite for the V5 card hero. Layered per LimeZu paper-doll order.
 async function compositeFullBody(args: CompositeArgs): Promise<string | null> {
   const layerSegments: string[][] = [];
 
@@ -129,34 +142,17 @@ async function compositeFullBody(args: CompositeArgs): Promise<string | null> {
   }
 }
 
-function applyMask(items: string[], mask: string | null): string[] {
-  if (!mask) return items;
-  if (mask.length !== items.length) return items; // length mismatch = ignore mask
-  return items.filter((_, i) => mask[i] === '1');
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
-  const cleanText = (raw: string, max: number) =>
-    raw.replace(/[\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
-
-  // V3.2 — if `cid` is present, fetch authoritative card data from the DB
-  // and ignore tampered text URL params. This blocks forged share images
-  // (e.g. crafting a URL with offensive copy attributed to a real handle).
-  // For back-compat, the GET still falls back to URL params when cid is
-  // absent or the row isn't found, so old shared v3 URLs still render.
+  // V3.2 anti-forgery: when cid is a valid UUID, fetch authoritative card
+  // data from the DB and ignore tampered URL params.
   const cidRaw = (searchParams.get('cid') || '').trim();
-  // UUID v4 shape: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx, lower-case hex.
   const cid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cidRaw)
     ? cidRaw
     : null;
 
   let name = sanitizeNameForDisplay(searchParams.get('n'));
-  let presence = clamp(parseInt(searchParams.get('s')    || '70'));
-  let wit      = clamp(parseInt(searchParams.get('c')    || '70'));
-  let taste    = clamp(parseInt(searchParams.get('st')   || '70'));
-  let resolve  = clamp(parseInt(searchParams.get('lk_v') || '70'));
 
   let args: CompositeArgs = {
     body:      safeId(searchParams.get('b'),  ''),
@@ -167,24 +163,16 @@ export async function GET(req: NextRequest) {
     accessory: safeId(searchParams.get('ac'), 'none'),
   };
 
-  let zodiacRaw = searchParams.get('z') || '';
-  let zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
-
-  let quote = cleanText(searchParams.get('kf') || '', 200);
-  let ability1Name = cleanText(searchParams.get('a1n') || '', 32);
-  let ability1Desc = cleanText(searchParams.get('a1d') || '', 140);
-  let ability2Name = cleanText(searchParams.get('a2n') || '', 32);
-  let ability2Desc = cleanText(searchParams.get('a2d') || '', 140);
-  let weakness1Name = cleanText(searchParams.get('w1n') || '', 32);
-  let weakness1Desc = cleanText(searchParams.get('w1d') || '', 140);
-  let weakness2Name = cleanText(searchParams.get('w2n') || '', 32);
-  let weakness2Desc = cleanText(searchParams.get('w2d') || '', 140);
-
   let refHandle = (searchParams.get('ref') || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15);
 
-  // DB-backed render path — only when cid is a valid UUID. Errors fall
-  // back to URL params silently so the OG never returns a hard error
-  // for a valid in-app share URL when Supabase has a transient failure.
+  const tParam = (searchParams.get('t') || '').toLowerCase().trim();
+  let tierFromParam: TierKey | undefined =
+    (TIER_KEYS as readonly string[]).includes(tParam) ? (tParam as TierKey) : undefined;
+
+  // V5 — AI hero art (DB-only; can't be passed via URL params at any
+  // reasonable size). Used in place of the LimeZu sprite when present.
+  let heroArtSrc: string | undefined;
+
   if (cid) {
     try {
       const { data: row } = await getSupabaseAdmin()
@@ -193,13 +181,9 @@ export async function GET(req: NextRequest) {
         .eq('id', cid)
         .maybeSingle();
       if (row) {
-        const { config, personality } = unpackTrainer(row);
-        const stats = generateStats(config, personality);
+        const unpacked = unpackTrainer(row);
+        const { config, tier } = unpacked;
         name = sanitizeNameForDisplay(row.trainer_name);
-        presence = clamp(stats.presence);
-        wit      = clamp(stats.wit);
-        taste    = clamp(stats.taste);
-        resolve  = clamp(stats.resolve);
         args = {
           body: config.body,
           hair: config.hair,
@@ -208,459 +192,447 @@ export async function GET(req: NextRequest) {
           eyes: config.eyes,
           accessory: config.accessory,
         };
-        zodiacRaw = personality.zodiac;
-        zodiac = VALID_ZODIACS.has(zodiacRaw) ? (zodiacRaw as Zodiac) : null;
-        quote = cleanText(personality.quote ?? personality.knownFor ?? '', 200);
-        const a1 = personality.abilities?.[0];
-        const a2 = personality.abilities?.[1];
-        ability1Name = a1 ? cleanText(a1.name, 32) : '';
-        ability1Desc = a1 ? cleanText(a1.description, 140) : '';
-        ability2Name = a2 ? cleanText(a2.name, 32) : '';
-        ability2Desc = a2 ? cleanText(a2.description, 140) : '';
-        const w1 = personality.weaknesses?.[0];
-        const w2 = personality.weaknesses?.[1];
-        weakness1Name = w1 ? cleanText(w1.name, 32) : '';
-        weakness1Desc = w1 ? cleanText(w1.description, 140) : '';
-        weakness2Name = w2 ? cleanText(w2.name, 32) : '';
-        weakness2Desc = w2 ? cleanText(w2.description, 140) : '';
         refHandle = typeof row.x_handle === 'string'
           ? row.x_handle.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15)
           : '';
+        if (tier) tierFromParam = tier;
+        heroArtSrc = unpacked.heroArtSrc;
       }
     } catch (err) {
       console.warn('[og] cid lookup failed, falling back to URL params:', err);
     }
   }
 
-  const abilities = [
-    ability1Name && ability1Desc ? { name: ability1Name, description: ability1Desc } : null,
-    ability2Name && ability2Desc ? { name: ability2Name, description: ability2Desc } : null,
-  ].filter((a): a is { name: string; description: string } => a !== null);
+  const seed = cid || refHandle || name || 'unknown';
+  const finalTier: TierKey = resolveTier(tierFromParam, seed);
+  const palette = TIER_PALETTES[finalTier];
 
-  const weaknesses = [
-    weakness1Name && weakness1Desc ? { name: weakness1Name, description: weakness1Desc } : null,
-    weakness2Name && weakness2Desc ? { name: weakness2Name, description: weakness2Desc } : null,
-  ].filter((a): a is { name: string; description: string } => a !== null);
+  // Skip the (slow) sharp sprite composite when AI hero art is present.
+  const fullBodyDataUri = heroArtSrc ? null : await compositeFullBody(args);
 
-  const fullBodyDataUri = await compositeFullBody(args);
-
-  // QR — referral entry point. Encodes <appUrl>/create?ref=<xHandle>.
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://verity-trainer.vercel.app';
-  const qrTarget = refHandle
-    ? `${appUrl}/create?ref=${refHandle}`
-    : `${appUrl}/create`;
+  const refUrlBase = process.env.NEXT_PUBLIC_REFERRAL_URL_BASE
+    || 'https://verity.xyz/ref/';
+  const qrTarget = refHandle ? `${refUrlBase}${refHandle.toUpperCase()}` : refUrlBase;
   let qrDataUri = '';
   try {
     qrDataUri = await QRCode.toDataURL(qrTarget, {
       margin: 1,
-      width: 280,
-      color: { dark: '#16272C', light: '#00000000' },
+      width: 360,
+      color: { dark: '#000000', light: '#ffffff' },
       errorCorrectionLevel: 'M',
     });
   } catch (err) {
     console.warn('[og] QR generation failed:', err);
   }
 
+  const memberNo = deriveMemberNo(seed);
+  const memberShort = memberNo.replace('#', '').padStart(3, '0').slice(-3);
+
+  const rawName = (name || 'TRAINER').toUpperCase();
+  const displayName = rawName.length > 18 ? rawName.slice(0, 17) + '…' : rawName;
+  const titleFontSize = displayName.length <= 7 ? 180
+    : displayName.length <= 10 ? 150
+    : displayName.length <= 13 ? 125
+    : displayName.length <= 16 ? 105
+    : 90;
+  const displayHandle = refHandle.toUpperCase().slice(0, 12);
+
   return new ImageResponse(
     (
       <div
         style={{
-          width: 1200,
-          height: 630,
+          width: OG_W,
+          height: OG_H,
+          backgroundColor: '#000000',
           display: 'flex',
-          flexDirection: 'column',
-          backgroundImage: 'linear-gradient(135deg, #FFFDF3 0%, #F1ECDA 100%)',
-          fontFamily: 'Moderniz',
-          padding: 24,
+          fontFamily: 'Bebas Neue',
         }}
       >
-        {/* Card container */}
+        {/* Outer card surface */}
         <div
           style={{
+            position: 'absolute',
+            top: 30,
+            left: 30,
+            width: OG_W - 60,
+            height: OG_H - 60,
+            background: '#0a0a0a',
+            borderRadius: 32,
             display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            backgroundColor: '#FFFDF3',
-            borderRadius: 22,
             overflow: 'hidden',
-            border: '1px solid rgba(22, 39, 44, 0.14)',
-            boxShadow: '0 24px 48px -16px rgba(22, 39, 44, 0.22)',
+            border: `1px solid rgba(255,255,255,0.08)`,
+          }}
+        />
+
+        {/* PSA-style graded slab strip — top of card */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 30,
+            left: 30,
+            width: OG_W - 60,
+            height: 64,
+            background: 'linear-gradient(180deg, #0f0f0f 0%, #1a1a1a 100%)',
+            borderBottom: `2px solid ${palette.trainerText}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 14,
+            fontFamily: 'Moderniz',
+            fontSize: 14,
+            letterSpacing: '4px',
+            color: '#ffffff',
           }}
         >
-          {/* Header band — deep teal */}
+          <span style={{ fontWeight: 700 }}>VERITY</span>
+          <Bullet color="#ffffff" />
+          <span style={{ color: 'rgba(255,255,255,0.7)' }}>GRADED</span>
+          <Bullet color="#ffffff" />
+          <span style={{ color: palette.trainerText, fontWeight: 700 }}>
+            {TIER_DISPLAY[finalTier]} {TIER_GRADES[finalTier]}
+          </span>
+          <Bullet color="#ffffff" />
+          <span style={{ color: 'rgba(255,255,255,0.7)' }}>{memberNo}</span>
+          <Bullet color="#ffffff" />
+          <span style={{ color: 'rgba(255,255,255,0.5)' }}>2026.05</span>
+        </div>
+
+        {/* Display title — auto-scaled */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 126,
+            left: 90,
+            width: OG_W - 60 - 60 - 60,
+            height: 180,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'Bebas Neue',
+            fontSize: titleFontSize,
+            letterSpacing: '2px',
+            color: '#ffffff',
+            fontWeight: 400,
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {displayName}
+        </div>
+
+        {/* Hero block — solid tier color radial spotlight */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 326,
+            left: 90,
+            width: OG_W - 60 - 60 - 60,
+            height: 700,
+            background: HERO_BG[finalTier],
+            borderRadius: 16,
+            border: `2px solid ${palette.innerBorder}`,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          {/* VERITY watermark behind avatar */}
           <div
             style={{
+              position: 'absolute',
+              top: 80,
+              left: 0,
+              width: '100%',
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              padding: '14px 28px',
-              backgroundColor: '#16272C',
-              color: '#FFFDF3',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <svg width="14" height="14" viewBox="0 0 16 16">
-                <path d="M2 13 L8 3 L14 13 Z" fill="#FFFDF3" />
-              </svg>
-              <span style={{ fontSize: 14, letterSpacing: '6px', fontWeight: 700 }}>VERITY</span>
-              <span style={{ fontSize: 14, opacity: 0.45 }}>·</span>
-              <span style={{ fontSize: 12, letterSpacing: '5px', fontWeight: 500, color: 'rgba(255,253,243,0.7)' }}>TRAINER CARD</span>
-            </div>
-            {zodiac ? (
-              <span
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '5px 14px',
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(255,253,243,0.06)',
-                  border: '1px solid rgba(255,253,243,0.22)',
-                  fontSize: 11,
-                  letterSpacing: '4px',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,253,243,0.85)',
-                }}
-              >
-                <span style={{ fontSize: 14 }}>{ZODIAC_GLYPHS[zodiac]}</span>
-                <span>{capitalize(zodiac)}</span>
-              </span>
-            ) : (
-              <span style={{ fontSize: 11, letterSpacing: '4px', color: 'rgba(255,253,243,0.4)' }}>EARLY ACCESS</span>
-            )}
-          </div>
-
-          {/* Body row: full sprite | identity */}
-          <div style={{ display: 'flex', flex: 1, padding: 28, gap: 28 }}>
-            {/* Sprite — full body */}
-            <div
-              style={{
-                width: 240,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-                flexShrink: 0,
-              }}
-            >
-              <div
-                style={{
-                  width: 240,
-                  height: 480,
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  justifyContent: 'center',
-                  backgroundImage: 'linear-gradient(180deg, rgba(54,125,149,0.06) 0%, rgba(144,179,77,0.10) 100%)',
-                  border: '1px solid rgba(22,39,44,0.16)',
-                  borderRadius: 14,
-                  overflow: 'hidden',
-                  padding: '14px 0',
-                }}
-              >
-                {fullBodyDataUri ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={fullBodyDataUri}
-                    alt=""
-                    width={210}
-                    height={420}
-                    style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
-                  />
-                ) : (
-                  <div style={{ color: '#90b34d', fontSize: 100, display: 'flex' }}>V</div>
-                )}
-              </div>
-            </div>
-
-            {/* Identity column */}
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 14, minWidth: 0 }}>
-              <div
-                style={{
-                  color: '#16272C',
-                  fontSize: 96,
-                  fontFamily: 'Agency',
-                  display: 'flex',
-                  letterSpacing: '2px',
-                  lineHeight: 0.95,
-                }}
-              >
-                {name}
-              </div>
-
-              {quote ? (
-                <div
-                  style={{
-                    color: 'rgba(22, 39, 44, 0.82)',
-                    fontSize: 22,
-                    display: 'flex',
-                    lineHeight: 1.4,
-                    maxWidth: 720,
-                    fontFamily: 'Inter',
-                    fontStyle: 'italic',
-                  }}
-                >
-                  &ldquo;{quote}&rdquo;
-                </div>
-              ) : null}
-
-              {/* Stats — PRESENCE / WIT / TASTE / RESOLVE */}
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <StatCell label="PRESENCE" value={presence} />
-                <StatCell label="WIT"      value={wit} />
-                <StatCell label="TASTE"    value={taste} />
-                <StatCell label="RESOLVE"  value={resolve} />
-              </div>
-
-              {/* Special Abilities + Weaknesses + QR */}
-              <div style={{ display: 'flex', gap: 14, marginTop: 4, alignItems: 'flex-end' }}>
-                {abilities.length > 0 || weaknesses.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
-                    {abilities.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-                        <span style={{ display: 'flex', fontSize: 11, letterSpacing: '5px', fontWeight: 700, color: '#367D95' }}>
-                          SPECIAL ABILITIES
-                        </span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {abilities.map((a, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                display: 'flex',
-                                gap: 14,
-                                padding: '8px 12px',
-                                backgroundColor: 'rgba(144, 179, 77, 0.08)',
-                                border: '1px solid rgba(144, 179, 77, 0.30)',
-                                borderRadius: 10,
-                                alignItems: 'baseline',
-                              }}
-                            >
-                              <span
-                                style={{
-                                  display: 'flex',
-                                  fontSize: 12,
-                                  letterSpacing: '2px',
-                                  textTransform: 'uppercase',
-                                  fontWeight: 700,
-                                  color: '#3F5520',
-                                  width: 170,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {a.name}
-                              </span>
-                              <span style={{ display: 'flex', fontSize: 14, lineHeight: 1.4, color: '#16272C', flex: 1, fontFamily: 'Inter' }}>
-                                {a.description}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {weaknesses.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-                        <span style={{ display: 'flex', fontSize: 11, letterSpacing: '5px', fontWeight: 700, color: '#A53A2E' }}>
-                          WEAKNESSES
-                        </span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {weaknesses.map((w, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                display: 'flex',
-                                gap: 14,
-                                padding: '8px 12px',
-                                backgroundColor: 'rgba(232, 85, 68, 0.07)',
-                                border: '1px solid rgba(232, 85, 68, 0.30)',
-                                borderRadius: 10,
-                                alignItems: 'baseline',
-                              }}
-                            >
-                              <span
-                                style={{
-                                  display: 'flex',
-                                  fontSize: 12,
-                                  letterSpacing: '2px',
-                                  textTransform: 'uppercase',
-                                  fontWeight: 700,
-                                  color: '#A53A2E',
-                                  width: 170,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {w.name}
-                              </span>
-                              <span style={{ display: 'flex', fontSize: 14, lineHeight: 1.4, color: '#16272C', flex: 1, fontFamily: 'Inter' }}>
-                                {w.description}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : <div style={{ flex: 1 }} />}
-
-                {/* QR — referral entry point */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                  <div
-                    style={{
-                      width: 124,
-                      height: 124,
-                      display: 'flex',
-                      padding: 8,
-                      backgroundColor: '#FFFDF3',
-                      border: '1px solid rgba(22, 39, 44, 0.14)',
-                      borderRadius: 10,
-                    }}
-                  >
-                    {qrDataUri ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={qrDataUri} alt="" width={108} height={108} style={{ display: 'block' }} />
-                    ) : null}
-                  </div>
-                  <span style={{ display: 'flex', fontSize: 9, letterSpacing: '4px', fontWeight: 700, color: 'rgba(22,39,44,0.55)' }}>
-                    SCAN · MAKE YOURS
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div
-            style={{
-              display: 'flex',
               justifyContent: 'center',
-              alignItems: 'center',
-              gap: 14,
-              padding: '12px 28px',
-              borderTop: '1px solid rgba(22, 39, 44, 0.10)',
-              color: 'rgba(22, 39, 44, 0.55)',
-              fontSize: 11,
-              letterSpacing: '5px',
-              fontWeight: 700,
+              fontFamily: 'Bebas Neue',
+              fontSize: 280,
+              lineHeight: 0.85,
+              color: finalTier === 'founder' || finalTier === 'mint' ? '#000000' : '#ffffff',
+              opacity: finalTier === 'black-label' ? 0.18
+                : finalTier === 'gem' ? 0.16
+                : finalTier === 'near-mint' ? 0.14
+                : finalTier === 'founder' ? 0.13
+                : 0.12,
+              letterSpacing: '12px',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span>VERITY</span>
-            <span style={{ opacity: 0.4 }}>·</span>
-            <span>EARLY ACCESS</span>
-            <span style={{ opacity: 0.4 }}>·</span>
-            <span>MAY 2026</span>
+            VERITY
           </div>
+
+          {/* Hero subject — AI art when present, otherwise LimeZu sprite */}
+          {heroArtSrc ? (
+            <img
+              src={heroArtSrc}
+              alt=""
+              width={Math.round((OG_W - 60 - 60 - 60) * 0.92)}
+              height={Math.round(700 * 0.92)}
+              style={{
+                objectFit: 'contain',
+                position: 'relative',
+                imageRendering: 'pixelated',
+              }}
+            />
+          ) : fullBodyDataUri ? (
+            <img
+              src={fullBodyDataUri}
+              alt=""
+              width={520}
+              height={1040}
+              style={{
+                imageRendering: 'pixelated',
+                objectFit: 'contain',
+                marginBottom: 30,
+                position: 'relative',
+              }}
+            />
+          ) : (
+            <div style={{ color: palette.headerText, fontSize: 200, display: 'flex' }}>V</div>
+          )}
+        </div>
+
+        {/* Metadata strip — size · format · tier code */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 1048,
+            left: 90,
+            width: OG_W - 60 - 60 - 60,
+            height: 36,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            fontFamily: 'Moderniz',
+            fontSize: 14,
+            letterSpacing: '2px',
+          }}
+        >
+          <MetaPill>1080X1500PX</MetaPill>
+          <MetaPill>PNG</MetaPill>
+          <MetaPill>RGBA</MetaPill>
+          <MetaPill accent={palette.trainerText}>{TIER_CODES[finalTier]}</MetaPill>
+        </div>
+
+        {/* 3-col footer: holo sticker | member# + name | yellow QR pill */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 1120,
+            left: 90,
+            width: OG_W - 60 - 60 - 60,
+            height: 230,
+            display: 'flex',
+            gap: 12,
+          }}
+        >
+          {/* Holo sticker */}
+          <div
+            style={{
+              width: 230,
+              height: 230,
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, #ff61ab 0%, #6dffe2 25%, #ffec61 50%, #61c1ff 75%, #d161ff 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid rgba(255,255,255,0.2)',
+              fontFamily: 'Moderniz',
+              fontSize: 32,
+              color: 'rgba(0,0,0,0.55)',
+              letterSpacing: '2px',
+              textAlign: 'center',
+              lineHeight: 1.1,
+            }}
+          >
+            VERITY{'\n'}HOLO
+          </div>
+
+          {/* Member # + name */}
+          <div
+            style={{
+              flex: 1,
+              background: '#ffffff',
+              borderRadius: 14,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 16px',
+            }}
+          >
+            <div style={{
+              fontFamily: 'Bebas Neue',
+              fontSize: 100,
+              color: '#0a0a0a',
+              lineHeight: 1,
+              letterSpacing: '2px',
+              display: 'flex',
+            }}>
+              {memberShort}
+            </div>
+            <div style={{
+              fontFamily: 'Moderniz',
+              fontSize: 18,
+              color: '#0a0a0a',
+              letterSpacing: '2px',
+              marginTop: 8,
+              display: 'flex',
+            }}>
+              &ldquo;{displayName}&rdquo;
+            </div>
+          </div>
+
+          {/* QR pill */}
+          <div
+            style={{
+              width: 230,
+              background: '#ffde59',
+              borderRadius: 14,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 18,
+            }}
+          >
+            <div style={{
+              fontFamily: 'Moderniz',
+              fontSize: 13,
+              color: '#0a0a0a',
+              letterSpacing: '2px',
+              marginBottom: 8,
+              display: 'flex',
+            }}>
+              SCAN TO CLAIM
+            </div>
+            <div style={{
+              width: 160,
+              height: 160,
+              background: '#ffffff',
+              borderRadius: 6,
+              padding: 4,
+              display: 'flex',
+            }}>
+              {qrDataUri ? (
+                <img src={qrDataUri} alt="" width={152} height={152} style={{ display: 'block' }} />
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        {/* Disclaimer */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 1370,
+            left: 30,
+            width: OG_W - 60,
+            display: 'flex',
+            justifyContent: 'center',
+            fontFamily: 'Moderniz',
+            fontSize: 11,
+            letterSpacing: '3px',
+            color: 'rgba(255,255,255,0.35)',
+          }}
+        >
+          UNAUTHORISED COPYING OF CARD IS PROHIBITED
+        </div>
+
+        {/* Bottom serial */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 1400,
+            left: 60,
+            right: 60,
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontFamily: 'Inter',
+            fontSize: 10,
+            letterSpacing: '1px',
+            color: 'rgba(255,255,255,0.5)',
+          }}
+        >
+          <span>prototype#01</span>
+          <span>VRT{TIER_CODES[finalTier]}{memberShort}{(cid || 'TEST').slice(0, 4).toUpperCase()}</span>
+        </div>
+
+        {/* Verity logo mark — small, bottom-right of slab strip area for brand presence */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 38,
+            right: 50,
+            width: 48,
+            height: 48,
+            display: 'flex',
+          }}
+        >
+          <VerityMarkSvg color={palette.trainerText} />
         </div>
       </div>
     ),
     {
-      width: 1200,
-      height: 630,
+      width: OG_W,
+      height: OG_H,
       headers: CACHE_HEADERS,
       fonts: await loadOgFonts(),
     },
   );
 }
 
-function StatCell({ label, value }: { label: string; value: number }) {
-  const pct = clamp(value);
+function MetaPill({ children, accent }: { children: React.ReactNode; accent?: string }) {
   return (
-    <div
+    <span
       style={{
         display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        padding: '10px 14px',
-        backgroundColor: '#FFFDF3',
-        border: '1px solid rgba(22, 39, 44, 0.10)',
-        borderRadius: 10,
-        flex: 1,
+        alignItems: 'center',
+        padding: '6px 12px',
+        border: `1px solid ${accent ?? 'rgba(255,255,255,0.18)'}`,
+        borderRadius: 4,
+        color: accent ?? 'rgba(255,255,255,0.7)',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ color: 'rgba(22,39,44,0.55)', fontSize: 11, letterSpacing: '3px', fontWeight: 700 }}>{label}</span>
-        <span style={{ color: '#16272C', fontSize: 22, fontWeight: 900, fontFamily: 'Moderniz' }}>{value}</span>
-      </div>
-      <div style={{ display: 'flex', height: 4, borderRadius: 999, backgroundColor: 'rgba(22, 39, 44, 0.08)', overflow: 'hidden' }}>
-        <div
-          style={{
-            display: 'flex',
-            width: `${pct}%`,
-            height: '100%',
-            backgroundImage: 'linear-gradient(90deg, #367D95 0%, #90B34D 100%)',
-            borderRadius: 999,
-          }}
-        />
-      </div>
-    </div>
+      {children}
+    </span>
   );
 }
 
-const chipRowLabelStyle: Record<string, string | number> = {
-  display: 'flex',
-  fontSize: 12,
-  letterSpacing: '3px',
-  fontWeight: 700,
-  width: 84,
-  flexShrink: 0,
-};
-
-function chipRowStyle(bg: string, border: string): Record<string, string | number> {
-  return {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    padding: '8px 12px',
-    backgroundColor: bg,
-    border: '1px solid ' + border,
-    borderRadius: 12,
-    marginTop: 4,
-  };
+function Bullet({ color }: { color: string }) {
+  return (
+    <span
+      style={{
+        width: 4,
+        height: 4,
+        borderRadius: '50%',
+        background: color,
+        opacity: 0.6,
+        display: 'flex',
+      }}
+    />
+  );
 }
 
-function tagStyle(bg: string, border: string, color: string): Record<string, string | number> {
-  return {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '4px 12px',
-    fontSize: 14,
-    fontWeight: 600,
-    backgroundColor: bg,
-    border: '1px solid ' + border,
-    color,
-    borderRadius: 999,
-  };
+function VerityMarkSvg({ color }: { color: string }) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="48" height="48">
+    <circle cx="25" cy="25" r="23" fill="none" stroke="${color}" stroke-width="2"/>
+    <path d="M14 33 L25 12 L36 33 L25 26 Z" fill="${color}"/>
+  </svg>`;
+  return (
+    <img
+      src={`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`}
+      alt=""
+      width={48}
+      height={48}
+    />
+  );
 }
 
-function chipStyle(bg: string, border: string, color: string): Record<string, string | number> {
-  return {
-    display: 'flex',
-    padding: '3px 10px',
-    fontSize: 12,
-    fontWeight: 600,
-    backgroundColor: bg,
-    border: '1px solid ' + border,
-    color,
-    borderRadius: 999,
-  };
-}
-
-function clamp(n: number): number {
-  if (Number.isNaN(n)) return 70;
-  return Math.max(0, Math.min(100, n));
-}
 function safeId(raw: string | null, fallback: string): string {
   if (!raw) return fallback;
   if (!/^[a-z0-9_-]+$/i.test(raw)) return fallback;
   return raw;
-}
-function splitPipe(raw: string | null): string[] {
-  if (!raw) return [];
-  return raw.split('|').filter(Boolean);
-}
-function sanitizeMask(raw: string | null): string | null {
-  if (!raw) return null;
-  if (!/^[01]+$/.test(raw)) return null;
-  if (raw.length > 10) return null;
-  return raw;
-}
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

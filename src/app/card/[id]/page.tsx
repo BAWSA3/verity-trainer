@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!trainer) return { title: 'VERITY Trainer Card' };
 
   const name = sanitizeNameForDisplay(trainer.trainer_name);
-  const { config, personality, reasoning } = unpackTrainer(trainer);
+  const { config, personality, reasoning, tier } = unpackTrainer(trainer);
   const stats = generateStats(config, personality);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://verity-trainer.vercel.app';
   const xHandle = typeof trainer.x_handle === 'string' ? trainer.x_handle : '';
@@ -80,6 +80,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ogParams.set('w2d', w2.description.slice(0, 140));
   }
   if (xHandle) ogParams.set('ref', xHandle.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15));
+  // V4 — tier param (`t`). Appended after existing keys to preserve URL ordering
+  // for any cached crawler URLs from V3.x.
+  if (tier) ogParams.set('t', tier);
   const ogUrl = `${appUrl}/api/og?${ogParams.toString()}`;
 
   return {
@@ -104,7 +107,7 @@ export default async function CardPage({ params }: PageProps) {
   const trainer = await getTrainer(id);
   if (!trainer) notFound();
 
-  const { config, personality, reasoning } = unpackTrainer(trainer);
+  const { config, personality, reasoning, tier, heroArtSrc } = unpackTrainer(trainer);
 
   return (
     <CardPageClient
@@ -114,6 +117,8 @@ export default async function CardPage({ params }: PageProps) {
       trainerName={sanitizeNameForDisplay(trainer.trainer_name)}
       xHandle={typeof trainer.x_handle === 'string' ? trainer.x_handle : undefined}
       reasoning={reasoning}
+      tier={tier}
+      heroArtSrc={heroArtSrc}
     />
   );
 }

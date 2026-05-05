@@ -121,4 +121,8 @@ export interface StoredTrainer {
   referredBy?: string;
   // Rolled at signup time via roll_tier() RPC. Absent for legacy rows.
   tier?: TierKey;
+  // V5 — AI-generated hero art (chibi character per user). Stored as
+  // either a base64 data URI (`data:image/...`) or a public HTTPS URL.
+  // When absent, the V5 card falls back to the LimeZu sprite renderer.
+  heroArtSrc?: string;
 }
