@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TrainerConfig, TrainerPersonality, TierKey } from '@/types/trainer';
 import TrainerSprite from '../TrainerSprite';
 import { TIER_PALETTES } from '@/lib/cards/v4-tokens';
@@ -52,14 +52,15 @@ const TIER_DISPLAY: Record<TierKey, string> = {
   'founder':     'FOUNDER 1/1',
 };
 
-// Pixel-art scene bg per tier — uses the LimeZu scenes that ship at
-// public/sprites/limezu/scenes/. Avatar composites on top.
-const TIER_SCENES: Record<TierKey, string> = {
-  'near-mint':   '/sprites/limezu/scenes/gym.png',
-  'mint':        '/sprites/limezu/scenes/generic-home.png',
-  'gem':         '/sprites/limezu/scenes/tv-studio.png',
-  'black-label': '/sprites/limezu/scenes/museum.png',
-  'founder':     '/sprites/limezu/scenes/japanese-home.png',
+// Hero block bg per tier — solid tier color with a radial spotlight
+// behind the character so the avatar pops without a busy scene fighting
+// for attention. Pixel-art scenes were tried but felt too cluttered.
+const HERO_BG: Record<TierKey, string> = {
+  'near-mint':   'radial-gradient(ellipse 75% 70% at 50% 55%, #ff5454 0%, #ff3131 45%, #b81818 100%)',
+  'mint':        'radial-gradient(ellipse 75% 70% at 50% 55%, #c5d8c8 0%, #6b9583 50%, #2d5043 100%)',
+  'gem':         'radial-gradient(ellipse 75% 70% at 50% 55%, #6ba6e0 0%, #468bd5 50%, #1f548c 100%)',
+  'black-label': 'radial-gradient(ellipse 75% 70% at 50% 55%, #2a2a2a 0%, #141414 50%, #000000 100%)',
+  'founder':     'radial-gradient(ellipse 75% 70% at 50% 55%, #ffe989 0%, #f0a8e0 50%, #b35aa5 100%)',
 };
 
 export default function TrainerCardV5({
@@ -123,17 +124,6 @@ export default function TrainerCardV5({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-
-  // Tier-tinted overlay color — applied on top of the pixel-art scene to
-  // tie the hero block into the tier color palette. Subtle so the scene
-  // still shows through.
-  const heroTint = useMemo(() => {
-    if (tier === 'mint') return 'linear-gradient(135deg, rgba(168,191,178,0.35) 0%, rgba(45,80,67,0.55) 100%)';
-    if (tier === 'founder') return 'linear-gradient(135deg, rgba(255,247,173,0.45) 0%, rgba(217,132,211,0.55) 100%)';
-    if (tier === 'gem') return 'linear-gradient(180deg, rgba(70,139,213,0.45) 0%, rgba(44,107,166,0.6) 100%)';
-    if (tier === 'near-mint') return 'linear-gradient(180deg, rgba(255,49,49,0.45) 0%, rgba(200,28,28,0.65) 100%)';
-    return 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%)'; // black-label
-  }, [tier]);
 
   // Holo foil shimmer — animated for rare tiers (matches existing spec
   // §8.3 "rare cards feel alive" requirement). Common tiers get a static
@@ -243,9 +233,10 @@ export default function TrainerCardV5({
             {displayName}
           </div>
 
-          {/* Hero image area — pixel-art LimeZu scene with tier-tinted
-              overlay, VERITY wordmark watermark, vignette, and avatar
-              composited on top. */}
+          {/* Hero image area — solid tier color with radial spotlight,
+              VERITY wordmark watermark behind avatar. Clean and minimal
+              so the character dominates. Pixel-art scenes were tried but
+              felt too busy. */}
           <div
             style={{
               position: 'absolute',
@@ -253,7 +244,7 @@ export default function TrainerCardV5({
               left: 60,
               width: W - 60 - 60 - 60,
               height: 700,
-              background: '#000',
+              background: HERO_BG[tier],
               borderRadius: 16,
               overflow: 'hidden',
               display: 'flex',
@@ -262,33 +253,6 @@ export default function TrainerCardV5({
               border: `2px solid ${palette.innerBorder}`,
             }}
           >
-            {/* Pixel-art scene layer — bottom of stack */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={TIER_SCENES[tier]}
-              alt=""
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                imageRendering: 'pixelated',
-                zIndex: 0,
-              }}
-            />
-
-            {/* Tier-tint overlay on the scene */}
-            <div
-              aria-hidden
-              style={{
-                position: 'absolute',
-                inset: 0,
-                background: heroTint,
-                pointerEvents: 'none',
-                zIndex: 1,
-              }}
-            />
 
             {/* VERITY wordmark watermark — large, faint, behind avatar.
                 Per-tier opacity tuned so the watermark reads on darker
