@@ -34,6 +34,34 @@ const TIER_CODES: Record<TierKey, string> = {
   'founder':     'F1/1',
 };
 
+// PSA-style numeric grades — communicates rarity in a TCG-native way.
+const TIER_GRADES: Record<TierKey, string> = {
+  'near-mint':   '8.0',
+  'mint':        '8.5',
+  'gem':         '9.0',
+  'black-label': '9.5',
+  'founder':     '10.0',
+};
+
+// Full tier display names for the slab strip.
+const TIER_DISPLAY: Record<TierKey, string> = {
+  'near-mint':   'NEAR MINT',
+  'mint':        'MINT',
+  'gem':         'GEM',
+  'black-label': 'BLACK LABEL',
+  'founder':     'FOUNDER 1/1',
+};
+
+// Pixel-art scene bg per tier — uses the LimeZu scenes that ship at
+// public/sprites/limezu/scenes/. Avatar composites on top.
+const TIER_SCENES: Record<TierKey, string> = {
+  'near-mint':   '/sprites/limezu/scenes/gym.png',
+  'mint':        '/sprites/limezu/scenes/generic-home.png',
+  'gem':         '/sprites/limezu/scenes/tv-studio.png',
+  'black-label': '/sprites/limezu/scenes/museum.png',
+  'founder':     '/sprites/limezu/scenes/japanese-home.png',
+};
+
 export default function TrainerCardV5({
   tier, config, personality, trainerName, cardId, xHandle,
 }: Props) {
@@ -96,16 +124,21 @@ export default function TrainerCardV5({
     return () => ro.disconnect();
   }, []);
 
-  // Pick a hero-area background — lighter tint of the tier color so the
-  // avatar pops. For solid-color tiers we shade; for gradient tiers we
-  // reuse the gradient.
-  const heroBg = useMemo(() => {
-    if (tier === 'mint') return 'linear-gradient(135deg, #b9d3c5 0%, #5b8a7a 100%)';
-    if (tier === 'founder') return 'linear-gradient(135deg, #fff7ad 0%, #d984d3 100%)';
-    if (tier === 'gem') return 'linear-gradient(180deg, #6ba6e0 0%, #468bd5 70%, #2c6ba6 100%)';
-    if (tier === 'near-mint') return 'linear-gradient(180deg, #ff5454 0%, #ff3131 60%, #c81c1c 100%)';
-    return 'linear-gradient(180deg, #2a2a2a 0%, #0a0a0a 100%)'; // black-label
+  // Tier-tinted overlay color — applied on top of the pixel-art scene to
+  // tie the hero block into the tier color palette. Subtle so the scene
+  // still shows through.
+  const heroTint = useMemo(() => {
+    if (tier === 'mint') return 'linear-gradient(135deg, rgba(168,191,178,0.35) 0%, rgba(45,80,67,0.55) 100%)';
+    if (tier === 'founder') return 'linear-gradient(135deg, rgba(255,247,173,0.45) 0%, rgba(217,132,211,0.55) 100%)';
+    if (tier === 'gem') return 'linear-gradient(180deg, rgba(70,139,213,0.45) 0%, rgba(44,107,166,0.6) 100%)';
+    if (tier === 'near-mint') return 'linear-gradient(180deg, rgba(255,49,49,0.45) 0%, rgba(200,28,28,0.65) 100%)';
+    return 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%)'; // black-label
   }, [tier]);
+
+  // Holo foil shimmer — animated for rare tiers (matches existing spec
+  // §8.3 "rare cards feel alive" requirement). Common tiers get a static
+  // diagonal sheen; black-label + founder get a slow-loop animation.
+  const holoAnimating = tier === 'black-label' || tier === 'founder';
 
   return (
     <div id="trainer-card" className="card-v5-wrapper" ref={wrapperRef}>
@@ -139,14 +172,50 @@ export default function TrainerCardV5({
             }}
           />
 
+          {/* PSA/CGC-style graded slab strip — top label band reading
+              "VERITY · GRADED · NEAR MINT 9.0 · #00076 · 2026.05".
+              Visually frames the card like a serious collectible. */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: W - 60,
+              height: 64,
+              background: `linear-gradient(180deg, ${palette.outerBg} 0%, ${palette.outerBg.startsWith('linear-gradient') ? '#1a1a1a' : '#1a1a1a'} 100%)`,
+              borderBottom: `2px solid ${palette.innerBorder}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 14,
+              fontFamily: 'var(--font-moderniz), Impact, sans-serif',
+              fontSize: 14,
+              letterSpacing: '4px',
+              color: palette.urlText,
+              textTransform: 'uppercase',
+            }}
+          >
+            <span style={{ fontWeight: 700 }}>VERITY</span>
+            <Bullet color={palette.urlText} />
+            <span>GRADED</span>
+            <Bullet color={palette.urlText} />
+            <span style={{ color: palette.trainerText, fontWeight: 700 }}>
+              {TIER_DISPLAY[tier]} {TIER_GRADES[tier]}
+            </span>
+            <Bullet color={palette.urlText} />
+            <span>{memberNo}</span>
+            <Bullet color={palette.urlText} />
+            <span style={{ color: 'rgba(255,255,255,0.55)' }}>2026.05</span>
+          </div>
+
           {/* Display title — auto-scaled to fit, Bebas Neue */}
           <div
             style={{
               position: 'absolute',
-              top: 70,
+              top: 96,
               left: 60,
               width: W - 60 - 60 - 60,
-              height: 200,
+              height: 180,
               textAlign: 'center',
               fontFamily: 'var(--font-bebas), Impact, sans-serif',
               fontSize: titleFontSize,
@@ -172,41 +241,92 @@ export default function TrainerCardV5({
             {displayName}
           </div>
 
-          {/* Hero image area — big tinted block with avatar centered */}
+          {/* Hero image area — pixel-art LimeZu scene with tier-tinted
+              overlay, VERITY wordmark watermark, vignette, and avatar
+              composited on top. */}
           <div
             style={{
               position: 'absolute',
-              top: 280,
+              top: 296,
               left: 60,
               width: W - 60 - 60 - 60,
-              height: 760,
-              background: heroBg,
+              height: 700,
+              background: '#000',
               borderRadius: 16,
               overflow: 'hidden',
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-end',
               justifyContent: 'center',
-              border: '1px solid rgba(255,255,255,0.12)',
+              border: `2px solid ${palette.innerBorder}`,
             }}
           >
-            {/* Subtle vignette for depth */}
-            <div
+            {/* Pixel-art scene layer — bottom of stack */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={TIER_SCENES[tier]}
+              alt=""
               style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'radial-gradient(ellipse 70% 60% at 50% 40%, transparent 40%, rgba(0,0,0,0.4) 100%)',
-                pointerEvents: 'none',
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                imageRendering: 'pixelated',
+                zIndex: 0,
               }}
             />
 
-            {/* Tantama-style doodle accents — hand-drawn lines, sparkles,
-                swooshes around the avatar. Color varies per tier so they
-                pop against the hero bg. */}
-            <DoodleAccents tier={tier} />
+            {/* Tier-tint overlay on the scene */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: heroTint,
+                pointerEvents: 'none',
+                zIndex: 1,
+              }}
+            />
 
-            {/* Avatar — oversized so it dominates the hero area */}
-            <div style={{ position: 'relative', zIndex: 2 }}>
-              <TrainerSprite config={config} size={620} />
+            {/* VERITY wordmark watermark — large, faint, behind avatar */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -55%)',
+                fontFamily: 'var(--font-bebas), Impact, sans-serif',
+                fontSize: 280,
+                lineHeight: 0.85,
+                color: '#ffffff',
+                opacity: tier === 'founder' ? 0.18 : 0.13,
+                letterSpacing: '12px',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                zIndex: 2,
+                mixBlendMode: 'overlay',
+                textShadow: '0 4px 24px rgba(0,0,0,0.4)',
+              }}
+            >
+              VERITY
+            </div>
+
+            {/* Vignette */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'radial-gradient(ellipse 80% 70% at 50% 45%, transparent 30%, rgba(0,0,0,0.55) 100%)',
+                pointerEvents: 'none',
+                zIndex: 3,
+              }}
+            />
+
+            {/* Avatar — oversized, bottom-anchored. zIndex above all bg layers. */}
+            <div style={{ position: 'relative', zIndex: 4, marginBottom: 10 }}>
+              <TrainerSprite config={config} size={580} />
             </div>
           </div>
 
@@ -214,7 +334,7 @@ export default function TrainerCardV5({
           <div
             style={{
               position: 'absolute',
-              top: 1070,
+              top: 1018,
               left: 60,
               width: W - 60 - 60 - 60,
               height: 36,
@@ -237,7 +357,7 @@ export default function TrainerCardV5({
           <div
             style={{
               position: 'absolute',
-              top: 1140,
+              top: 1090,
               left: 60,
               width: W - 60 - 60 - 60,
               height: 230,
@@ -365,7 +485,7 @@ export default function TrainerCardV5({
           <div
             style={{
               position: 'absolute',
-              top: 1395,
+              top: 1340,
               left: 0,
               width: W - 60,
               textAlign: 'center',
@@ -382,7 +502,7 @@ export default function TrainerCardV5({
           <div
             style={{
               position: 'absolute',
-              top: 1418,
+              top: 1370,
               left: 30,
               right: 30,
               display: 'flex',
@@ -396,6 +516,24 @@ export default function TrainerCardV5({
             <span>prototype#01</span>
             <span>VRT{tierCode}{memberShort}{cardId.slice(0, 4).toUpperCase()}</span>
           </div>
+
+          {/* Holo foil shimmer — diagonal rainbow overlay across the whole
+              card. Static for common tiers; loops for rare tiers (matches
+              spec §8.3 "rare cards feel alive"). Mix-blend overlay so it
+              tints content rather than obscuring it. */}
+          <div
+            aria-hidden
+            className={holoAnimating ? 'card-v5-holo card-v5-holo--animated' : 'card-v5-holo'}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              borderRadius: 32,
+              overflow: 'hidden',
+              mixBlendMode: 'overlay',
+              opacity: holoAnimating ? 0.28 : 0.12,
+            }}
+          />
         </div>
       </div>
 
@@ -414,6 +552,30 @@ export default function TrainerCardV5({
           height: ${H}px;
           background-color: #000000;
           transform-origin: top left;
+        }
+        /* Holo foil — diagonal rainbow gradient. Wider than the card so
+           the animated variant can pan it across without clipping. */
+        :global(.card-v5-holo) {
+          background: linear-gradient(
+            115deg,
+            transparent 0%,
+            rgba(255, 97, 171, 0.6) 18%,
+            rgba(109, 255, 226, 0.6) 32%,
+            rgba(255, 236, 97, 0.6) 46%,
+            rgba(97, 193, 255, 0.6) 60%,
+            rgba(209, 97, 255, 0.6) 74%,
+            transparent 92%
+          );
+          background-size: 220% 220%;
+          background-position: 0% 0%;
+        }
+        :global(.card-v5-holo--animated) {
+          animation: cardV5HoloShimmer 6s ease-in-out infinite;
+        }
+        @keyframes cardV5HoloShimmer {
+          0%   { background-position: 0% 0%; }
+          50%  { background-position: 100% 100%; }
+          100% { background-position: 0% 0%; }
         }
       `}</style>
     </div>
@@ -438,66 +600,20 @@ function MetaPill({ children, accent }: { children: React.ReactNode; accent?: st
   );
 }
 
-// Tantama-style hand-drawn accents — sparkles, swooshes, lines, dots —
-// scattered around the avatar to give the card energy. Single SVG covering
-// the hero block; positioned absolutely. Color picks per tier so the
-// doodles read against the hero bg.
-function DoodleAccents({ tier }: { tier: TierKey }) {
-  const stroke = tier === 'black-label' ? '#ffde59'
-    : tier === 'founder' ? '#000000'
-    : tier === 'mint' ? '#fffdf3'
-    : tier === 'gem' ? '#ffde59'
-    : '#fffdf3'; // near-mint
-  const strokeAlpha = 0.85;
-
+// Small dot separator used in the slab strip (PSA-style).
+function Bullet({ color }: { color: string }) {
   return (
-    <svg
+    <span
       aria-hidden
-      viewBox="0 0 960 760"
-      preserveAspectRatio="xMidYMid slice"
       style={{
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: 1,
-        opacity: strokeAlpha,
+        width: 4,
+        height: 4,
+        borderRadius: '50%',
+        background: color,
+        opacity: 0.6,
+        flexShrink: 0,
       }}
-    >
-      <g stroke={stroke} strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-        {/* Top-left sparkle */}
-        <path d="M 110 130 L 110 170 M 90 150 L 130 150" />
-        <circle cx="110" cy="150" r="3" fill={stroke} stroke="none" />
-        {/* Top-right squiggle */}
-        <path d="M 800 90 q 20 -15 40 0 t 40 0" strokeWidth="5" />
-        {/* Top-right star burst */}
-        <path d="M 870 200 L 870 230 M 855 215 L 885 215 M 860 205 L 880 225 M 880 205 L 860 225" strokeWidth="4" />
-        {/* Right-mid swoosh */}
-        <path d="M 880 380 q -30 -25 -60 0" strokeWidth="5" />
-        <path d="M 870 410 q -20 -18 -40 0" strokeWidth="5" />
-        {/* Bottom-right dots */}
-        <circle cx="850" cy="600" r="6" fill={stroke} stroke="none" />
-        <circle cx="880" cy="630" r="4" fill={stroke} stroke="none" />
-        <circle cx="820" cy="640" r="4" fill={stroke} stroke="none" />
-        {/* Bottom-left zigzag motion lines */}
-        <path d="M 60 580 l 24 -10 l -16 -10 l 28 -8" strokeWidth="5" />
-        <path d="M 90 620 l 30 -10 l -20 -12 l 35 -8" strokeWidth="5" />
-        {/* Mid-left small sparkle */}
-        <path d="M 70 340 L 70 370 M 55 355 L 85 355" strokeWidth="4" />
-        {/* Bottom-mid arc — under the character */}
-        <path d="M 340 720 q 140 30 280 0" strokeWidth="5" opacity="0.55" />
-        {/* Top-mid above character */}
-        <path d="M 420 60 q 60 -18 120 0" strokeWidth="4" opacity="0.6" />
-        {/* Asterisk top-far-right */}
-        <g transform="translate(720,60)" strokeWidth="4">
-          <path d="M -10 0 L 10 0 M 0 -10 L 0 10 M -7 -7 L 7 7 M -7 7 L 7 -7" />
-        </g>
-        {/* Asterisk bottom-left */}
-        <g transform="translate(170,470)" strokeWidth="4">
-          <path d="M -8 0 L 8 0 M 0 -8 L 0 8 M -6 -6 L 6 6 M -6 6 L 6 -6" />
-        </g>
-      </g>
-    </svg>
+    />
   );
 }
+
