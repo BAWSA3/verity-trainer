@@ -380,10 +380,12 @@ export default function TrainerCardV5({
             />
 
             {/* Hero subject — AI-generated chibi art when heroArtSrc is
-                set, otherwise fall back to bust-cropped LimeZu sprite
-                (head + chest only, vertically centered). User pref:
-                fuller bust crop felt more like a "trainer card portrait"
-                than a tiny full-body figure floating in the hero block. */}
+                set, otherwise fall back to a custom crop of the LimeZu
+                sprite. The bustCrop in the manifest (y=26..66) gave
+                head + 10px shoulders only; user wanted "full face +
+                upper body cut clean at bottom of frame" so we render
+                the full sprite oversized and clip to source y=22..70
+                (above hair through mid-torso). */}
             {heroArtSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -399,13 +401,25 @@ export default function TrainerCardV5({
                 }}
               />
             ) : (
-              <div style={{ position: 'relative', zIndex: 4 }}>
-                {/* size=460 with bust crop renders ~460×575 — bust portrait
-                    centered in the 900×700 hero block with breathing room
-                    on all sides. Big enough to read, small enough to feel
-                    like a "portrait inside a frame" not "sprite jammed
-                    into a window". */}
-                <TrainerSprite config={config} size={460} crop="bust" />
+              <div
+                style={{
+                  position: 'relative',
+                  zIndex: 4,
+                  width: 700,
+                  height: 700,
+                  overflow: 'hidden',
+                  borderRadius: 8,
+                }}
+              >
+                {/* Sprite at size=700 renders 700×1400. Top offset -320
+                    pushes the transparent padding above the hair OFF the
+                    top of the wrapper, putting hair top at wrapper top.
+                    Wrapper height 700 = 1× sprite-width = exactly source
+                    y=22..70 visible (face + upper body, cut at mid-torso
+                    by the hero block's bottom edge). */}
+                <div style={{ position: 'absolute', top: -320, left: 0 }}>
+                  <TrainerSprite config={config} size={700} />
+                </div>
               </div>
             )}
           </div>
